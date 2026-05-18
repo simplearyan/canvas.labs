@@ -23,13 +23,20 @@ import {
   setIsPlaybackPlaying,
   openFullEditor,
   exitFullEditor,
-  filteredCards
+  filteredCards,
+  closeQuickEditor,
+  initUrlRouter
 } from "../store/global";
 
 export default function Portal() {
   // Canvas Reference
   let canvasRef: HTMLCanvasElement | undefined;
   let canvasAnimId: number;
+
+  // --- INITIALIZE DYNAMIC ROUTER popstate LISTENER ---
+  createEffect(() => {
+    initUrlRouter();
+  });
 
   // --- ADAPTIVE TAB-THEME FAVICON ENGINE ---
   createEffect(() => {
@@ -321,7 +328,7 @@ export default function Portal() {
               
               {/* Breadcrumb Back Button */}
               <button 
-                onClick={() => setIsViewingDetail(false)}
+                onClick={closeQuickEditor}
                 class="flex items-center gap-2 text-sm font-semibold text-text-muted hover:text-text-main transition-colors w-fit group cursor-pointer"
               >
                 <Icon name="arrow-left" class="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

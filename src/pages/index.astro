@@ -31,9 +31,10 @@ import Favicon from '@/components/Favicon.astro';
 		<meta property="twitter:title" content={SITE_CONFIG.seo.title} />
 		<meta property="twitter:description" content={SITE_CONFIG.seo.description} />
 		<meta property="twitter:image" content={SITE_CONFIG.seo.ogImage} />
-		<!-- Block-level Theme Initializer Script to prevent flickering -->
+		<!-- Block-level Initializer Script to prevent theme & route flickering -->
 		<script is:inline>
 			(function() {
+				// Theme setup
 				const savedTheme = localStorage.getItem("theme");
 				const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 				const useDark = savedTheme === "dark" || (!savedTheme && systemDark);
@@ -41,6 +42,12 @@ import Favicon from '@/components/Favicon.astro';
 					document.documentElement.classList.add("dark");
 				} else {
 					document.documentElement.classList.remove("dark");
+				}
+
+				// Route parameter loading setup to prevent flash of incorrect route layout
+				const params = new URLSearchParams(window.location.search);
+				if (params.get("category") || params.get("template") || params.get("editor")) {
+					document.documentElement.classList.add("route-loading");
 				}
 			})();
 		</script>

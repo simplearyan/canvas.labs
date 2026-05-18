@@ -8,10 +8,8 @@ import {
   isDarkTheme,
   toggleTheme,
   searchQuery,
-  setSearchQuery,
-  setIsViewingDetail,
-  setIsViewingEditor,
-  handleHamburgerClick
+  handleHamburgerClick,
+  handleSearchInput
 } from "../../store/global";
 
 export default function Header() {
@@ -60,9 +58,7 @@ export default function Header() {
               type="text"
               value={searchQuery()}
               onInput={(e) => {
-                setSearchQuery(e.currentTarget.value);
-                setIsViewingDetail(false);
-                setIsViewingEditor(false);
+                handleSearchInput(e.currentTarget.value);
               }}
               class="block w-full pl-11 pr-4 py-2 border border-border-color rounded-xl leading-5 bg-black/5 dark:bg-white/5 text-text-main placeholder-text-muted outline-none focus:bg-card-bg focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 sm:text-sm transition-all duration-300"
               placeholder="Search premium presets..."
