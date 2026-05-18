@@ -17,13 +17,16 @@ import Favicon from '@/components/Favicon.astro';
 		<meta name="title" content={SITE_CONFIG.seo.title} />
 		<meta name="description" content={SITE_CONFIG.seo.description} />
 		<meta name="keywords" content={SITE_CONFIG.seo.keywords.join(', ')} />
+		<meta name="author" content={SITE_CONFIG.branding.creator} />
 		
-		<!-- Open Graph / Facebook -->
+		<!-- Open Graph / Facebook / WhatsApp -->
 		<meta property="og:type" content="website" />
 		<meta property="og:url" content={SITE_CONFIG.seo.url} />
 		<meta property="og:title" content={SITE_CONFIG.seo.title} />
 		<meta property="og:description" content={SITE_CONFIG.seo.description} />
 		<meta property="og:image" content={SITE_CONFIG.seo.ogImage} />
+		<meta property="og:site_name" content={SITE_CONFIG.branding.name} />
+		<meta property="og:locale" content="en_US" />
 
 		<!-- Twitter -->
 		<meta property="twitter:card" content="summary_large_image" />
@@ -31,6 +34,8 @@ import Favicon from '@/components/Favicon.astro';
 		<meta property="twitter:title" content={SITE_CONFIG.seo.title} />
 		<meta property="twitter:description" content={SITE_CONFIG.seo.description} />
 		<meta property="twitter:image" content={SITE_CONFIG.seo.ogImage} />
+		<meta property="twitter:site" content={SITE_CONFIG.seo.twitterHandle} />
+		<meta property="twitter:creator" content={SITE_CONFIG.seo.twitterHandle} />
 		<!-- Block-level Initializer Script to prevent theme & route flickering -->
 		<script is:inline>
 			(function() {

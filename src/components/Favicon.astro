@@ -7,6 +7,7 @@ const darkSvg = base + SITE_CONFIG.tabPreferences.favicon.darkTabSvg;
 const defaultFav = base + SITE_CONFIG.tabPreferences.favicon.default;
 ---
 
+{/* Modern SVG Favicons with Dark/Light preference support */}
 {SITE_CONFIG.tabPreferences.favicon.useSvgIcon ? (
 	<>
 		<link rel="icon" type="image/svg+xml" href={lightSvg} media="(prefers-color-scheme: light)" />
@@ -15,3 +16,9 @@ const defaultFav = base + SITE_CONFIG.tabPreferences.favicon.default;
 ) : (
 	<link rel="icon" type="image/svg+xml" href={defaultFav} />
 )}
+
+{/* Cross-platform Legacy & Social Preview Fallback Icons */}
+<link rel="shortcut icon" href={`${base}/favicon.ico`} />
+<link rel="icon" type="image/png" sizes="48x48" href={`${base}/favicon/favicon-CL-48x48.png`} />
+<link rel="icon" type="image/png" sizes="192x192" href={`${base}/favicon/favicon-CL-192x192-transparent.png`} />
+<link rel="apple-touch-icon" sizes="180x180" href={`${base}/favicon/favicon-CL-192x192.png`} />

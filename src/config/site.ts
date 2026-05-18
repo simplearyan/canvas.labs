@@ -10,9 +10,9 @@ export const SITE_CONFIG = {
   seo: {
     title: "CanvasLabs — Premium Animated Background Templates",
     description: "Elevate your web and video projects with free, high-performance, responsive canvas animations and timeline editors.",
-    url: "https://canvaslabs.portal",
+    url: "https://simplearyan.github.io/canvas.labs",
     keywords: ["canvas", "animation", "motion graphics", "presets", "timeline editor", "Astro", "SolidJS"],
-    ogImage: "/og-image.png",
+    ogImage: "https://simplearyan.github.io/canvas.labs/og-image.png",
     twitterHandle: "@canvaslabs",
   },
   tabPreferences: {
