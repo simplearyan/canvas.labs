@@ -7,6 +7,9 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://simplearyan.github.io',
+  base: '/canvas.labs',
+
   integrations: [solidJs()],
 
   vite: {
