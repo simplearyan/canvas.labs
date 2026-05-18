@@ -1,0 +1,19 @@
+{
+  "name": "CanvasLabs Portal",
+  "short_name": "CanvasLabs",
+  "icons": [
+    {
+      "src": "/canvas.labs/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/canvas.labs/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#050505",
+  "background_color": "#050505",
+  "display": "standalone"
+}
