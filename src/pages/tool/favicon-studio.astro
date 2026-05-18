@@ -1,12 +1,17 @@
 ---
 import { SITE_CONFIG } from '@/config/site';
 import Favicon from '@/components/Favicon.astro';
+
+const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
 ---
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <Favicon />
+    <script is:inline define:vars={{ baseUrl: import.meta.env.BASE_URL }}>
+        window.BASE_URL = baseUrl === '/' ? '' : baseUrl;
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canvas Labs | CapCut Favicon Studio</title>
     
@@ -131,16 +136,16 @@ import Favicon from '@/components/Favicon.astro';
                     <span class="text-[8px] text-zinc-600 font-mono">SVG vector</span>
                 </div>
                 <div class="grid grid-cols-3 gap-2">
-                    <button type="button" class="preset-btn p-2 bg-capcut-card hover:bg-zinc-800/80 border border-capcut-border rounded-xl transition-all flex flex-col items-center gap-1 focus:outline-none" data-svg-preset="/favicon/favicon-dark-trans.svg">
-                        <div class="w-7 h-7 bg-zinc-950 rounded-lg flex items-center justify-center border border-zinc-850"><img src="/favicon/favicon-dark-trans.svg" class="w-5 h-5 object-contain" /></div>
+                    <button type="button" class="preset-btn p-2 bg-capcut-card hover:bg-zinc-800/80 border border-capcut-border rounded-xl transition-all flex flex-col items-center gap-1 focus:outline-none" data-svg-preset={base + "/favicon/favicon-dark-trans.svg"}>
+                        <div class="w-7 h-7 bg-zinc-950 rounded-lg flex items-center justify-center border border-zinc-850"><img src={base + "/favicon/favicon-dark-trans.svg"} class="w-5 h-5 object-contain" /></div>
                         <span class="text-[8px] font-medium text-zinc-400 truncate w-full text-center">Matte Dark</span>
                     </button>
-                    <button type="button" class="preset-btn p-2 bg-capcut-card hover:bg-zinc-800/80 border border-capcut-border rounded-xl transition-all flex flex-col items-center gap-1 focus:outline-none" data-svg-preset="/favicon/favicon-gradeint-trans.svg">
-                        <div class="w-7 h-7 bg-zinc-900 rounded-lg flex items-center justify-center"><img src="/favicon/favicon-gradeint-trans.svg" class="w-5 h-5 object-contain" /></div>
+                    <button type="button" class="preset-btn p-2 bg-capcut-card hover:bg-zinc-800/80 border border-capcut-border rounded-xl transition-all flex flex-col items-center gap-1 focus:outline-none" data-svg-preset={base + "/favicon/favicon-gradeint-trans.svg"}>
+                        <div class="w-7 h-7 bg-zinc-900 rounded-lg flex items-center justify-center"><img src={base + "/favicon/favicon-gradeint-trans.svg"} class="w-5 h-5 object-contain" /></div>
                         <span class="text-[8px] font-medium text-zinc-400 truncate w-full text-center">Gradient</span>
                     </button>
-                    <button type="button" class="preset-btn p-2 bg-capcut-card hover:bg-zinc-800/80 border border-capcut-border rounded-xl transition-all flex flex-col items-center gap-1 focus:outline-none" data-svg-preset="/favicon/favicon-white-trans.svg">
-                        <div class="w-7 h-7 bg-white rounded-lg flex items-center justify-center border border-gray-250"><img src="/favicon/favicon-white-trans.svg" class="w-5 h-5 object-contain" /></div>
+                    <button type="button" class="preset-btn p-2 bg-capcut-card hover:bg-zinc-800/80 border border-capcut-border rounded-xl transition-all flex flex-col items-center gap-1 focus:outline-none" data-svg-preset={base + "/favicon/favicon-white-trans.svg"}>
+                        <div class="w-7 h-7 bg-white rounded-lg flex items-center justify-center border border-gray-250"><img src={base + "/favicon/favicon-white-trans.svg"} class="w-5 h-5 object-contain" /></div>
                         <span class="text-[8px] font-medium text-zinc-400 truncate w-full text-center">White</span>
                     </button>
                 </div>
@@ -558,7 +563,8 @@ import Favicon from '@/components/Favicon.astro';
 
         async function loadPreset(url) {
             try {
-                const response = await fetch(url);
+                const fetchUrl = (window.BASE_URL && !url.startsWith(window.BASE_URL)) ? (window.BASE_URL + url) : url;
+                const response = await fetch(fetchUrl);
                 const text = await response.text();
                 uploadedSvgContent = text;
                 updateSvgContainer();
