@@ -2,6 +2,8 @@
 import '@/styles/global.css';
 import { SITE_CONFIG } from '@/config/site';
 import Favicon from '@/components/Favicon.astro';
+
+const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
 ---
 
 <!DOCTYPE html>
@@ -192,7 +194,7 @@ import Favicon from '@/components/Favicon.astro';
     <!-- Glass Header Navigation -->
     <nav class="fixed w-full z-50 top-0 glass-nav-v2">
         <div class="max-w-7xl mx-auto px-6 h-[72px] flex items-center justify-between">
-            <a href="/" class="flex items-center gap-3 outline-none">
+            <a href={base + "/"} class="flex items-center gap-3 outline-none">
                 <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-black font-black text-xl tracking-tighter">
                     K
                 </div>
@@ -206,13 +208,13 @@ import Favicon from '@/components/Favicon.astro';
                 <a href="#features" class="hover:text-white transition-colors">Features</a>
                 <a href="#ai-tools" class="hover:text-white transition-colors">AI Tools</a>
                 <a href="#comparison" class="hover:text-white transition-colors">V1 vs V2 Palette</a>
-                <a href="/kenichi" class="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                <a href={base + "/kenichi"} class="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
                     <i class="ph ph-arrow-left"></i> V1 Promo
                 </a>
             </div>
 
             <div class="flex items-center gap-4">
-                <a href="/" class="text-[13px] font-semibold text-gray-300 hover:text-white transition-colors hidden sm:block">Back to Portal</a>
+                <a href={base + "/"} class="text-[13px] font-semibold text-gray-300 hover:text-white transition-colors hidden sm:block">Back to Portal</a>
                 <a href="#mockup" class="px-5 py-2 text-[12px] font-bold rounded-full bg-white text-black hover:bg-gray-100 transition-all active:scale-95">
                     Launch Studio
                 </a>
@@ -571,9 +573,9 @@ import Favicon from '@/components/Favicon.astro';
             <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-gray-500 font-medium uppercase tracking-wider">
                 <p>&copy; 2026 Kenichi Studio v2. Engineered by Aryan (simplearyan). All rights reserved.</p>
                 <div class="flex gap-4">
-                    <a href="/privacy" class="hover:text-white transition-colors">Cookies</a>
+                    <a href={base + "/privacy"} class="hover:text-white transition-colors">Cookies</a>
                     <span class="text-white/10">|</span>
-                    <a href="/terms" class="hover:text-white transition-colors">Security</a>
+                    <a href={base + "/terms"} class="hover:text-white transition-colors">Security</a>
                 </div>
             </div>
         </div>

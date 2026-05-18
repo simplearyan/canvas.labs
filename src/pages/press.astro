@@ -1,11 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { SITE_CONFIG } from '../config/site';
+
+const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
 ---
 
 <Layout title="Press & Media Resources" description="Access official media resources, press kits, and promotional web video editors for CanvasLabs.">
 	<!-- Back link -->
-	<a href="/" class="inline-flex items-center gap-2 text-sm text-text-muted hover:text-brand-500 transition-colors group mb-4">
+	<a href={base + "/"} class="inline-flex items-center gap-2 text-sm text-text-muted hover:text-brand-500 transition-colors group mb-4">
 		<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-transform group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
 		Back to Hub
 	</a>
@@ -48,7 +50,7 @@ import { SITE_CONFIG } from '../config/site';
 
 					<div class="pt-6">
 						<a 
-							href="/kenichi" 
+							href={base + "/kenichi"} 
 							class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black/5 dark:bg-white/5 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-500 dark:hover:text-white border border-border-color text-text-main rounded-xl text-xs font-bold transition-all outline-none"
 						>
 							Launch V1 Editor Demo
@@ -77,7 +79,7 @@ import { SITE_CONFIG } from '../config/site';
 
 					<div class="pt-6">
 						<a 
-							href="/kenichi-v2" 
+							href={base + "/kenichi-v2"} 
 							class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-500/10 text-brand-500 hover:bg-brand-500 hover:text-white rounded-xl text-xs font-bold transition-all outline-none"
 						>
 							Launch V2 Matte Demo
@@ -106,7 +108,7 @@ import { SITE_CONFIG } from '../config/site';
 
 					<div class="pt-6">
 						<a 
-							href="/tool/logo-customizer-v3" 
+							href={base + "/tool/logo-customizer-v3"} 
 							class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-600 text-white hover:bg-brand-700 rounded-xl text-xs font-bold transition-all outline-none"
 						>
 							Launch Customizer Studio
@@ -135,7 +137,7 @@ import { SITE_CONFIG } from '../config/site';
 
 					<div class="pt-6">
 						<a 
-							href="/tool/favicon-generator" 
+							href={base + "/tool/favicon-generator"} 
 							class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-500 text-white hover:bg-brand-600 rounded-xl text-xs font-bold transition-all outline-none"
 						>
 							Launch Favicon Studio
@@ -164,7 +166,7 @@ import { SITE_CONFIG } from '../config/site';
 
 					<div class="pt-6">
 						<a 
-							href="/tool/favicon-studio" 
+							href={base + "/tool/favicon-studio"} 
 							class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-600 text-white rounded-xl text-xs font-bold transition-all outline-none"
 						>
 							Launch CapCut Studio
@@ -192,7 +194,7 @@ import { SITE_CONFIG } from '../config/site';
 						<p class="text-sm font-bold text-text-main">Monogram Emblem</p>
 						<p class="text-[10px] text-text-muted">High-res SVG, 512x512px</p>
 					</div>
-					<a href="/favicon.svg" download class="text-[11px] font-bold text-brand-500 hover:underline">Download Asset &rarr;</a>
+					<a href={base + "/favicon.svg"} download class="text-[11px] font-bold text-brand-500 hover:underline">Download Asset &rarr;</a>
 				</div>
 
 				<!-- Logo Mark Card -->
@@ -207,7 +209,7 @@ import { SITE_CONFIG } from '../config/site';
 						<p class="text-sm font-bold text-text-main">Global Logo Lockup</p>
 						<p class="text-[10px] text-text-muted">Transparent PNG format</p>
 					</div>
-					<a href="/favicon.svg" download class="text-[11px] font-bold text-brand-500 hover:underline">Download Asset &rarr;</a>
+					<a href={base + "/favicon.svg"} download class="text-[11px] font-bold text-brand-500 hover:underline">Download Asset &rarr;</a>
 				</div>
 
 				<!-- Brand Colors Card -->
@@ -235,7 +237,7 @@ import { SITE_CONFIG } from '../config/site';
 					Are you reviewing {SITE_CONFIG.branding.name} or seeking standard high-resolution graphic templates, interviews, or engineering briefs? Connect directly via the portal coordinator.
 				</p>
 				<div class="pt-3">
-					<a href="/contact" class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-500 text-white rounded-xl text-xs font-bold hover:bg-brand-600 transition-colors shadow-sm outline-none">
+					<a href={base + "/contact"} class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-500 text-white rounded-xl text-xs font-bold hover:bg-brand-600 transition-colors shadow-sm outline-none">
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
 						Contact Public Relations
 					</a>

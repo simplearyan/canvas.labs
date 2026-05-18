@@ -90,7 +90,7 @@ const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
     <!-- Header navigation (Ultra-minimal 44px) -->
     <header class="h-11 shrink-0 bg-capcut-panel border-b border-capcut-border/50 px-5 flex items-center justify-between select-none z-30 shadow-md">
         <div class="flex items-center gap-2">
-            <a href="/" class="flex items-center gap-1.5 group">
+            <a href={base + "/"} class="flex items-center gap-1.5 group">
                 <div class="w-6 h-6 rounded bg-gradient-to-tr from-brand-600 to-capcut-cyan flex items-center justify-center shadow-inner transform transition-transform group-hover:scale-105">
                     <span class="text-[10px] font-black tracking-tighter text-black select-none font-outfit">CL</span>
                 </div>
@@ -102,7 +102,7 @@ const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
         </div>
         
         <div class="flex items-center gap-3">
-            <a href="/tool/favicon-generator" class="text-[9.5px] font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors flex items-center gap-1 bg-zinc-900 px-2.5 py-0.5 rounded-full border border-zinc-800">
+            <a href={base + "/tool/favicon-generator"} class="text-[9.5px] font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors flex items-center gap-1 bg-zinc-900 px-2.5 py-0.5 rounded-full border border-zinc-800">
                 <i data-lucide="sliders" class="w-2.5 h-2.5"></i> Generator
             </a>
             

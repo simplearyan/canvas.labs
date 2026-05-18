@@ -2,6 +2,8 @@
 import '@/styles/global.css';
 import { SITE_CONFIG } from '@/config/site';
 import Favicon from '@/components/Favicon.astro';
+
+const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
 ---
 
 <!DOCTYPE html>
@@ -121,7 +123,7 @@ import Favicon from '@/components/Favicon.astro';
     <nav class="fixed w-full z-50 top-0 glass-nav">
         <div class="max-w-7xl mx-auto px-6 h-[72px] flex items-center justify-between">
             <!-- Brand Logo -->
-            <a href="/" class="flex items-center gap-3 group outline-none">
+            <a href={base + "/"} class="flex items-center gap-3 group outline-none">
                 <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-black font-black text-xl tracking-tighter">
                     K
                 </div>
@@ -136,14 +138,14 @@ import Favicon from '@/components/Favicon.astro';
                 <a href="#features" class="hover:text-white transition-colors">Features</a>
                 <a href="#ai-tools" class="hover:text-white transition-colors">AI Tools</a>
                 <a href="#mockup" class="hover:text-white transition-colors">Workspace</a>
-                <a href="/" class="text-[#5c80ff] hover:text-[#8ca8ff] transition-colors flex items-center gap-1.5 font-semibold">
+                <a href={base + "/"} class="text-[#5c80ff] hover:text-[#8ca8ff] transition-colors flex items-center gap-1.5 font-semibold">
                     <i class="ph ph-arrow-left"></i> Back to Hub
                 </a>
             </div>
 
             <!-- CTA Actions -->
             <div class="flex items-center gap-4">
-                <a href="/" class="text-[14px] font-semibold text-gray-300 hover:text-white transition-colors hidden sm:block">Back to Portal</a>
+                <a href={base + "/"} class="text-[14px] font-semibold text-gray-300 hover:text-white transition-colors hidden sm:block">Back to Portal</a>
                 <a href="#mockup" class="px-5 py-2 text-[13px] font-bold rounded-full bg-white text-black hover:bg-gray-100 transition-all active:scale-95">
                     Launch App
                 </a>
@@ -488,7 +490,7 @@ import Favicon from '@/components/Favicon.astro';
                     </p>
                     <div class="flex gap-3">
                         <a href="https://github.com/simplearyan" target="_blank" rel="noopener noreferrer" class="w-9 h-9 rounded-xl bg-[#141416] border border-white/5 flex items-center justify-center hover:bg-white/5 hover:text-white text-gray-400 transition-colors"><i class="ph ph-github-logo text-lg"></i></a>
-                        <a href="/" class="w-9 h-9 rounded-xl bg-[#141416] border border-white/5 flex items-center justify-center hover:bg-white/5 hover:text-white text-gray-400 transition-colors"><i class="ph ph-sparkles text-lg"></i></a>
+                        <a href={base + "/"} class="w-9 h-9 rounded-xl bg-[#141416] border border-white/5 flex items-center justify-center hover:bg-white/5 hover:text-white text-gray-400 transition-colors"><i class="ph ph-sparkles text-lg"></i></a>
                     </div>
                 </div>
                 
@@ -496,7 +498,7 @@ import Favicon from '@/components/Favicon.astro';
                     <h4 class="font-bold text-xs text-white uppercase tracking-wider mb-4 select-none">Product</h4>
                     <ul class="space-y-3 text-xs text-gray-400">
                         <li><a href="#features" class="hover:text-white transition-colors">Video Editor</a></li>
-                        <li><a href="/" class="hover:text-white transition-colors">Templates</a></li>
+                        <li><a href={base + "/"} class="hover:text-white transition-colors">Templates</a></li>
                         <li><a href="#ai-tools" class="hover:text-white transition-colors">AI Magic Tools</a></li>
                     </ul>
                 </div>
@@ -504,18 +506,18 @@ import Favicon from '@/components/Favicon.astro';
                 <div>
                     <h4 class="font-bold text-xs text-white uppercase tracking-wider mb-4 select-none">Solutions</h4>
                     <ul class="space-y-3 text-xs text-gray-400">
-                        <li><a href="/" class="hover:text-white transition-colors">For TikTok</a></li>
-                        <li><a href="/" class="hover:text-white transition-colors">For YouTube</a></li>
-                        <li><a href="/contact" class="hover:text-white transition-colors">For Business</a></li>
+                        <li><a href={base + "/"} class="hover:text-white transition-colors">For TikTok</a></li>
+                        <li><a href={base + "/"} class="hover:text-white transition-colors">For YouTube</a></li>
+                        <li><a href={base + "/contact"} class="hover:text-white transition-colors">For Business</a></li>
                     </ul>
                 </div>
 
                 <div>
                     <h4 class="font-bold text-xs text-white uppercase tracking-wider mb-4 select-none">Company</h4>
                     <ul class="space-y-3 text-xs text-gray-400">
-                        <li><a href="/contact" class="hover:text-white transition-colors">Contact</a></li>
-                        <li><a href="/terms" class="hover:text-white transition-colors">Terms of Service</a></li>
-                        <li><a href="/privacy" class="hover:text-white transition-colors">Privacy Policy</a></li>
+                        <li><a href={base + "/contact"} class="hover:text-white transition-colors">Contact</a></li>
+                        <li><a href={base + "/terms"} class="hover:text-white transition-colors">Terms of Service</a></li>
+                        <li><a href={base + "/privacy"} class="hover:text-white transition-colors">Privacy Policy</a></li>
                     </ul>
                 </div>
             </div>
@@ -523,9 +525,9 @@ import Favicon from '@/components/Favicon.astro';
             <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-gray-500 font-medium uppercase tracking-wider">
                 <p>&copy; 2026 Kenichi Studio. Engineered by Aryan (simplearyan). All rights reserved.</p>
                 <div class="flex gap-4">
-                    <a href="/privacy" class="hover:text-white transition-colors">Cookies</a>
+                    <a href={base + "/privacy"} class="hover:text-white transition-colors">Cookies</a>
                     <span class="text-white/10">|</span>
-                    <a href="/terms" class="hover:text-white transition-colors">Security</a>
+                    <a href={base + "/terms"} class="hover:text-white transition-colors">Security</a>
                 </div>
             </div>
         </div>

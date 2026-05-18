@@ -1,6 +1,8 @@
 import { Show, For, createSignal, onCleanup } from "solid-js";
 import { SITE_CONFIG } from "../../config/site";
 import Icon from "../ui/Icon";
+
+const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
 import {
   currentCategory,
   handleCategorySelect,
@@ -116,10 +118,10 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
             <Show when={isExpanded()}>
               <div class="pt-6 pb-2 px-2 border-t border-border-color/30 space-y-2 text-xs text-text-muted mt-6">
                 <div class="flex flex-wrap gap-x-3.5 gap-y-1.5 font-semibold">
-                  <a href="/terms" class="hover:text-text-main transition-colors">Terms</a>
-                  <a href="/contact" class="hover:text-text-main transition-colors">Contact</a>
-                  <a href="/privacy" class="hover:text-text-main transition-colors">Privacy</a>
-                  <a href="/press" class="hover:text-text-main transition-colors">Press</a>
+                  <a href={`${base}/terms`} class="hover:text-text-main transition-colors">Terms</a>
+                  <a href={`${base}/contact`} class="hover:text-text-main transition-colors">Contact</a>
+                  <a href={`${base}/privacy`} class="hover:text-text-main transition-colors">Privacy</a>
+                  <a href={`${base}/press`} class="hover:text-text-main transition-colors">Press</a>
                 </div>
                 <p class="text-[10px]">© 2026 {SITE_CONFIG.branding.name}. All rights reserved.</p>
               </div>
@@ -163,10 +165,10 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
             {/* Mobile Sidebar Footer (Non-sticky: scroll to find) */}
             <div class="pt-6 pb-2 px-2 border-t border-border-color/30 space-y-2 text-xs text-text-muted mt-6">
               <div class="flex flex-wrap gap-x-3.5 gap-y-1.5 font-semibold">
-                <a href="/terms" class="hover:text-text-main transition-colors">Terms</a>
-                <a href="/contact" class="hover:text-text-main transition-colors">Contact</a>
-                <a href="/privacy" class="hover:text-text-main transition-colors">Privacy</a>
-                <a href="/press" class="hover:text-text-main transition-colors">Press</a>
+                <a href={`${base}/terms`} class="hover:text-text-main transition-colors">Terms</a>
+                <a href={`${base}/contact`} class="hover:text-text-main transition-colors">Contact</a>
+                <a href={`${base}/privacy`} class="hover:text-text-main transition-colors">Privacy</a>
+                <a href={`${base}/press`} class="hover:text-text-main transition-colors">Press</a>
               </div>
               <p class="text-[10px]">© 2026 {SITE_CONFIG.branding.name}. All rights reserved.</p>
             </div>

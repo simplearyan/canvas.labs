@@ -1,11 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { SITE_CONFIG } from '../config/site';
+
+const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
 ---
 
 <Layout title="Privacy Policy" description={`Privacy Policy and data security guidelines for ${SITE_CONFIG.branding.name}.`}>
 	<!-- Back link -->
-	<a href="/" class="inline-flex items-center gap-2 text-sm text-text-muted hover:text-brand-500 transition-colors group mb-4">
+	<a href={base + "/"} class="inline-flex items-center gap-2 text-sm text-text-muted hover:text-brand-500 transition-colors group mb-4">
 		<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-transform group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
 		Back to Hub
 	</a>
