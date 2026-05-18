@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Labs | Favicon & Browser Tab Studio</title>
+    
+    <!-- Tailwind CSS -->
+    <script is:inline src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script is:inline src="https://unpkg.com/lucide@latest"></script>
+    <!-- HTML to Image Library -->
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900&family=JetBrains+Mono:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
+    
+    <script is:inline>
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                        grotesk: ['Space Grotesk', 'sans-serif'],
+                        playfair: ['Playfair Display', 'serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .bg-checker {
+            background-color: #f3f4f6;
+            background-image: linear-gradient(45deg, #e5e7eb 25%, transparent 25%), 
+                              linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #e5e7eb 75%), 
+                              linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        }
+        .dark .bg-checker {
+            background-color: #0c0c0e;
+            background-image: linear-gradient(45deg, #18181b 25%, transparent 25%),
+                              linear-gradient(-45deg, #18181b 25%, transparent 25%),
+                              linear-gradient(45deg, transparent 75%, #18181b 75%),
+                              linear-gradient(-45deg, transparent 75%, #18181b 75%);
+        }
+
+        /* Chrome Tab CSS specifics */
+        .chrome-tab-light {
+            background-color: #dee1e6;
+            color: #4a4a4a;
+        }
+        .chrome-tab-dark {
+            background-color: #202124;
+            color: #e8eaed;
+        }
+        
+        /* macOS-style range sliders */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: #ffffff; cursor: pointer; margin-top: -4px; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .dark input[type=range]::-webkit-slider-thumb { border-color: #52525b; background: #e4e4e7; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e5e7eb; border-radius: 2px; }
+        .dark input[type=range]::-webkit-slider-runnable-track { background: #3f3f46; }
+        
+        input[type="color"] { -webkit-appearance: none; border: none; border-radius: 6px; cursor: pointer; padding: 0; overflow: hidden; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); }
+
+        select, input[type="text"] { background-color: rgba(243, 244, 246, 0.8); border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; font-size: 11px; outline: none; transition: all 0.2s; width: 100%; }
+        select:focus, input[type="text"]:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2); }
+        .dark select, .dark input[type="text"] { background-color: rgba(24, 24, 27, 0.8); border-color: #3f3f46; color: #fff; }
+        .dark select:focus, .dark input[type="text"]:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3); }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; }
+
+        .property-group { border-bottom: 1px solid #e5e7eb; padding: 1rem 0; }
+        .dark .property-group { border-bottom-color: #27272a; }
+        .property-group:last-child { border-bottom: none; }
+        
+        .transform-layer { display: inline-block; transform-origin: center; transition: all 0.15s ease-out; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-[#09090b] text-gray-900 dark:text-zinc-100 h-screen flex flex-col overflow-hidden transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="h-14 bg-white dark:bg-[#121212] border-b border-gray-200 dark:border-white/5 shrink-0 flex items-center justify-between px-6 z-30">
+        <div class="flex items-center gap-3">
+            <button onclick="window.history.back()" class="p-1.5 -ml-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <div class="h-4 w-px bg-gray-300 dark:bg-zinc-700"></div>
+            <span class="text-sm font-semibold tracking-tight ml-1">Favicon & Browser Tab Studio</span>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button class="theme-toggle-btn p-2 rounded-full text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors focus:outline-none">
+                <span class="dark:hidden flex"><i data-lucide="moon" class="w-4 h-4"></i></span>
+                <span class="hidden dark:flex"><i data-lucide="sun" class="w-4 h-4"></i></span>
+            </button>
+            
+            <!-- Export Bundle Dropdown -->
+            <div class="relative group">
+                <button class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> Export Kit
+                </button>
+                <div class="absolute right-0 top-[calc(100%+8px)] w-56 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-zinc-800 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col py-2 z-50">
+                    <div class="px-3 pb-1 mb-1 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Favicon PNG Formats</span>
+                    </div>
+                    <button onclick="exportFavicon(16)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between"><span>Micro Tab (16x16)</span><span class="text-[9px] text-gray-400 font-mono">16px</span></button>
+                    <button onclick="exportFavicon(32)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between"><span>Retina Tab (32x32)</span><span class="text-[9px] text-gray-400 font-mono">32px</span></button>
+                    <button onclick="exportFavicon(48)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between"><span>Desktop App (48x48)</span><span class="text-[9px] text-gray-400 font-mono">48px</span></button>
+                    <button onclick="exportFavicon(180)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between"><span>Apple Touch (180x180)</span><span class="text-[9px] text-gray-400 font-mono">180px</span></button>
+                    <button onclick="exportFavicon(192)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between"><span>Android Chrome (192x192)</span><span class="text-[9px] text-gray-400 font-mono">192px</span></button>
+                    
+                    <div class="px-3 pb-1 mt-2 mb-1 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Vector Formats</span>
+                    </div>
+                    <button onclick="exportFaviconSVG()" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between"><span>Scalable Favicon (SVG)</span><span class="text-[9px] text-brand-500 font-bold font-mono">SVG</span></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Visual Workspace -->
+        <div class="flex-1 bg-checker overflow-y-auto custom-scrollbar p-6 space-y-6 flex flex-col items-center">
+            
+            <!-- 1. The Chrome Tab Mockup (Interactive Dark/Light Tab Mockup) -->
+            <div class="w-full max-w-2xl bg-white dark:bg-[#121212] rounded-2xl border border-gray-200 dark:border-white/5 shadow-xl overflow-hidden transition-all duration-300">
+                <!-- Browser Bar Controls -->
+                <div id="chrome-browser-bar" class="chrome-tab-light h-11 px-4 flex items-center justify-between transition-colors duration-300 relative select-none">
+                    <!-- macOS Close/Min/Max Dots -->
+                    <div class="flex items-center gap-1.5 absolute left-4">
+                        <div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                        <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                        <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+                    </div>
+                    
+                    <!-- Chrome Active Tab Mockup -->
+                    <div class="flex items-center gap-1 mx-auto pl-10">
+                        <div id="chrome-active-tab" class="h-8 bg-white dark:bg-[#35363a] rounded-t-lg px-4 flex items-center gap-2 border-t border-x border-gray-300/40 dark:border-white/5 shadow-sm min-w-[160px] max-w-[200px] transition-colors duration-300">
+                            <!-- Dynamically Drawn favicon inside Chrome Tab Mockup (Targeting exact 16px size) -->
+                            <div class="w-4 h-4 flex items-center justify-center shrink-0 overflow-hidden rounded-[2px]" id="chrome-tab-favicon-container">
+                                <!-- Favicon clones here inside updateUI() -->
+                            </div>
+                            <span id="chrome-tab-title" class="text-xs font-medium truncate pr-4 text-gray-700 dark:text-zinc-200 select-none">My Web App</span>
+                            <i data-lucide="x" class="w-3 h-3 text-gray-400 dark:text-zinc-500 hover:text-red-500 ml-auto cursor-pointer shrink-0"></i>
+                        </div>
+                        
+                        <!-- Chrome New Tab Plus button -->
+                        <div class="w-6 h-6 hover:bg-black/10 dark:hover:bg-white/10 rounded-full flex items-center justify-center cursor-pointer transition-colors">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- White/Dark Chrome Theme Toggle (Client Side) -->
+                    <div class="absolute right-4 flex items-center gap-2">
+                        <button onclick="toggleChromeMockupTheme()" class="flex items-center gap-1.5 px-3 py-1 bg-white/20 dark:bg-white/5 hover:bg-white/30 dark:hover:bg-white/10 border border-gray-300/20 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors outline-none">
+                            <i data-lucide="palette" class="w-3 h-3"></i> Tab Style
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Browser Address Bar -->
+                <div class="bg-white dark:bg-[#2b2b2b] border-b border-gray-200 dark:border-zinc-800 px-4 py-2 flex items-center gap-3">
+                    <div class="flex items-center gap-2.5 text-gray-400 dark:text-zinc-500">
+                        <i data-lucide="arrow-left" class="w-4 h-4 cursor-pointer"></i>
+                        <i data-lucide="arrow-right" class="w-4 h-4 cursor-pointer"></i>
+                        <i data-lucide="rotate-cw" class="w-4 h-4 cursor-pointer"></i>
+                    </div>
+                    <div class="flex-1 bg-gray-100 dark:bg-[#202124] border border-gray-200 dark:border-white/5 rounded-full px-4 py-1 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
+                        <span class="truncate">https://my-web-app.com</span>
+                        <i data-lucide="star" class="w-3.5 h-3.5 text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Master Canvas Render Area (Exported for Vector/High-res) -->
+            <div class="flex flex-col items-center gap-2">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sandbox Canvas (256x256px)</span>
+                <!-- Container that gets compiled to canvas or exported -->
+                <div class="relative bg-white/5 border border-gray-300/20 rounded-3xl p-4 shadow-sm flex items-center justify-center overflow-hidden">
+                    <div id="master-favicon-canvas" class="relative flex items-center justify-center shadow-lg transition-all" style="width: 256px; height: 256px; background-color: #8b5cf6; border-radius: 64px;">
+                        
+                        <!-- Content: Monogram letters -->
+                        <span id="master-favicon-text" class="font-outfit text-white text-[120px] font-black select-none leading-none tracking-normal">A</span>
+                        
+                        <!-- Content: Emojis -->
+                        <span id="master-favicon-emoji" class="hidden text-[140px] leading-none select-none tracking-normal">✨</span>
+
+                        <!-- Ring overlay -->
+                        <div id="favicon-ring" class="hidden absolute inset-0 border-[10px] border-white/20 rounded-full"></div>
+                        <!-- Accent dot -->
+                        <div id="favicon-dot" class="hidden absolute bottom-4 right-4 w-10 h-10 rounded-full bg-brand-500 border-4 border-transparent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Multi-Size Legibility Grid -->
+            <div class="w-full max-w-xl bg-white dark:bg-card-bg border border-gray-200 dark:border-border-color/40 p-6 rounded-3xl space-y-4 shadow-sm">
+                <div class="flex items-center gap-2 border-b border-border-color/30 pb-2">
+                    <i data-lucide="grid" class="w-4 h-4 text-brand-500"></i>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-text-main">Real-Size Preview Grid</h4>
+                </div>
+                
+                <div class="grid grid-cols-5 gap-4 items-end text-center">
+                    <!-- Size 16 -->
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-black/30 flex items-center justify-center border border-border-color/20">
+                            <div class="size-preview-16 w-[16px] h-[16px] overflow-hidden rounded-[2px]"></div>
+                        </div>
+                        <span class="text-[9px] font-mono text-gray-500">16x16px</span>
+                    </div>
+                    <!-- Size 32 -->
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-black/30 flex items-center justify-center border border-border-color/20">
+                            <div class="size-preview-32 w-[32px] h-[32px] overflow-hidden rounded-md"></div>
+                        </div>
+                        <span class="text-[9px] font-mono text-gray-500">32x32px</span>
+                    </div>
+                    <!-- Size 48 -->
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-16 h-16 rounded-lg bg-gray-100 dark:bg-black/30 flex items-center justify-center border border-border-color/20">
+                            <div class="size-preview-48 w-[48px] h-[48px] overflow-hidden rounded-lg"></div>
+                        </div>
+                        <span class="text-[9px] font-mono text-gray-500">48x48px</span>
+                    </div>
+                    <!-- Size 128 -->
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-24 h-24 rounded-lg bg-gray-100 dark:bg-black/30 flex items-center justify-center border border-border-color/20">
+                            <div class="size-preview-128 w-[80px] h-[80px] overflow-hidden rounded-2xl"></div>
+                        </div>
+                        <span class="text-[9px] font-mono text-gray-500">128x128px</span>
+                    </div>
+                    <!-- Size 180 -->
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-28 h-28 rounded-lg bg-gray-100 dark:bg-black/30 flex items-center justify-center border border-border-color/20">
+                            <div class="size-preview-180 w-[96px] h-[96px] overflow-hidden rounded-[20px]"></div>
+                        </div>
+                        <span class="text-[9px] font-mono text-gray-500">Apple 180px</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Design Inspector Panel -->
+        <aside class="w-[360px] bg-white dark:bg-[#121212] border-l border-gray-200 dark:border-white/5 flex flex-col shrink-0 shadow-[-4px_0_15px_rgba(0,0,0,0.03)] z-20">
+            <div class="p-3.5 border-b border-gray-200 dark:border-white/5 flex items-center gap-2 bg-gray-50/50 dark:bg-black/20">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-gray-500 dark:text-zinc-400"></i>
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-zinc-300">Favicon Inspector</span>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-5 pb-12 space-y-2">
+                
+                <!-- 1. Browser Tab Mockup Settings -->
+                <div class="property-group">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="window" class="w-3.5 h-3.5"></i> Tab Mockup Setup</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[9px] uppercase text-gray-500 mb-1">Tab Label Title</label>
+                            <input type="text" id="ctrl-tab-title" value="My Web App" placeholder="Type custom tab text...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Favicon Mode Selector -->
+                <div class="property-group">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="layers" class="w-3.5 h-3.5"></i> Customizer Mode</h3>
+                    <div>
+                        <select id="ctrl-favicon-mode" class="w-full">
+                            <option value="monogram" selected>Text Monogram Style</option>
+                            <option value="emoji">Developer Emoji Style</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 3. Monogram Settings (Conditional) -->
+                <div id="monogram-settings-group" class="property-group">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="type" class="w-3.5 h-3.5"></i> Monogram Setup</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-[1fr_2fr] gap-2 items-end">
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Letter</label>
+                                <input type="text" id="ctrl-mono-text" value="A" maxlength="2" class="text-center">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[9px] uppercase text-gray-500 mb-1">Font</label>
+                                    <select id="ctrl-mono-font">
+                                        <option value="Outfit">Outfit</option>
+                                        <option value="Inter">Inter</option>
+                                        <option value="Space Grotesk">Grotesk</option>
+                                        <option value="JetBrains Mono">Mono</option>
+                                        <option value="Playfair Display">Playfair</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] uppercase text-gray-500 mb-1">Weight</label>
+                                    <select id="ctrl-mono-weight">
+                                        <option value="300">Light</option>
+                                        <option value="500">Medium</option>
+                                        <option value="700">Bold</option>
+                                        <option value="900" selected>Black</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Monogram Fills -->
+                        <div class="bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-semibold text-gray-700 dark:text-zinc-300">Text Fill</span>
+                                <select id="ctrl-mono-fill-type" class="w-20 text-[9px] py-0.5"><option value="solid">Solid</option><option value="gradient">Gradient</option></select>
+                            </div>
+                            <div id="mono-solid-ctrl"><input type="color" id="ctrl-mono-color" value="#ffffff" class="w-full h-6"></div>
+                            <div id="mono-grad-ctrl" class="hidden space-y-2">
+                                <div class="flex gap-1"><input type="color" id="ctrl-mono-g1" value="#ffffff" class="flex-1 h-6"><input type="color" id="ctrl-mono-g2" value="#a78bfa" class="flex-1 h-6"></div>
+                                <div><div class="flex justify-between mb-1"><label class="text-[8px] text-gray-500">Angle</label><span id="val-mono-ang" class="text-[8px]">135°</span></div><input type="range" id="ctrl-mono-ang" min="0" max="360" value="135"></div>
+                            </div>
+                        </div>
+
+                        <!-- Monogram Scaling / Offset -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Font Scale</label><span id="val-mono-scale" class="text-[9px]">1x</span></div>
+                                <input type="range" id="ctrl-mono-scale" min="0.5" max="1.5" step="0.05" value="1">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Y Offset</label><span id="val-mono-y" class="text-[9px]">0px</span></div>
+                                <input type="range" id="ctrl-mono-y" min="-40" max="40" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Emoji Settings (Conditional) -->
+                <div id="emoji-settings-group" class="property-group hidden">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Emoji Setup</h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Pick Preset</label>
+                                <select id="ctrl-emoji-preset">
+                                    <option value="✨" selected>✨ Magic Sparks</option>
+                                    <option value="⚡">⚡ Lightning</option>
+                                    <option value="🚀">🚀 Rocket</option>
+                                    <option value="🔥">🔥 Heat Fire</option>
+                                    <option value="💻">💻 Code Developer</option>
+                                    <option value="💡">💡 Idea</option>
+                                    <option value="🛡️">🛡️ Shield Security</option>
+                                    <option value="🎨">🎨 Art Palette</option>
+                                    <option value="custom">Type Custom...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Custom Emoji</label>
+                                <input type="text" id="ctrl-emoji-text" value="✨" class="text-center" disabled>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Emoji Scale</label><span id="val-emoji-scale" class="text-[9px]">1x</span></div>
+                                <input type="range" id="ctrl-emoji-scale" min="0.5" max="1.5" step="0.05" value="1">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Y Offset</label><span id="val-emoji-y" class="text-[9px]">0px</span></div>
+                                <input type="range" id="ctrl-emoji-y" min="-40" max="40" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Background Canvas settings -->
+                <div class="property-group">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="image" class="w-3.5 h-3.5"></i> Background Board</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Fill Type</label>
+                                <select id="ctrl-bg-type">
+                                    <option value="solid">Solid Color</option>
+                                    <option value="gradient" selected>Gradient Fill</option>
+                                    <option value="transparent">Transparent</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Outer Radius</label>
+                                <select id="ctrl-bg-radius-preset">
+                                    <option value="circle">Circle Shape</option>
+                                    <option value="rounded-sq" selected>Rounded Square</option>
+                                    <option value="squircle">Squircle Pro</option>
+                                    <option value="sharp">Sharp Square</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Solid BG Color picker -->
+                        <div id="bg-solid-ctrl" class="hidden bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800 flex justify-between items-center">
+                            <span class="text-[10px] font-medium text-gray-600 dark:text-zinc-400 pl-1">Background Solid</span>
+                            <input type="color" id="ctrl-bg-color" value="#8b5cf6" class="w-16 h-6">
+                        </div>
+
+                        <!-- Gradient BG Color controls -->
+                        <div id="bg-grad-ctrl" class="bg-gray-50 dark:bg-zinc-900/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800 space-y-3">
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Preset Themes</label>
+                                <select id="ctrl-bg-preset" class="w-full">
+                                    <option value="purple" selected>Purple Velvet</option>
+                                    <option value="sunset" data-g1="#f59e0b" data-g2="#ef4444">Sunset Warmth</option>
+                                    <option value="ocean" data-g1="#06b6d4" data-g2="#3b82f6">Deep Ocean</option>
+                                    <option value="emerald" data-g1="#10b981" data-g2="#059669">Emerald Clean</option>
+                                    <option value="charcoal" data-g1="#18181b" data-g2="#09090b">Matte Charcoal</option>
+                                    <option value="custom">Custom Gradients...</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="color" id="ctrl-bg-g1" value="#a78bfa" class="flex-1 h-6">
+                                <input type="color" id="ctrl-bg-g2" value="#7c3aed" class="flex-1 h-6">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[8px] text-gray-500">Angle</label><span id="val-bg-ang" class="text-[8px]">135°</span></div>
+                                <input type="range" id="ctrl-bg-ang" min="0" max="360" value="135">
+                            </div>
+                        </div>
+
+                        <!-- Border Padding details -->
+                        <div class="grid grid-cols-2 gap-3 mt-2">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Border Radius</label><span id="val-bg-rad" class="text-[9px]">64px</span></div>
+                                <input type="range" id="ctrl-bg-rad" min="0" max="128" value="64">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Inner Padding</label><span id="val-bg-pad" class="text-[9px]">0px</span></div>
+                                <input type="range" id="ctrl-bg-pad" min="0" max="60" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Overlays & Accents -->
+                <div class="property-group">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="shield-alert" class="w-3.5 h-3.5"></i> Ring & Accent Overlays</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800">
+                            <span class="text-[10px] font-semibold text-gray-700 dark:text-zinc-300">Accent Circular Ring</span>
+                            <input type="checkbox" id="ctrl-ring-enable" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500">
+                        </div>
+                        <div id="ring-color-ctrl" class="hidden bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800 flex justify-between items-center">
+                            <span class="text-[10px] font-medium text-gray-600 dark:text-zinc-400 pl-1">Ring Color</span>
+                            <input type="color" id="ctrl-ring-color" value="#ffffff" class="w-16 h-6">
+                        </div>
+                        
+                        <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800">
+                            <span class="text-[10px] font-semibold text-gray-700 dark:text-zinc-300">Notification Accent Dot</span>
+                            <input type="checkbox" id="ctrl-dot-enable" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500">
+                        </div>
+                        <div id="dot-color-ctrl" class="hidden bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800 flex justify-between items-center">
+                            <span class="text-[10px] font-medium text-gray-600 dark:text-zinc-400 pl-1">Dot Color</span>
+                            <input type="color" id="ctrl-dot-color" value="#ff4b4b" class="w-16 h-6">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+    </main>
+
+    <script is:inline>
+        // DOM Nodes Map
+        const dom = {
+            canvas: document.getElementById('master-favicon-canvas'),
+            text: document.getElementById('master-favicon-text'),
+            emoji: document.getElementById('master-favicon-emoji'),
+            ring: document.getElementById('favicon-ring'),
+            dot: document.getElementById('favicon-dot'),
+            
+            tabTitle: document.getElementById('chrome-tab-title'),
+            tabFaviconContainer: document.getElementById('chrome-tab-favicon-container'),
+            browserBar: document.getElementById('chrome-browser-bar'),
+            activeTab: document.getElementById('chrome-active-tab')
+        };
+
+        const fontMap = {
+            'Outfit': 'font-outfit',
+            'Inter': 'font-sans',
+            'Space Grotesk': 'font-grotesk',
+            'Playfair Display': 'font-playfair',
+            'JetBrains Mono': 'font-mono'
+        };
+
+        let chromeMockupTheme = 'light'; // Light mode tab mockup by default
+
+        // Helper to bind label updates dynamically
+        function bindLabel(id, suffix='') {
+            const el = document.getElementById(`ctrl-${id}`);
+            const val = document.getElementById(`val-${id}`);
+            if(el && val) el.addEventListener('input', () => val.innerText = el.value + suffix);
+        }
+        ['mono-ang','mono-scale','mono-y','emoji-scale','emoji-y','bg-ang','bg-rad','bg-pad'].forEach(id => {
+            const suffix = id.includes('scale') ? 'x' : (id.includes('ang') ? '°' : 'px');
+            bindLabel(id, suffix);
+        });
+
+        // Mode Toggles
+        document.getElementById('ctrl-favicon-mode').addEventListener('change', (e) => {
+            const mode = e.target.value;
+            const monoGroup = document.getElementById('monogram-settings-group');
+            const emojiGroup = document.getElementById('emoji-settings-group');
+            
+            if(mode === 'monogram') {
+                monoGroup.classList.remove('hidden');
+                emojiGroup.classList.add('hidden');
+                dom.text.classList.remove('hidden');
+                dom.emoji.classList.add('hidden');
+            } else {
+                monoGroup.classList.add('hidden');
+                emojiGroup.classList.remove('hidden');
+                dom.text.classList.add('hidden');
+                dom.emoji.classList.remove('hidden');
+            }
+            updateUI();
+        });
+
+        // Emoji Presets logic
+        document.getElementById('ctrl-emoji-preset').addEventListener('change', (e) => {
+            const preset = e.target.value;
+            const customInput = document.getElementById('ctrl-emoji-text');
+            if (preset === 'custom') {
+                customInput.removeAttribute('disabled');
+                customInput.focus();
+            } else {
+                customInput.setAttribute('disabled', 'true');
+                customInput.value = preset;
+                updateUI();
+            }
+        });
+        document.getElementById('ctrl-emoji-text').addEventListener('input', updateUI);
+
+        // Fill Toggles
+        document.getElementById('ctrl-bg-type').addEventListener('change', (e) => {
+            const type = e.target.value;
+            const sCtrl = document.getElementById('bg-solid-ctrl');
+            const gCtrl = document.getElementById('bg-grad-ctrl');
+            
+            if(type === 'solid') {
+                sCtrl.classList.remove('hidden'); gCtrl.classList.add('hidden');
+            } else if (type === 'gradient') {
+                sCtrl.classList.add('hidden'); gCtrl.classList.remove('hidden');
+            } else {
+                sCtrl.classList.add('hidden'); gCtrl.classList.add('hidden');
+            }
+            updateUI();
+        });
+
+        // Monogram Fill type toggling
+        document.getElementById('ctrl-mono-fill-type').addEventListener('change', (e) => {
+            const isGrad = e.target.value === 'gradient';
+            const sCtrl = document.getElementById('mono-solid-ctrl');
+            const gCtrl = document.getElementById('mono-grad-ctrl');
+            if (isGrad) {
+                sCtrl.classList.add('hidden'); gCtrl.classList.remove('hidden');
+            } else {
+                sCtrl.classList.remove('hidden'); gCtrl.classList.add('hidden');
+            }
+            updateUI();
+        });
+
+        // BG Gradient preset selection logic
+        document.getElementById('ctrl-bg-preset').addEventListener('change', (e) => {
+            if(e.target.value !== 'custom') {
+                const opt = e.target.options[e.target.selectedIndex];
+                const bg1 = document.getElementById('ctrl-bg-g1');
+                const bg2 = document.getElementById('ctrl-bg-g2');
+                if (e.target.value === 'purple') {
+                    bg1.value = '#a78bfa'; bg2.value = '#7c3aed';
+                } else {
+                    bg1.value = opt.dataset.g1; bg2.value = opt.dataset.g2;
+                }
+                updateUI();
+            }
+        });
+        ['ctrl-bg-g1', 'ctrl-bg-g2', 'ctrl-bg-ang'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => { document.getElementById('ctrl-bg-preset').value = 'custom'; });
+        });
+
+        // Border radius preset logic
+        document.getElementById('ctrl-bg-radius-preset').addEventListener('change', (e) => {
+            const preset = e.target.value;
+            const radSlider = document.getElementById('ctrl-bg-rad');
+            const valLabel = document.getElementById('val-bg-rad');
+            
+            if(preset === 'circle') { radSlider.value = 128; }
+            else if (preset === 'rounded-sq') { radSlider.value = 64; }
+            else if (preset === 'squircle') { radSlider.value = 88; }
+            else { radSlider.value = 0; }
+            valLabel.innerText = `${radSlider.value}px`;
+            updateUI();
+        });
+
+        // Toggle Accent Ring & Dot input controls
+        document.getElementById('ctrl-ring-enable').addEventListener('change', (e) => {
+            document.getElementById('ring-color-ctrl').classList.toggle('hidden', !e.target.checked);
+            updateUI();
+        });
+        document.getElementById('ctrl-dot-enable').addEventListener('change', (e) => {
+            document.getElementById('dot-color-ctrl').classList.toggle('hidden', !e.target.checked);
+            updateUI();
+        });
+
+        // Client UI state selectors
+        const val = (id) => document.getElementById(`ctrl-${id}`).value;
+        const checked = (id) => document.getElementById(`ctrl-${id}`).checked;
+
+        function applyTextFill(element, prefix) {
+            const type = val(`${prefix}-fill-type`);
+            if (type === 'gradient') {
+                element.style.backgroundImage = `linear-gradient(${val(`${prefix}-ang`)}deg, ${val(`${prefix}-g1`)}, ${val(`${prefix}-g2`)})`;
+                element.style.webkitBackgroundClip = 'text';
+                element.style.backgroundClip = 'text';
+                element.style.webkitTextFillColor = 'transparent';
+                element.style.color = 'transparent';
+            } else {
+                element.style.backgroundImage = 'none';
+                element.style.webkitBackgroundClip = 'initial';
+                element.style.backgroundClip = 'initial';
+                element.style.webkitTextFillColor = 'initial';
+                element.style.color = val(`${prefix}-color`);
+            }
+        }
+
+        function updateUI() {
+            // Update Tab Mockup text Label
+            dom.tabTitle.innerText = document.getElementById('ctrl-tab-title').value || 'My Web App';
+
+            // 1. Background Setup
+            const bgType = val('bg-type');
+            if (bgType === 'gradient') {
+                dom.canvas.style.background = `linear-gradient(${val('bg-ang')}deg, ${val('bg-g1')}, ${val('bg-g2')})`;
+            } else if (bgType === 'transparent') {
+                dom.canvas.style.background = 'transparent';
+            } else {
+                dom.canvas.style.background = val('bg-color');
+            }
+            dom.canvas.style.borderRadius = `${val('bg-rad')}px`;
+            dom.canvas.style.padding = `${val('bg-pad')}px`;
+
+            // 2. Favicon Mode content loading
+            const mode = val('favicon-mode');
+            if(mode === 'monogram') {
+                dom.text.innerText = val('mono-text');
+                dom.text.className = `${fontMap[val('mono-font')]} font-black select-none leading-none tracking-normal block`;
+                dom.text.style.fontWeight = val('mono-weight');
+                dom.text.style.transform = `scale(${val('mono-scale')}) translateY(${val('mono-y')}px)`;
+                applyTextFill(dom.text, 'mono');
+            } else {
+                dom.emoji.innerText = val('emoji-text');
+                dom.emoji.style.transform = `scale(${val('emoji-scale')}) translateY(${val('emoji-y')}px)`;
+            }
+
+            // 3. Ring Accents
+            if(checked('ring-enable')) {
+                dom.ring.classList.remove('hidden');
+                dom.ring.style.borderColor = val('ring-color');
+                dom.ring.style.borderRadius = `${val('bg-rad')}px`;
+            } else {
+                dom.ring.classList.add('hidden');
+            }
+            if(checked('dot-enable')) {
+                dom.dot.classList.remove('hidden');
+                dom.dot.style.backgroundColor = val('dot-color');
+            } else {
+                dom.dot.classList.add('hidden');
+            }
+
+            // 4. Update real-size Multi-Size legibility grid clones dynamically!
+            const canvasHTML = dom.canvas.outerHTML;
+            ['16', '32', '48', '128', '180'].forEach(size => {
+                const containers = document.querySelectorAll(`.size-preview-${size}`);
+                containers.forEach(box => {
+                    box.innerHTML = canvasHTML;
+                    // Fix nested canvas size to fit exact bounds
+                    const child = box.firstElementChild;
+                    child.id = `preview-clone-${size}`;
+                    child.style.width = '100%';
+                    child.style.height = '100%';
+                    child.style.borderRadius = `${parseInt(val('bg-rad')) * (parseInt(size) / 256)}px`;
+                    child.style.padding = `${parseInt(val('bg-pad')) * (parseInt(size) / 256)}px`;
+                    
+                    // Scale text element
+                    const textNode = child.querySelector('#master-favicon-text');
+                    const emojiNode = child.querySelector('#master-favicon-emoji');
+                    if (textNode) {
+                        textNode.style.fontSize = `${120 * (parseInt(size) / 256)}px`;
+                        textNode.style.transform = `scale(${val('mono-scale')}) translateY(${parseInt(val('mono-y')) * (parseInt(size) / 256)}px)`;
+                    }
+                    if (emojiNode) {
+                        emojiNode.style.fontSize = `${140 * (parseInt(size) / 256)}px`;
+                        emojiNode.style.transform = `scale(${val('emoji-scale')}) translateY(${parseInt(val('emoji-y')) * (parseInt(size) / 256)}px)`;
+                    }
+                    
+                    // Scale accents
+                    const ringNode = child.querySelector('#favicon-ring');
+                    const dotNode = child.querySelector('#favicon-dot');
+                    if (ringNode) {
+                        ringNode.style.borderWidth = `${10 * (parseInt(size) / 256)}px`;
+                        ringNode.style.borderRadius = `${parseInt(val('bg-rad')) * (parseInt(size) / 256)}px`;
+                    }
+                    if (dotNode) {
+                        dotNode.style.width = `${10 * (parseInt(size) / 64)}px`;
+                        dotNode.style.height = `${10 * (parseInt(size) / 64)}px`;
+                        dotNode.style.bottom = `${4 * (parseInt(size) / 256)}px`;
+                        dotNode.style.right = `${4 * (parseInt(size) / 256)}px`;
+                    }
+                });
+            });
+
+            // 5. Clone direct to chrome tab container at 16x16px size
+            dom.tabFaviconContainer.innerHTML = document.querySelector('.size-preview-16').innerHTML;
+        }
+
+        // Toggle White/Dark Chrome Mockup bar
+        function toggleChromeMockupTheme() {
+            if(chromeMockupTheme === 'light') {
+                chromeMockupTheme = 'dark';
+                dom.browserBar.className = 'chrome-tab-dark h-11 px-4 flex items-center justify-between transition-colors duration-300 relative select-none';
+                dom.activeTab.className = 'h-8 bg-[#35363a] text-zinc-200 rounded-t-lg px-4 flex items-center gap-2 border-t border-x border-white/5 shadow-sm min-w-[160px] max-w-[200px] transition-colors duration-300';
+            } else {
+                chromeMockupTheme = 'light';
+                dom.browserBar.className = 'chrome-tab-light h-11 px-4 flex items-center justify-between transition-colors duration-300 relative select-none';
+                dom.activeTab.className = 'h-8 bg-white text-gray-700 rounded-t-lg px-4 flex items-center gap-2 border-t border-x border-gray-300/40 shadow-sm min-w-[160px] max-w-[200px] transition-colors duration-300';
+            }
+        }
+
+        // Blanket Listeners
+        document.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('input', updateUI);
+            el.addEventListener('change', updateUI);
+        });
+
+        // Theme Toggle
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateUI();
+        }
+        document.querySelector('.theme-toggle-btn').addEventListener('click', toggleTheme);
+
+        // Export PNG resolutions
+        function exportFavicon(size) {
+            // Temporary container rendering to exact pixel size for pixel-perfect download
+            const tempBox = document.createElement('div');
+            tempBox.style.width = `${size}px`;
+            tempBox.style.height = `${size}px`;
+            tempBox.style.position = 'fixed';
+            tempBox.style.top = '-9999px';
+            tempBox.style.left = '-9999px';
+            
+            // Clone the multi-size legibility container exactly
+            tempBox.innerHTML = document.querySelector(`.size-preview-${size === 16 || size === 32 || size === 48 || size === 128 || size === 180 ? size : '128'}`).innerHTML;
+            document.body.appendChild(tempBox);
+            
+            const targetNode = tempBox.firstElementChild;
+            if(size !== 16 && size !== 32 && size !== 48 && size !== 128 && size !== 180) {
+                // Resize for custom outputs (192px Android etc)
+                targetNode.style.width = `${size}px`;
+                targetNode.style.height = `${size}px`;
+                targetNode.style.borderRadius = `${parseInt(val('bg-rad')) * (size / 256)}px`;
+                targetNode.style.padding = `${parseInt(val('bg-pad')) * (size / 256)}px`;
+                
+                const tNode = targetNode.querySelector('#master-favicon-text');
+                const eNode = targetNode.querySelector('#master-favicon-emoji');
+                if(tNode) {
+                    tNode.style.fontSize = `${120 * (size / 256)}px`;
+                    tNode.style.transform = `scale(${val('mono-scale')}) translateY(${parseInt(val('mono-y')) * (size / 256)}px)`;
+                }
+                if(eNode) {
+                    eNode.style.fontSize = `${140 * (size / 256)}px`;
+                    eNode.style.transform = `scale(${val('emoji-scale')}) translateY(${parseInt(val('emoji-y')) * (size / 256)}px)`;
+                }
+                
+                const ringNode = targetNode.querySelector('#favicon-ring');
+                const dotNode = targetNode.querySelector('#favicon-dot');
+                if (ringNode) {
+                    ringNode.style.borderWidth = `${10 * (size / 256)}px`;
+                    ringNode.style.borderRadius = `${parseInt(val('bg-rad')) * (size / 256)}px`;
+                }
+                if (dotNode) {
+                    dotNode.style.width = `${10 * (size / 64)}px`;
+                    dotNode.style.height = `${10 * (size / 64)}px`;
+                    dotNode.style.bottom = `${4 * (size / 256)}px`;
+                    dotNode.style.right = `${4 * (size / 256)}px`;
+                }
+            }
+
+            htmlToImage.toPng(targetNode, {
+                width: size,
+                height: size,
+                pixelRatio: 1,
+                style: { transform: 'scale(1)', transformOrigin: 'top left' }
+            }).then(dataUrl => {
+                const link = document.createElement('a');
+                const nameLabel = val('favicon-mode') === 'monogram' ? val('mono-text') : 'emoji';
+                link.download = `favicon-${nameLabel}-${size}x${size}.png`;
+                link.href = dataUrl;
+                link.click();
+                document.body.removeChild(tempBox);
+            }).catch(err => {
+                console.error(err);
+                document.body.removeChild(tempBox);
+            });
+        }
+
+        // Export Vector SVG
+        function exportFaviconSVG() {
+            htmlToImage.toSvg(dom.canvas, {
+                width: 256,
+                height: 256,
+                pixelRatio: 1
+            }).then(dataUrl => {
+                const link = document.createElement('a');
+                const nameLabel = val('favicon-mode') === 'monogram' ? val('mono-text') : 'emoji';
+                link.download = `favicon-${nameLabel}.svg`;
+                link.href = dataUrl;
+                link.click();
+            }).catch(err => {
+                console.error(err);
+            });
+        }
+
+        lucide.createIcons();
+        updateUI(); // Initial render
+    </script>
+</body>
+</html>

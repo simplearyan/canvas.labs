@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Glassy Purple/Blue Gradient -->
+    <linearGradient id="mainBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Bezel Inner Border Highlight Gradient -->
+    <linearGradient id="bezelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.1" />
+    </linearGradient>
+
+    <!-- Accent Dot Gradient -->
+    <linearGradient id="glowDotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+
+    <!-- Ultra Soft Drop Shadow for Icon Depth -->
+    <filter id="shadowFilter" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.4" />
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.2" />
+    </filter>
+
+    <!-- High-res Monogram Styling -->
+    <style>
+      .master-monogram {
+        font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+        font-weight: 900;
+        fill: #ffffff;
+      }
+    </style>
+  </defs>
+
+  <!-- Ground surface background (completely transparent, let squircle float with its shadow) -->
+  <!-- 1. Master Squircle with premium drop shadows -->
+  <rect x="48" y="48" width="416" height="416" rx="96" fill="url(#mainBgGrad)" filter="url(#shadowFilter)" />
+
+  <!-- Inner Bezel Ring Highlight -->
+  <rect x="50" y="50" width="412" height="412" rx="94" fill="none" stroke="url(#bezelGrad)" stroke-width="4" />
+
+  <!-- 2. Master Monogram letters 'CL' centered perfectly -->
+  <text x="256" y="306" font-size="192" letter-spacing="-8" text-anchor="middle" class="master-monogram">CL</text>
+
+  <!-- 3. Master Accent Dot at bottom right -->
+  <!-- White spacing outline ring -->
+  <circle cx="396" cy="396" r="68" fill="#020617" />
+  <!-- Glowing Violet Dot itself -->
+  <circle cx="396" cy="396" r="50" fill="url(#glowDotGrad)" />
+</svg>

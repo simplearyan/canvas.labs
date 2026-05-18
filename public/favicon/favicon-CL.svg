@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!--
+    ======================================================================
+    CANVAS LABS - CUSTOMIZABLE VECTOR FAVICON (CLEAN CODE VERSION)
+    ======================================================================
+    This clean-code vector SVG is fully customizable. You can directly edit 
+    the parameters below using any code editor.
+  -->
+  <defs>
+    <!-- 
+      1. BACKGROUND GRADIENT CONFIGURATION
+      - Edit 'stop-color' values to change background gradients.
+      - Edit 'x1, y1, x2, y2' coordinates to change the gradient angle.
+        Diagonal (135°): x1="0%" y1="0%" x2="100%" y2="100%"
+        Horizontal (90°): x1="0%" y1="0%" x2="100%" y2="0%"
+        Vertical (180°):  x1="0%" y1="0%" x2="0%" y2="100%"
+    -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa" />   <!-- Start Gradient Color (Lavender) -->
+      <stop offset="100%" stop-color="#7c3aed" />  <!-- End Gradient Color (Purple) -->
+    </linearGradient>
+
+    <!-- 
+      2. DESIGN & TYPOGRAPHY STYLES
+      - Edit 'fill' to change the Monogram text color.
+      - Edit 'font-size' to scale the letters up or down.
+      - Edit 'font-weight' to change boldness (100 to 900).
+    -->
+    <style>
+      .monogram-label {
+        font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+        font-size: 110px;      /* TEXT SIZE: Change this to scale monogram */
+        font-weight: 900;      /* TEXT WEIGHT: Change thickness (100-900) */
+        fill: #ffffff;         /* TEXT COLOR: Monogram character color */
+        letter-spacing: -6px;  /* LETTER SPACING: Adjust separation */
+      }
+    </style>
+  </defs>
+
+  <!-- 
+    3. BACKGROUND BOARD (SQUIRCLE)
+    - Edit 'x' and 'y' to adjust the outer padding gutter.
+    - Edit 'width' and 'height' to scale the background squircle.
+    - Edit 'rx' to adjust the corner roundness (e.g. 0 for square, 116 for circle).
+  -->
+  <rect 
+    x="12" 
+    y="12" 
+    width="232" 
+    height="232" 
+    rx="58" 
+    fill="url(#bgGradient)" 
+  />
+
+  <!-- 
+    4. MONOGRAM TEXT CONTENT
+    - Edit the inner text ('CL') below to change the brand monogram characters!
+    - Adjust 'y' coordinate to slide the text vertically and achieve perfect centering.
+  -->
+  <text 
+    x="128" 
+    y="166" 
+    text-anchor="middle" 
+    class="monogram-label"
+  >CL</text>
+</svg>

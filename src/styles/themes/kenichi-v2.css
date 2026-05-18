@@ -1,0 +1,16 @@
+@theme {
+  /* Kenichi v2 Brand Theme Colors - Exact matches to CapCut reference config */
+  --color-kenichi-v2-50: #f2f5ff;
+  --color-kenichi-v2-100: #e6ebff;
+  --color-kenichi-v2-400: #8ca8ff;
+  --color-kenichi-v2-500: #5c80ff;
+  --color-kenichi-v2-600: #3d63ff;
+  --color-kenichi-v2-900: #1a2e80;
+  --color-kenichi-v2-950: #0d1740;
+  
+  /* Kenichi v2 Matte Dark Surface Colors */
+  --color-surface-v2-900: #111111;
+  --color-surface-v2-800: #1e1e1e;
+  --color-surface-v2-700: #2a2a2a;
+  --color-surface-v2-600: #3a3a3a;
+}

@@ -1,0 +1,27 @@
+export const SITE_CONFIG = {
+  branding: {
+    name: "CanvasLabs",
+    acronym: "CL",
+    creator: "Canvas Labs Team",
+    defaultAccent: "#8b5cf6", // brand violet/purple
+    defaultBg: "#050505",     // pitch black base
+    darkModePalette: "capcut-v2", // Choose dark mode color scheme: "deep-black" (classic pitch black) or "capcut-v2" (matte cinematic grey)
+  },
+  seo: {
+    title: "CanvasLabs — Premium Animated Background Templates",
+    description: "Elevate your web and video projects with free, high-performance, responsive canvas animations and timeline editors.",
+    url: "https://canvaslabs.portal",
+    keywords: ["canvas", "animation", "motion graphics", "presets", "timeline editor", "Astro", "SolidJS"],
+    ogImage: "/og-image.png",
+    twitterHandle: "@canvaslabs",
+  },
+  tabPreferences: {
+    marqueeTitle: "Canvas Labs — Premium Animated Background Templates    ",
+    marqueeSpeedMs: 250,
+    favicon: {
+      default: "/favicon.svg",
+      darkTabEmoji: "⭐",
+      lightTabEmoji: "👉",
+    }
+  }
+};

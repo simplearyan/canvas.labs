@@ -1,0 +1,50 @@
+---
+import '../styles/global.css';
+import SecondaryLayout from './SecondaryLayout';
+import { SITE_CONFIG } from '../config/site';
+
+interface Props {
+	title: string;
+	description?: string;
+}
+
+const { title, description = SITE_CONFIG.seo.description } = Astro.props;
+---
+
+<html lang="en" data-theme-palette={SITE_CONFIG.branding.darkModePalette}>
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href={SITE_CONFIG.tabPreferences.favicon.default} />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<meta name="generator" content={Astro.generator} />
+		
+		<!-- Primary SEO Meta Tags -->
+		<title>{title} — {SITE_CONFIG.branding.name}</title>
+		<meta name="title" content={`${title} — ${SITE_CONFIG.branding.name}`} />
+		<meta name="description" content={description} />
+		
+		<!-- Block-level Theme Initializer Script to prevent flickering -->
+		<script is:inline>
+			(function() {
+				const savedTheme = localStorage.getItem("theme");
+				const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+				const useDark = savedTheme === "dark" || (!savedTheme && systemDark);
+				if (useDark) {
+					document.documentElement.classList.add("dark");
+				} else {
+					document.documentElement.classList.remove("dark");
+				}
+			})();
+		</script>
+
+		<!-- Google Fonts Outfit & Inter -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	</head>
+	<body>
+		<SecondaryLayout client:load>
+			<slot />
+		</SecondaryLayout>
+	</body>
+</html>

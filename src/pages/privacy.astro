@@ -1,0 +1,68 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { SITE_CONFIG } from '../config/site';
+---
+
+<Layout title="Privacy Policy" description={`Privacy Policy and data security guidelines for ${SITE_CONFIG.branding.name}.`}>
+	<!-- Back link -->
+	<a href="/" class="inline-flex items-center gap-2 text-sm text-text-muted hover:text-brand-500 transition-colors group mb-4">
+		<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-transform group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+		Back to Hub
+	</a>
+
+	<!-- Header -->
+	<div class="space-y-3 border-b border-border-color pb-6">
+		<h1 class="text-4xl font-extrabold tracking-tight text-text-main font-sans">Privacy Policy</h1>
+		<p class="text-sm text-text-muted">Last updated: May 17, 2026</p>
+	</div>
+
+	<!-- Content Grid -->
+	<div class="prose prose-neutral dark:prose-invert max-w-none text-text-muted space-y-8 font-sans leading-relaxed text-sm md:text-base">
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">1. Our Privacy Philosophy</h2>
+			<p>
+				At <strong>{SITE_CONFIG.branding.name}</strong>, we are committed to providing a high-fidelity visual experience without invasive user tracking. This portal is built by <strong>Aryan</strong> (<a href="https://github.com/simplearyan" target="_blank" rel="noopener noreferrer" class="text-brand-500 hover:underline font-semibold">simplearyan</a>) with privacy-first engineering as a core architectural design principle.
+			</p>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">2. Data We Do NOT Collect</h2>
+			<p>
+				We firmly believe in minimized data footprints:
+			</p>
+			<ul class="list-disc pl-5 space-y-2">
+				<li><strong>No Personal Databases:</strong> We do not ask for, process, or store your passwords, email accounts, or contact coordinates.</li>
+				<li><strong>No Invasive Advertising:</strong> We do not load third-party ad tracking scripts, keeping your web rendering blazing fast and tracking-free.</li>
+				<li><strong>No Server-Side Analytics:</strong> Your canvas layout editing preferences remain strictly local to your system.</li>
+			</ul>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">3. Local Storage Persistence</h2>
+			<p>
+				We use standard HTML5 <code>localStorage</code> purely to optimize your visual state, specifically saving your Light/Dark theme mode. This data remains locked to your local browser environment and is never sent to our servers or shared with external analytics companies.
+			</p>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">4. External Integrations</h2>
+			<p>
+				When you follow links to third-party resources, such as Aryan's public GitHub portfolio (<a href="https://github.com/simplearyan" target="_blank" rel="noopener noreferrer" class="text-brand-500 hover:underline font-semibold">simplearyan</a>), your activities on those external systems are governed exclusively by their respective privacy policies.
+			</p>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">5. Technical Policy Compliance</h2>
+			<p>
+				Our rendering components operate fully in compliance with standard digital security practices, implementing isolated browser contexts for script executions.
+			</p>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">6. Contact for Privacy Audits</h2>
+			<p>
+				If you have inquiries regarding our local storage keys or would like to audit our open-source frontend architectures, feel free to submit an issue at Aryan's repository: <a href="https://github.com/simplearyan" target="_blank" rel="noopener noreferrer" class="text-brand-500 hover:underline font-semibold">github.com/simplearyan</a>.
+			</p>
+		</section>
+	</div>
+</Layout>

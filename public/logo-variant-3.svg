@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 120" width="100%" height="100%">
+  <defs>
+    <!-- Sunset Purple/Magenta Gradient for App Icon Background -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#d946ef" />
+    </linearGradient>
+
+    <!-- Warm Amber Accent Dot Gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+
+    <!-- Brand Text Sunset Gradient -->
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#d946ef" />
+    </linearGradient>
+    
+    <!-- Premium Fonts Setup -->
+    <style>
+      .monogram-text {
+        font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+        font-weight: 900;
+        fill: #ffffff;
+      }
+      .brand-bold {
+        font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+        font-weight: 700;
+        fill: url(#textGrad);
+      }
+      .brand-light {
+        font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+        font-weight: 300;
+        fill: #374151;
+      }
+    </style>
+  </defs>
+
+  <!-- Group containing whole logo lockup -->
+  <g transform="translate(12, 12)">
+    <!-- 1. App Icon Box (96x96px) in Sunset Gradient -->
+    <rect x="0" y="0" width="96" height="96" rx="20" fill="url(#bgGrad)" />
+    
+    <!-- Monogram letters 'CL' -->
+    <text x="48" y="58" font-size="40" letter-spacing="-2" text-anchor="middle" class="monogram-text">CL</text>
+    
+    <!-- Accent Dot (24x24px) -->
+    <circle cx="82" cy="82" r="16" fill="#ffffff" />
+    <circle cx="82" cy="82" r="12" fill="url(#goldGrad)" />
+    
+    <!-- 2. Brand Typography -->
+    <g transform="translate(120, 48)">
+      <text x="0" y="16" font-size="48" letter-spacing="-1">
+        <tspan class="brand-bold">Canvas</tspan>
+        <tspan class="brand-light">Labs</tspan>
+      </text>
+    </g>
+  </g>
+</svg>

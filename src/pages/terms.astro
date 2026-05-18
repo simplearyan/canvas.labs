@@ -1,0 +1,67 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { SITE_CONFIG } from '../config/site';
+---
+
+<Layout title="Terms of Service" description={`Terms of Service and legal guidelines for using ${SITE_CONFIG.branding.name}.`}>
+	<!-- Back link -->
+	<a href="/" class="inline-flex items-center gap-2 text-sm text-text-muted hover:text-brand-500 transition-colors group mb-4">
+		<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-transform group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+		Back to Hub
+	</a>
+
+	<!-- Header -->
+	<div class="space-y-3 border-b border-border-color pb-6">
+		<h1 class="text-4xl font-extrabold tracking-tight text-text-main font-sans">Terms of Service</h1>
+		<p class="text-sm text-text-muted">Last updated: May 17, 2026</p>
+	</div>
+
+	<!-- Content Grid -->
+	<div class="prose prose-neutral dark:prose-invert max-w-none text-text-muted space-y-8 font-sans leading-relaxed text-sm md:text-base">
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">1. Acceptance of Terms</h2>
+			<p>
+				By accessing, browsing, or utilizing the services, motion presets, and visual layouts offered by <strong>{SITE_CONFIG.branding.name}</strong> ("Service", "we", "our"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please discontinue use of this portal immediately.
+			</p>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">2. Creative License & Usage</h2>
+			<p>
+				All templates, presets, vector animations, and code provided on this platform are curated by <strong>Aryan</strong> (<a href="https://github.com/simplearyan" target="_blank" rel="noopener noreferrer" class="text-brand-500 hover:underline font-semibold">simplearyan</a>).
+			</p>
+			<ul class="list-disc pl-5 space-y-2">
+				<li><strong>Permitted Use:</strong> You are granted a non-exclusive, non-transferable, personal license to download and experiment with the presets for visual prototyping and learning.</li>
+				<li><strong>Restricted Use:</strong> You may not repackage, re-license, sublicense, sell, or redistribute raw canvas components or JSON presets directly to competitive template marketplaces without written approval.</li>
+			</ul>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">3. Intellectual Property Rights</h2>
+			<p>
+				The intellectual property, underlying rendering engine architectures, custom WebWorkers, and mathematical formulas supporting the canvas simulations are the proprietary assets of the developer team, spearheaded by Aryan. All brand monogram graphics ("{SITE_CONFIG.branding.acronym}"), design systems, and portal page codes are legally copyrighted.
+			</p>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">4. Disclaimer of Warranties</h2>
+			<p>
+				Our services are provided on an "AS IS" and "AS AVAILABLE" basis. We make no warranty that our Web Workers, MP4 compression pipelines, or canvas rendering models will meet 100% of your performance metrics across all legacy mobile browsers or custom desktop operating systems.
+			</p>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">5. Modifications to Service</h2>
+			<p>
+				We reserve the right, at our sole discretion, to modify or discontinue any part of our motion presets library or core editor widgets without prior warning or liability.
+			</p>
+		</section>
+
+		<section class="space-y-3">
+			<h2 class="text-xl font-bold text-text-main">6. Contact and Inquiries</h2>
+			<p>
+				For copyright disputes, license agreements, or general technical support, please contact the developer via their public portal at <a href="https://github.com/simplearyan" target="_blank" rel="noopener noreferrer" class="text-brand-500 hover:underline font-semibold">github.com/simplearyan</a> or navigate directly to our <a href="/contact" class="text-brand-500 hover:underline font-semibold">Contact Page</a>.
+			</p>
+		</section>
+	</div>
+</Layout>

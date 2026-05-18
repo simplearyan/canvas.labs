@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <!-- Cyan to Green Neon Stroke Gradient -->
+    <linearGradient id="neonStrokeDef" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+
+    <!-- Neon Pink Accent Dot Gradient -->
+    <linearGradient id="pinkDotDef" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+
+    <!-- Neon Glow Filter -->
+    <filter id="neonGlowDef" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    
+    <style>
+      .monogram {
+        font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+        font-weight: 900;
+        fill: #22d3ee;
+        filter: url(#neonGlowDef);
+      }
+    </style>
+  </defs>
+
+  <!-- Cyber Black Squircle with Neon Outline -->
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="#050505" stroke="url(#neonStrokeDef)" stroke-width="2" />
+
+  <!-- Monogram text 'CL' -->
+  <text x="64" y="78" font-size="48" letter-spacing="-3" text-anchor="middle" class="monogram">CL</text>
+
+  <!-- Accent Dot (Neon Pink) -->
+  <circle cx="102" cy="102" r="18" fill="#050505" />
+  <circle cx="102" cy="102" r="13" fill="url(#pinkDotDef)" filter="url(#neonGlowDef)" />
+</svg>

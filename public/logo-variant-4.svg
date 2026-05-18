@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 120" width="100%" height="100%">
+  <defs>
+    <!-- Electric Blue Accent Dot Gradient -->
+    <linearGradient id="blueDotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+    
+    <!-- Premium Fonts Setup -->
+    <style>
+      .monogram-text {
+        font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+        font-weight: 900;
+        fill: #1f2937;
+      }
+      .brand-bold {
+        font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+        font-weight: 700;
+        fill: #1f2937;
+      }
+      .brand-light {
+        font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+        font-weight: 300;
+        fill: #6b7280;
+      }
+    </style>
+  </defs>
+
+  <!-- Group containing whole logo lockup -->
+  <g transform="translate(12, 12)">
+    <!-- 1. App Icon Box (96x96px) in Clean Tech White/Gray -->
+    <rect x="0" y="0" width="96" height="96" rx="20" fill="#ffffff" stroke="#e5e7eb" stroke-width="2" />
+    
+    <!-- Monogram letters 'CL' -->
+    <text x="48" y="58" font-size="40" letter-spacing="-2" text-anchor="middle" class="monogram-text">CL</text>
+    
+    <!-- Accent Dot (24x24px) -->
+    <circle cx="82" cy="82" r="16" fill="#ffffff" stroke="#e5e7eb" stroke-width="1" />
+    <circle cx="82" cy="82" r="12" fill="url(#blueDotGrad)" />
+    
+    <!-- 2. Brand Typography -->
+    <g transform="translate(120, 48)">
+      <text x="0" y="16" font-size="48" letter-spacing="-1">
+        <tspan class="brand-bold">Canvas</tspan>
+        <tspan class="brand-light">Labs</tspan>
+      </text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <!-- CapCut v2 Accent Blue Gradient -->
+    <linearGradient id="blueDotDef" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8ca8ff" />
+      <stop offset="100%" stop-color="#5c80ff" />
+    </linearGradient>
+    
+    <style>
+      .monogram {
+        font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+        font-weight: 900;
+        fill: #ffffff;
+      }
+    </style>
+  </defs>
+
+  <!-- Matte Charcoal Squircle with clean border -->
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="#1e1e1e" stroke="#3a3a3a" stroke-width="2" />
+
+  <!-- Monogram text 'CL' -->
+  <text x="64" y="78" font-size="48" letter-spacing="-3" text-anchor="middle" class="monogram">CL</text>
+
+  <!-- Accent Dot (CapCut Blue) -->
+  <circle cx="102" cy="102" r="18" fill="#111111" />
+  <circle cx="102" cy="102" r="13" fill="url(#blueDotDef)" />
+</svg>

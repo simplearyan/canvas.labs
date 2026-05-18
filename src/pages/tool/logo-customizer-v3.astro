@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Labs | Pro Logo Customizer</title>
+    
+    <!-- Tailwind CSS -->
+    <script is:inline src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script is:inline src="https://unpkg.com/lucide@latest"></script>
+    <!-- HTML to Image Library -->
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <!-- Google Fonts (Loaded with all weights and crossorigin for export) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900&family=JetBrains+Mono:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
+    
+    <script is:inline>
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                        grotesk: ['Space Grotesk', 'sans-serif'],
+                        playfair: ['Playfair Display', 'serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .bg-checker {
+            background-color: #f3f4f6;
+            background-image: linear-gradient(45deg, #e5e7eb 25%, transparent 25%), 
+                              linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #e5e7eb 75%), 
+                              linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        .dark .bg-checker {
+            background-color: #111111;
+            background-image: linear-gradient(45deg, #1e1e1e 25%, transparent 25%),
+                              linear-gradient(-45deg, #1e1e1e 25%, transparent 25%),
+                              linear-gradient(45deg, transparent 75%, #1e1e1e 75%),
+                              linear-gradient(-45deg, transparent 75%, #1e1e1e 75%);
+        }
+
+        /* macOS-style Inputs */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: #ffffff; cursor: pointer; margin-top: -5px; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .dark input[type=range]::-webkit-slider-thumb { border-color: #3a3a3a; background: #e4e4e7; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e5e7eb; border-radius: 2px; }
+        .dark input[type=range]::-webkit-slider-runnable-track { background: #2a2a2a; }
+        
+        input[type="color"] { -webkit-appearance: none; border: none; border-radius: 6px; cursor: pointer; padding: 0; overflow: hidden; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); }
+        .dark input[type="color"]::-webkit-color-swatch { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1); }
+
+        select, input[type="text"] { background-color: rgba(243, 244, 246, 0.8); border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; font-size: 11px; outline: none; transition: all 0.2s; width: 100%; }
+        select:focus, input[type="text"]:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2); }
+        .dark select, .dark input[type="text"] { background-color: rgba(30, 30, 30, 0.8); border-color: #2a2a2a; color: #fff; }
+        .dark select:focus, .dark input[type="text"]:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3); }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #2a2a2a; }
+
+        .property-group { border-bottom: 1px solid #e5e7eb; padding: 1rem 0; }
+        .dark .property-group { border-bottom-color: #2a2a2a; }
+        .property-group:last-child { border-bottom: none; }
+        
+        /* Ensures smooth inline transform animations for text */
+        .text-transform-layer { display: inline-block; transform-origin: center; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-[#111111] text-gray-900 dark:text-zinc-100 h-screen flex flex-col overflow-hidden transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="h-14 bg-white dark:bg-[#1e1e1e] border-b border-gray-200 dark:border-[#2a2a2a] shrink-0 flex items-center justify-between px-6 z-30">
+        <div class="flex items-center gap-3">
+            <button onclick="window.history.back()" class="p-1.5 -ml-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-md transition-colors">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <div class="h-4 w-px bg-gray-300 dark:bg-zinc-700"></div>
+            <span class="text-sm font-semibold tracking-tight ml-1">Pro Customizer Studio</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button class="theme-toggle-btn p-2 rounded-full text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors focus:outline-none">
+                <span class="dark:hidden flex"><i data-lucide="moon" class="w-4 h-4"></i></span>
+                <span class="hidden dark:flex"><i data-lucide="sun" class="w-4 h-4"></i></span>
+            </button>
+            
+            <!-- Export Dropdown -->
+            <div class="relative group">
+                <button class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> Export
+                </button>
+                <div class="absolute right-0 top-[calc(100%+8px)] w-56 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-zinc-800 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col py-2 z-50">
+                    <div class="px-3 pb-1 mb-1 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Logo Only (Transparent)</span>
+                    </div>
+                    <button onclick="exportLogo('logo', 'png', 1)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">Standard PNG</button>
+                    <button onclick="exportLogo('logo', 'png', 2)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">HD PNG (2x)</button>
+                    <button onclick="exportLogo('logo', 'svg', 1)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">Vector SVG</button>
+                    
+                    <div class="px-3 pb-1 mt-2 mb-1 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Full Canvas Board</span>
+                    </div>
+                    <button onclick="exportLogo('canvas', 'png', 1)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">Standard PNG</button>
+                    <button onclick="exportLogo('canvas', 'png', 2)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">HD PNG (2x)</button>
+                    <button onclick="exportLogo('canvas', 'png', 4)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">4K PNG (4x)</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Preview Area -->
+        <div class="flex-1 bg-checker relative flex items-center justify-center overflow-auto custom-scrollbar p-8">
+            
+            <!-- Zoom Wrapper for Previewing -->
+            <div id="preview-zoom-wrapper" class="transition-transform duration-300 transform scale-[0.8] 2xl:scale-100 origin-center flex items-center justify-center">
+                
+                <!-- The Canvas Container (Exported for "Full Canvas") -->
+                <div id="export-canvas" class="relative flex items-center justify-center transition-all duration-300 overflow-hidden" style="width: 1000px; height: 562.5px; background-color: transparent;">
+                    
+                    <!-- The Logo Container (Exported for "Logo Only") -->
+                    <div id="export-logo" class="flex items-center justify-center gap-6 p-4">
+                        
+                        <!-- App Icon Box -->
+                        <div id="app-icon" class="relative flex items-center justify-center transition-all" style="width: 96px; height: 96px; background-color: #111827; border-radius: 20px;">
+                            <span id="icon-text" class="font-outfit text-white" style="font-size: 40px; letter-spacing: -0.05em; font-weight: 900;">CL</span>
+                            <!-- Accent Dot -->
+                            <div id="accent-dot" class="absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-4 border-transparent" style="background-color: #8b5cf6;"></div>
+                        </div>
+
+                        <!-- Brand Text Wrapper -->
+                        <div id="brand-text-wrapper" class="flex items-center transition-all">
+                            <!-- Text 1 uses a wrapper span for independent transforms -->
+                            <span id="t1-transform" class="text-transform-layer">
+                                <span id="brand-text-1" class="font-outfit text-gray-900 dark:text-white" style="font-size: 48px; letter-spacing: -0.02em; font-weight: 700;">Canvas</span>
+                            </span>
+                            <!-- Text 2 uses a wrapper span for independent transforms -->
+                            <span id="t2-transform" class="text-transform-layer">
+                                <span id="brand-text-2" class="font-outfit text-gray-900 dark:text-white" style="font-size: 48px; letter-spacing: -0.02em; font-weight: 300;">Labs</span>
+                            </span>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Zoom Controls -->
+            <div class="absolute bottom-6 bg-white dark:bg-[#18181b] px-4 py-2 rounded-full shadow-lg border border-gray-200 dark:border-zinc-800 flex items-center gap-3 z-10">
+                <button onclick="adjustZoom(-0.1)" class="text-gray-500 hover:text-gray-900 dark:hover:text-white"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                <span id="zoom-level" class="text-xs font-mono font-medium w-10 text-center">80%</span>
+                <button onclick="adjustZoom(0.1)" class="text-gray-500 hover:text-gray-900 dark:hover:text-white"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                <div class="h-4 w-px bg-gray-300 dark:bg-zinc-700"></div>
+                <button id="btn-toggle-guides" onclick="toggleSvgGuides()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-gray-600 dark:text-zinc-300 transition-colors" title="Toggle SVG Bounding Box & Padding Guide overlay">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> SVG Guides
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Properties Panel -->
+        <aside class="w-[360px] bg-white dark:bg-[#1e1e1e] border-l border-gray-200 dark:border-[#2a2a2a] flex flex-col shrink-0 shadow-[-4px_0_15px_rgba(0,0,0,0.03)] z-20">
+            <div class="p-3.5 border-b border-gray-200 dark:border-[#2a2a2a] flex items-center gap-2 bg-gray-50/50 dark:bg-black/20">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-gray-500 dark:text-zinc-400"></i>
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-zinc-300">Design Inspector</span>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-5 pb-12 space-y-2">
+                
+                <!-- 1. Canvas Board -->
+                <div class="property-group">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Canvas Board</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Ratio</label>
+                                <select id="ctrl-canvas-ratio">
+                                    <option value="auto">Auto (Logo Only)</option>
+                                    <option value="16:9" selected>16:9 (Thumbnail)</option>
+                                    <option value="1:1">1:1 (Post/Icon)</option>
+                                    <option value="3:1">3:1 (Banner)</option>
+                                    <option value="4:5">4:5 (Portrait)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Background</label>
+                                <select id="ctrl-canvas-type">
+                                    <option value="transparent">Transparent</option>
+                                    <option value="solid">Solid Color</option>
+                                    <option value="gradient">Gradient</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="canvas-solid-ctrl" class="hidden bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800 flex justify-between items-center">
+                            <span class="text-[10px] font-medium text-gray-600 dark:text-zinc-400 pl-1">Solid Color</span>
+                            <input type="color" id="ctrl-canvas-color" value="#111827" class="w-16 h-6">
+                        </div>
+                        
+                        <div id="canvas-grad-ctrl" class="hidden bg-gray-50 dark:bg-zinc-900/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800 space-y-3">
+                            <div id="canvas-preset-ctrl">
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Premium Presets</label>
+                                <select id="ctrl-canvas-preset" class="w-full">
+                                    <option value="custom">Custom Gradient...</option>
+                                    <option value="sunset" data-g1="#f59e0b" data-g2="#e11d48">Sunset Vibes</option>
+                                    <option value="ocean" data-g1="#0ea5e9" data-g2="#2563eb">Ocean Breeze</option>
+                                    <option value="purple" data-g1="#8b5cf6" data-g2="#d946ef">Purple Haze</option>
+                                    <option value="emerald" data-g1="#10b981" data-g2="#047857">Emerald Forest</option>
+                                    <option value="midnight" data-g1="#0f172a" data-g2="#1e1b4b">Midnight Depth</option>
+                                    <option value="candy" data-g1="#d946ef" data-g2="#f43f5e">Cotton Candy</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="color" id="ctrl-canvas-g1" value="#8b5cf6" class="flex-1 h-6">
+                                <input type="color" id="ctrl-canvas-g2" value="#0ea5e9" class="flex-1 h-6">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Angle</label><span id="val-canvas-ang" class="text-[9px] text-gray-400">135°</span></div>
+                                <input type="range" id="ctrl-canvas-ang" min="0" max="360" value="135">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 mt-2">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Radius</label><span id="val-canvas-rad" class="text-[9px]">0px</span></div>
+                                <input type="range" id="ctrl-canvas-rad" min="0" max="100" value="0">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Padding</label><span id="val-canvas-pad" class="text-[9px]">64px</span></div>
+                                <input type="range" id="ctrl-canvas-pad" min="0" max="200" value="64">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Global Logo Layout -->
+                <div class="property-group">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="layout-template" class="w-3.5 h-3.5"></i> Layout Setup</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500 uppercase">Logo Scale</label><span id="val-logo-scale" class="text-[9px]">1x</span></div>
+                            <input type="range" id="ctrl-logo-scale" min="0.5" max="3" step="0.1" value="1">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500 uppercase">Icon/Text Gap</label><span id="val-gap" class="text-[9px]">24px</span></div>
+                            <input type="range" id="ctrl-gap" min="0" max="100" value="24">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Icon settings -->
+                <div class="property-group">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="box" class="w-3.5 h-3.5"></i> Monogram Icon</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-[1fr_2fr] gap-2 items-end">
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Letters</label>
+                                <input type="text" id="ctrl-icon-text" value="CL" class="text-center">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[9px] uppercase text-gray-500 mb-1">Font</label>
+                                    <select id="ctrl-icon-font"><option value="Outfit">Outfit</option><option value="Inter">Inter</option><option value="Space Grotesk">Grotesk</option><option value="JetBrains Mono">Mono</option><option value="Playfair Display">Playfair</option></select>
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] uppercase text-gray-500 mb-1">Weight</label>
+                                    <select id="ctrl-icon-weight"><option value="300">Light</option><option value="500">Medium</option><option value="700">Bold</option><option value="900" selected>Black</option></select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Icon Text Fill -->
+                        <div class="bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-semibold text-gray-700 dark:text-zinc-300">Text Color Fill</span>
+                                <select id="ctrl-itext-type" class="w-20 text-[9px] py-0.5"><option value="solid">Solid</option><option value="gradient">Gradient</option></select>
+                            </div>
+                            <div id="itext-solid-ctrl"><input type="color" id="ctrl-itext-color" value="#ffffff" class="w-full h-6"></div>
+                            <div id="itext-grad-ctrl" class="hidden space-y-2">
+                                <div class="flex gap-1"><input type="color" id="ctrl-itext-g1" value="#8b5cf6" class="flex-1 h-6"><input type="color" id="ctrl-itext-g2" value="#22d3ee" class="flex-1 h-6"></div>
+                                <div><div class="flex justify-between mb-1"><label class="text-[8px] text-gray-500">Angle</label><span id="val-itext-ang" class="text-[8px]">135°</span></div><input type="range" id="ctrl-itext-ang" min="0" max="360" value="135"></div>
+                            </div>
+                        </div>
+
+                        <!-- Icon Box Fill -->
+                        <div class="bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-semibold text-gray-700 dark:text-zinc-300">Box Background Fill</span>
+                                <select id="ctrl-ibg-type" class="w-20 text-[9px] py-0.5"><option value="solid">Solid</option><option value="gradient">Gradient</option></select>
+                            </div>
+                            <div id="ibg-solid-ctrl"><input type="color" id="ctrl-ibg-color" value="#111827" class="w-full h-6"></div>
+                            <div id="ibg-grad-ctrl" class="hidden space-y-2">
+                                <div class="flex gap-1"><input type="color" id="ctrl-ibg-g1" value="#111827" class="flex-1 h-6"><input type="color" id="ctrl-ibg-g2" value="#3f3f46" class="flex-1 h-6"></div>
+                                <div><div class="flex justify-between mb-1"><label class="text-[8px] text-gray-500">Angle</label><span id="val-ibg-ang" class="text-[8px]">135°</span></div><input type="range" id="ctrl-ibg-ang" min="0" max="360" value="135"></div>
+                            </div>
+                        </div>
+
+                        <!-- Accent Dot Fill -->
+                        <div class="bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-semibold text-gray-700 dark:text-zinc-300">Accent Dot Fill</span>
+                                <select id="ctrl-idot-type" class="w-20 text-[9px] py-0.5"><option value="solid">Solid</option><option value="gradient">Gradient</option></select>
+                            </div>
+                            <div id="idot-solid-ctrl"><input type="color" id="ctrl-idot-color" value="#8b5cf6" class="w-full h-6"></div>
+                            <div id="idot-grad-ctrl" class="hidden space-y-2">
+                                <div class="flex gap-1"><input type="color" id="ctrl-idot-g1" value="#8b5cf6" class="flex-1 h-6"><input type="color" id="ctrl-idot-g2" value="#f43f5e" class="flex-1 h-6"></div>
+                                <div><div class="flex justify-between mb-1"><label class="text-[8px] text-gray-500">Angle</label><span id="val-idot-ang" class="text-[8px]">135°</span></div><input type="range" id="ctrl-idot-ang" min="0" max="360" value="135"></div>
+                            </div>
+                        </div>
+
+                        <!-- Box Transforms -->
+                        <div class="grid grid-cols-2 gap-3 mt-3">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Rotation</label><span id="val-icon-rot" class="text-[9px]">0°</span></div>
+                                <input type="range" id="ctrl-icon-rot" min="-180" max="180" value="0">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Radius</label><span id="val-icon-rad" class="text-[9px]">20px</span></div>
+                                <input type="range" id="ctrl-icon-rad" min="0" max="48" value="20">
+                            </div>
+                        </div>
+                        
+                        <!-- Box Shadows -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Drop Shadow</label><span id="val-ds" class="text-[9px]">20%</span></div>
+                                <input type="range" id="ctrl-ds" min="0" max="100" value="20">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Inner Shadow</label><span id="val-is" class="text-[9px]">10%</span></div>
+                                <input type="range" id="ctrl-is" min="0" max="100" value="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Typography 1 -->
+                <div class="property-group">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="type" class="w-3.5 h-3.5"></i> Typography 1</h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-[1fr_2fr] gap-2 items-end">
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Text</label>
+                                <input type="text" id="ctrl-t1-text" value="Canvas">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[9px] uppercase text-gray-500 mb-1">Font</label>
+                                    <select id="ctrl-t1-font"><option value="Outfit">Outfit</option><option value="Inter">Inter</option><option value="Space Grotesk">Grotesk</option><option value="JetBrains Mono">Mono</option><option value="Playfair Display">Playfair</option></select>
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] uppercase text-gray-500 mb-1">Weight</label>
+                                    <select id="ctrl-t1-weight"><option value="300">Light</option><option value="500">Medium</option><option value="700" selected>Bold</option><option value="900">Black</option></select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- T1 Fill -->
+                        <div class="bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-semibold text-gray-700 dark:text-zinc-300">Text Fill</span>
+                                <select id="ctrl-t1-type" class="w-20 text-[9px] py-0.5"><option value="solid">Solid</option><option value="gradient">Gradient</option></select>
+                            </div>
+                            <div id="t1-solid-ctrl"><input type="color" id="ctrl-t1-color" value="#111827" class="w-full h-6"></div>
+                            <div id="t1-grad-ctrl" class="hidden space-y-2">
+                                <div class="flex gap-1"><input type="color" id="ctrl-t1-g1" value="#8b5cf6" class="flex-1 h-6"><input type="color" id="ctrl-t1-g2" value="#22d3ee" class="flex-1 h-6"></div>
+                                <div><div class="flex justify-between mb-1"><label class="text-[8px] text-gray-500">Angle</label><span id="val-t1-ang" class="text-[8px]">135°</span></div><input type="range" id="ctrl-t1-ang" min="0" max="360" value="135"></div>
+                            </div>
+                        </div>
+
+                        <!-- T1 Layout -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Scale</label><span id="val-t1-scale" class="text-[9px]">1x</span></div>
+                                <input type="range" id="ctrl-t1-scale" min="0.5" max="3" step="0.1" value="1">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Rotation</label><span id="val-t1-rot" class="text-[9px]">0°</span></div>
+                                <input type="range" id="ctrl-t1-rot" min="-90" max="90" value="0">
+                            </div>
+                            <div class="col-span-2 mt-1">
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Letter Spacing</label><span id="val-t1-space" class="text-[9px]">-0.02em</span></div>
+                                <input type="range" id="ctrl-t1-space" min="-0.1" max="0.3" step="0.01" value="-0.02">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Typography 2 -->
+                <div class="property-group border-none pb-0">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="type" class="w-3.5 h-3.5"></i> Typography 2</h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-[1fr_2fr] gap-2 items-end">
+                            <div>
+                                <label class="block text-[9px] uppercase text-gray-500 mb-1">Text</label>
+                                <input type="text" id="ctrl-t2-text" value="Labs">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[9px] uppercase text-gray-500 mb-1">Font</label>
+                                    <select id="ctrl-t2-font"><option value="Outfit">Outfit</option><option value="Inter">Inter</option><option value="Space Grotesk">Grotesk</option><option value="JetBrains Mono">Mono</option><option value="Playfair Display">Playfair</option></select>
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] uppercase text-gray-500 mb-1">Weight</label>
+                                    <select id="ctrl-t2-weight"><option value="300" selected>Light</option><option value="500">Medium</option><option value="700">Bold</option><option value="900">Black</option></select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- T2 Fill -->
+                        <div class="bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-semibold text-gray-700 dark:text-zinc-300">Text Fill</span>
+                                <select id="ctrl-t2-type" class="w-20 text-[9px] py-0.5"><option value="solid">Solid</option><option value="gradient">Gradient</option></select>
+                            </div>
+                            <div id="t2-solid-ctrl"><input type="color" id="ctrl-t2-color" value="#111827" class="w-full h-6"></div>
+                            <div id="t2-grad-ctrl" class="hidden space-y-2">
+                                <div class="flex gap-1"><input type="color" id="ctrl-t2-g1" value="#8b5cf6" class="flex-1 h-6"><input type="color" id="ctrl-t2-g2" value="#f43f5e" class="flex-1 h-6"></div>
+                                <div><div class="flex justify-between mb-1"><label class="text-[8px] text-gray-500">Angle</label><span id="val-t2-ang" class="text-[8px]">135°</span></div><input type="range" id="ctrl-t2-ang" min="0" max="360" value="135"></div>
+                            </div>
+                        </div>
+
+                        <!-- T2 Layout -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Scale</label><span id="val-t2-scale" class="text-[9px]">1x</span></div>
+                                <input type="range" id="ctrl-t2-scale" min="0.5" max="3" step="0.1" value="1">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Rotation</label><span id="val-t2-rot" class="text-[9px]">0°</span></div>
+                                <input type="range" id="ctrl-t2-rot" min="-90" max="90" value="0">
+                            </div>
+                            <div class="col-span-2 mt-1">
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Letter Spacing</label><span id="val-t2-space" class="text-[9px]">-0.02em</span></div>
+                                <input type="range" id="ctrl-t2-space" min="-0.1" max="0.3" step="0.01" value="-0.02">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+    </main>
+
+    <script is:inline>
+        // DOM Nodes Map
+        const dom = {
+            canvas: document.getElementById('export-canvas'),
+            logo: document.getElementById('export-logo'),
+            appIcon: document.getElementById('app-icon'),
+            iconText: document.getElementById('icon-text'),
+            accentDot: document.getElementById('accent-dot'),
+            brandWrapper: document.getElementById('brand-text-wrapper'),
+            
+            t1Wrapper: document.getElementById('t1-transform'),
+            t1: document.getElementById('brand-text-1'),
+            
+            t2Wrapper: document.getElementById('t2-transform'),
+            t2: document.getElementById('brand-text-2'),
+            
+            zoomWrapper: document.getElementById('preview-zoom-wrapper'),
+            zoomLabel: document.getElementById('zoom-level')
+        };
+
+        const fontMap = {
+            'Outfit': 'font-outfit',
+            'Inter': 'font-sans',
+            'Space Grotesk': 'font-grotesk',
+            'Playfair Display': 'font-playfair',
+            'JetBrains Mono': 'font-mono'
+        };
+
+        let zoom = 0.8;
+        let showSvgGuides = false;
+
+        function toggleSvgGuides() {
+            showSvgGuides = !showSvgGuides;
+            const btn = document.getElementById('btn-toggle-guides');
+            if (showSvgGuides) {
+                btn.classList.add('bg-brand-600', 'text-white');
+                btn.classList.remove('bg-black/5', 'dark:bg-white/5', 'text-gray-600', 'dark:text-zinc-300');
+            } else {
+                btn.classList.remove('bg-brand-600', 'text-white');
+                btn.classList.add('bg-black/5', 'dark:bg-white/5', 'text-gray-600', 'dark:text-zinc-300');
+            }
+            updateUI();
+        }
+
+        // Auto Dark Mode initialization 
+        const isSystemDark = document.documentElement.classList.contains('dark');
+        if (isSystemDark) {
+            document.getElementById('ctrl-t1-color').value = "#ffffff";
+            document.getElementById('ctrl-t2-color').value = "#ffffff";
+        }
+
+        function adjustZoom(delta) {
+            zoom = Math.max(0.2, Math.min(2.0, zoom + delta));
+            dom.zoomWrapper.style.transform = `scale(${zoom})`;
+            dom.zoomLabel.innerText = `${Math.round(zoom * 100)}%`;
+        }
+
+        // Helper to bind label updates dynamically
+        function bindLabel(id, suffix='') {
+            const el = document.getElementById(`ctrl-${id}`);
+            const val = document.getElementById(`val-${id}`);
+            if(el && val) el.addEventListener('input', () => val.innerText = el.value + suffix);
+        }
+        ['canvas-ang','canvas-rad','canvas-pad','logo-scale','gap','icon-rot','icon-rad','ds','is','itext-ang','ibg-ang','idot-ang','t1-ang','t1-scale','t1-rot','t1-space','t2-ang','t2-scale','t2-rot','t2-space'].forEach(id => {
+            const suffix = id.includes('scale') ? 'x' : (id.includes('space') ? 'em' : (id.includes('ang') || id.includes('rot') ? '°' : (id.includes('ds') || id.includes('is') ? '%' : 'px')));
+            bindLabel(id, suffix);
+        });
+
+        // Helper to setup Fill toggles (Solid vs Gradient)
+        function setupFillToggle(prefix) {
+            const sel = document.getElementById(`ctrl-${prefix}-type`);
+            if(!sel) return;
+            sel.addEventListener('change', (e) => {
+                const isGrad = e.target.value === 'gradient';
+                const sCtrl = document.getElementById(`${prefix}-solid-ctrl`);
+                const gCtrl = document.getElementById(`${prefix}-grad-ctrl`);
+                if (sCtrl) isGrad ? sCtrl.classList.add('hidden') : sCtrl.classList.remove('hidden');
+                if (gCtrl) isGrad ? gCtrl.classList.remove('hidden') : gCtrl.classList.add('hidden');
+                updateUI();
+            });
+        }
+        ['canvas', 'ibg', 'itext', 'idot', 't1', 't2'].forEach(setupFillToggle);
+
+        // Gradient Preset logic for Canvas
+        document.getElementById('ctrl-canvas-preset').addEventListener('change', (e) => {
+            if(e.target.value !== 'custom') {
+                const opt = e.target.options[e.target.selectedIndex];
+                document.getElementById('ctrl-canvas-g1').value = opt.dataset.g1;
+                document.getElementById('ctrl-canvas-g2').value = opt.dataset.g2;
+                updateUI();
+            }
+        });
+        ['ctrl-canvas-g1', 'ctrl-canvas-g2', 'ctrl-canvas-ang'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => { document.getElementById('ctrl-canvas-preset').value = 'custom'; });
+        });
+
+        // Helper to safely fetch value from ID
+        const val = (id) => document.getElementById(`ctrl-${id}`).value;
+
+        // Apply Fill logic for Backgrounds
+        function applyBgFill(element, prefix) {
+            const type = val(`${prefix}-type`);
+            if (type === 'gradient') {
+                element.style.background = `linear-gradient(${val(`${prefix}-ang`)}deg, ${val(`${prefix}-g1`)}, ${val(`${prefix}-g2`)})`;
+            } else if (type === 'transparent') {
+                element.style.background = 'transparent';
+            } else {
+                element.style.background = val(`${prefix}-color`);
+            }
+        }
+
+        // Apply Fill logic for Text (Clip to text)
+        function applyTextFill(element, prefix) {
+            const type = val(`${prefix}-type`);
+            if (type === 'gradient') {
+                element.style.backgroundImage = `linear-gradient(${val(`${prefix}-ang`)}deg, ${val(`${prefix}-g1`)}, ${val(`${prefix}-g2`)})`;
+                element.style.webkitBackgroundClip = 'text';
+                element.style.backgroundClip = 'text';
+                element.style.webkitTextFillColor = 'transparent';
+                element.style.color = 'transparent';
+            } else {
+                element.style.backgroundImage = 'none';
+                element.style.webkitBackgroundClip = 'initial';
+                element.style.backgroundClip = 'initial';
+                element.style.webkitTextFillColor = 'initial';
+                element.style.color = val(`${prefix}-color`);
+            }
+        }
+
+        function updateUI() {
+            // 1. Canvas Board
+            const ratioMap = { '16:9': {w: 1000, h: 562.5}, '1:1': {w: 800, h: 800}, '3:1': {w: 1200, h: 400}, '4:5': {w: 800, h: 1000} };
+            const ratio = val('canvas-ratio');
+            if(ratio === 'auto') {
+                dom.canvas.style.width = 'auto'; dom.canvas.style.height = 'auto';
+            } else {
+                dom.canvas.style.width = `${ratioMap[ratio].w}px`; dom.canvas.style.height = `${ratioMap[ratio].h}px`;
+            }
+            const currentPad = val('canvas-pad');
+            dom.canvas.style.padding = `${currentPad}px`;
+            dom.canvas.style.borderRadius = `${val('canvas-rad')}px`;
+            applyBgFill(dom.canvas, 'canvas');
+
+            // Apply padding directly to the logo container for padding-aware exports
+            dom.logo.style.padding = `${currentPad}px`;
+
+            // SVG Guides highlighting
+            if (showSvgGuides) {
+                dom.logo.style.outline = '1.5px dashed #10b981';
+                dom.logo.style.outlineOffset = '-1.5px';
+                dom.logo.style.backgroundColor = 'rgba(16, 185, 129, 0.08)';
+            } else {
+                dom.logo.style.outline = 'none';
+                dom.logo.style.outlineOffset = '0px';
+                dom.logo.style.backgroundColor = 'transparent';
+            }
+
+            // 2. Global Layout
+            dom.logo.style.transform = `scale(${val('logo-scale')})`;
+            dom.logo.style.gap = `${val('gap')}px`;
+
+            // 3. Icon
+            dom.iconText.innerText = val('icon-text');
+            dom.iconText.className = `${fontMap[val('icon-font')]} font-black transition-all`;
+            dom.iconText.style.fontWeight = val('icon-weight');
+            applyTextFill(dom.iconText, 'itext');
+            
+            dom.appIcon.style.transform = `rotate(${val('icon-rot')}deg)`;
+            dom.appIcon.style.borderRadius = `${val('icon-rad')}px`;
+            applyBgFill(dom.appIcon, 'ibg');
+            applyBgFill(dom.accentDot, 'idot');
+            
+            // Match the border of the dot to the background behind it (pseudo-transparency)
+            dom.accentDot.style.borderColor = (val('canvas-type') === 'transparent') ? (document.documentElement.classList.contains('dark') ? '#111111' : '#f3f4f6') : (val('canvas-type') === 'solid' ? val('canvas-color') : 'transparent');
+
+            const ds = `0px 10px 25px rgba(0,0,0,${val('ds') / 100})`;
+            const is = `inset 0px -4px 10px rgba(0,0,0,${val('is') / 100})`;
+            const shadows = [];
+            if (val('ds') > 0) shadows.push(ds);
+            if (val('is') > 0) shadows.push(is);
+            dom.appIcon.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : 'none';
+
+            // 4. Typography 1
+            dom.t1.innerText = val('t1-text');
+            dom.t1.className = `${fontMap[val('t1-font')]} transition-all block`;
+            dom.t1.style.fontWeight = val('t1-weight');
+            dom.t1.style.letterSpacing = `${val('t1-space')}em`;
+            dom.t1Wrapper.style.transform = `scale(${val('t1-scale')}) rotate(${val('t1-rot')}deg)`;
+            applyTextFill(dom.t1, 't1');
+
+            // 5. Typography 2
+            dom.t2.innerText = val('t2-text');
+            dom.t2.className = `${fontMap[val('t2-font')]} transition-all block`;
+            dom.t2.style.fontWeight = val('t2-weight');
+            dom.t2.style.letterSpacing = `${val('t2-space')}em`;
+            dom.t2Wrapper.style.transform = `scale(${val('t2-scale')}) rotate(${val('t2-rot')}deg)`;
+            applyTextFill(dom.t2, 't2');
+        }
+
+        // Attach blanket input listeners
+        document.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('input', updateUI);
+            el.addEventListener('change', updateUI);
+        });
+
+        // Theme Toggle
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            // Swap default dark/light solid colors if untouched
+            const t1Color = document.getElementById('ctrl-t1-color');
+            const t2Color = document.getElementById('ctrl-t2-color');
+            if (t1Color.value === "#111827" && isDark) t1Color.value = "#ffffff";
+            else if (t1Color.value === "#ffffff" && !isDark) t1Color.value = "#111827";
+            
+            if (t2Color.value === "#111827" && isDark) t2Color.value = "#ffffff";
+            else if (t2Color.value === "#ffffff" && !isDark) t2Color.value = "#111827";
+
+            updateUI();
+        }
+        document.querySelector('.theme-toggle-btn').addEventListener('click', toggleTheme);
+
+        // Export Functionality
+        function exportLogo(target, format, multiplier) {
+            const node = target === 'canvas' ? dom.canvas : dom.logo;
+            
+            const origTransform = node.style.transform;
+            const origOutline = node.style.outline;
+            const origOutlineOffset = node.style.outlineOffset;
+            const origBgColor = node.style.backgroundColor;
+            
+            if (target === 'logo') { 
+                node.style.transform = 'scale(1)'; 
+            }
+            
+            // Clean guide styling during export so it doesn't leak into the final render
+            node.style.outline = 'none';
+            node.style.outlineOffset = '0px';
+            if (target === 'logo') {
+                node.style.backgroundColor = 'transparent';
+            }
+            
+            const config = {
+                quality: 1,
+                pixelRatio: multiplier, 
+                backgroundColor: (target === 'canvas' && val('canvas-type') !== 'transparent') ? null : 'transparent'
+            };
+
+            const triggerDL = (dataUrl, ext) => {
+                const link = document.createElement('a');
+                const ratioName = target === 'canvas' ? val('canvas-ratio').replace(':','x') : 'Transparent';
+                const resName = multiplier === 1 ? 'Standard' : (multiplier === 2 ? 'HD' : '4K');
+                link.download = `CanvasLabs-${target}-${ratioName}-${resName}.${ext}`;
+                link.href = dataUrl;
+                link.click();
+                
+                // Restore previous styles
+                node.style.transform = origTransform;
+                node.style.outline = origOutline;
+                node.style.outlineOffset = origOutlineOffset;
+                node.style.backgroundColor = origBgColor;
+            };
+
+            if (format === 'svg') {
+                htmlToImage.toSvg(node, config).then(dataUrl => triggerDL(dataUrl, 'svg')).catch(err => { 
+                    console.error(err); 
+                    node.style.transform = origTransform; 
+                    node.style.outline = origOutline;
+                    node.style.outlineOffset = origOutlineOffset;
+                    node.style.backgroundColor = origBgColor;
+                });
+            } else {
+                htmlToImage.toPng(node, config).then(dataUrl => triggerDL(dataUrl, 'png')).catch(err => { 
+                    console.error(err); 
+                    node.style.transform = origTransform; 
+                    node.style.outline = origOutline;
+                    node.style.outlineOffset = origOutlineOffset;
+                    node.style.backgroundColor = origBgColor;
+                });
+            }
+        }
+
+        lucide.createIcons();
+        updateUI(); // Initial render
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+@theme {
+  /* Kenichi Brand Theme Colors */
+  --color-kenichi-50: #f2f5ff;
+  --color-kenichi-100: #e6ebff;
+  --color-kenichi-400: #8ca8ff;
+  --color-kenichi-500: #5c80ff;
+  --color-kenichi-600: #3d63ff;
+  --color-kenichi-900: #1a2e80;
+  
+  /* Kenichi Cinematic Dark Surface Colors */
+  --color-surface-900: #111111;
+  --color-surface-800: #1e1e22;
+  --color-surface-700: #2a2a2a;
+  --color-surface-600: #3a3a3a;
+}
