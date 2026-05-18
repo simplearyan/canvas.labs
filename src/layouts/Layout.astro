@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import SecondaryLayout from "./SecondaryLayout";
 import { SITE_CONFIG } from "../config/site";
+import Favicon from "@/components/Favicon.astro";
 
 interface Props {
 	title: string;
@@ -14,30 +15,7 @@ const { title, description = SITE_CONFIG.seo.description } = Astro.props;
 <html lang="en" data-theme-palette={SITE_CONFIG.branding.darkModePalette}>
 	<head>
 		<meta charset="utf-8" />
-		{
-			SITE_CONFIG.tabPreferences.favicon.useSvgIcon ? (
-				<>
-					<link
-						rel="icon"
-						type="image/svg+xml"
-						href={SITE_CONFIG.tabPreferences.favicon.lightTabSvg}
-						media="(prefers-color-scheme: light)"
-					/>
-					<link
-						rel="icon"
-						type="image/svg+xml"
-						href={SITE_CONFIG.tabPreferences.favicon.darkTabSvg}
-						media="(prefers-color-scheme: dark)"
-					/>
-				</>
-			) : (
-				<link
-					rel="icon"
-					type="image/svg+xml"
-					href={SITE_CONFIG.tabPreferences.favicon.default}
-				/>
-			)
-		}
+		<Favicon />
 		<meta
 			name="viewport"
 			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"

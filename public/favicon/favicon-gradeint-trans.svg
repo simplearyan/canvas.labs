@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!--
+    ======================================================================
+    CANVAS LABS - CUSTOMIZABLE VECTOR FAVICON (CLEAN CODE VERSION)
+    ======================================================================
+    This clean-code vector SVG is fully customizable. You can directly edit 
+    the parameters below using any code editor.
+  -->
+  <defs>
+    <!-- 
+      1. BACKGROUND GRADIENT CONFIGURATION
+      - Edit 'stop-color' values to change background gradients.
+      - Edit 'x1, y1, x2, y2' coordinates to change the gradient angle.
+        Diagonal (135°): x1="0%" y1="0%" x2="100%" y2="100%"
+        Horizontal (90°): x1="0%" y1="0%" x2="100%" y2="0%"
+        Vertical (180°):  x1="0%" y1="0%" x2="0%" y2="100%"
+    -->
+    <!-- <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%"> -->
+      <!-- <stop offset="0%" stop-color="#a78bfa" />   Start Gradient Color (Lavender) -->
+      <!-- <stop offset="100%" stop-color="#7c3aed" />  End Gradient Color (Purple) -->
+    <!-- </linearGradient> -->
+
+    <!-- 
+      2. TEXT GRADIENT CONFIGURATION (Optional)
+      - To use a gradient for your monogram instead of a solid color,
+        uncomment this block, then inside the style section below 
+        change 'fill: #ffffff;' to 'fill: url(#textGradient);'
+    -->
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#60a5fa" />   
+      <stop offset="100%" stop-color="#a78bfa" />  
+    </linearGradient>
+
+    <!-- 
+      3. DESIGN & TYPOGRAPHY STYLES
+      - Edit 'fill' to change the Monogram text color (solid hex or url(#textGradient)).
+      - Edit 'font-size' to scale the letters up or down (stays perfectly centered!).
+      - Edit 'font-weight' to change boldness (100 to 900).
+    -->
+    <style>
+      .monogram-label {
+        /* 
+          FONT FAMILY OPTION: Choose between sans-serif or serif!
+          (Just comment/uncomment the line of your choice)
+        */
+        font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;  /* OPTION A: Modern Clean Sans-Serif */
+        /* font-family: 'Playfair Display', Georgia, serif; */                 /* OPTION B: Elegant Editorial Serif */
+
+        font-size: 200px;      /* TEXT SIZE: Change to scale monogram. Stays 100% centered! */
+        font-weight: 800;      /* TEXT WEIGHT: Change thickness (100-900) */
+        
+        /* 
+          TEXT FILL OPTION: Solid Color vs Gradient!
+          (Set to '#ffffff' for solid white, or 'url(#textGradient)' for gradient text)
+        */
+        <!-- fill: #ffffff;          -->
+        fill: url(#textGradient); 
+
+        letter-spacing: -4px;  /* LETTER SPACING: Adjust letter separation */
+      }
+    </style>
+  </defs>
+
+  <!-- 
+    4. BACKGROUND BOARD (SQUIRCLE)
+    - Edit 'x' and 'y' to adjust the outer padding gutter.
+    - Edit 'width' and 'height' to scale the background squircle.
+    - Edit 'rx' to adjust the corner roundness (e.g. 0 for square, 116 for circle).
+  -->
+  <rect 
+    x="12" 
+    y="12" 
+    width="232" 
+    height="232" 
+    rx="58" 
+    fill="url(#bgGradient)" 
+  />
+
+  <!-- 
+    5. MONOGRAM TEXT CONTENT
+    - Edit the inner text ('CL') below to change the brand monogram characters!
+    - Using 'dominant-baseline="central"' guarantees it stays 100% mathematically centered 
+      no matter what font-size or font family you choose!
+  -->
+  <text 
+    x="128" 
+    y="128" 
+    text-anchor="middle" 
+    dominant-baseline="central"
+    class="monogram-label"
+  >CL</text>
+</svg>

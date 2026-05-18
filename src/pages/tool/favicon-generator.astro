@@ -1,6 +1,6 @@
 ---
-import { SITE_CONFIG } from '../../config/site';
-import Favicon from '../../components/Favicon.astro';
+import { SITE_CONFIG } from '@/config/site';
+import Favicon from '@/components/Favicon.astro';
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -16,6 +16,8 @@ import Favicon from '../../components/Favicon.astro';
     <script is:inline src="https://unpkg.com/lucide@latest"></script>
     <!-- HTML to Image Library -->
     <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <!-- JSZip Library -->
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900&family=JetBrains+Mono:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
     
@@ -124,6 +126,13 @@ import Favicon from '../../components/Favicon.astro';
                 </button>
                 <div class="absolute right-0 top-[calc(100%+8px)] w-56 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-zinc-800 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col py-2 z-50">
                     <div class="px-3 pb-1 mb-1 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">All-in-One Exporter</span>
+                    </div>
+                    <button onclick="generateFaviconKit()" class="px-4 py-2 text-xs font-semibold text-left hover:bg-brand-50 dark:hover:bg-brand-900/30 text-brand-600 dark:text-brand-400 transition-colors flex items-center gap-2 border-b border-gray-100 dark:border-zinc-800/80">
+                        <i data-lucide="archive" class="w-3.5 h-3.5"></i> One-Click ZIP Kit
+                    </button>
+                    
+                    <div class="px-3 pb-1 mt-2 mb-1 border-b border-gray-100 dark:border-zinc-800">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Favicon PNG Formats</span>
                     </div>
                     <button onclick="exportFavicon(16)" class="px-4 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between"><span>Micro Tab (16x16)</span><span class="text-[9px] text-gray-400 font-mono">16px</span></button>
@@ -210,6 +219,9 @@ import Favicon from '../../components/Favicon.astro';
                         <!-- Content: Emojis -->
                         <span id="master-favicon-emoji" class="hidden text-[140px] leading-none select-none tracking-normal">✨</span>
 
+                        <!-- Content: Custom SVG Container -->
+                        <div id="master-favicon-svg-container" class="hidden absolute inset-0 flex items-center justify-center p-4 select-none pointer-events-none transition-transform duration-100"></div>
+
                         <!-- Ring overlay -->
                         <div id="favicon-ring" class="hidden absolute inset-0 border-[10px] border-white/20 rounded-full"></div>
                         <!-- Accent dot -->
@@ -292,7 +304,55 @@ import Favicon from '../../components/Favicon.astro';
                         <select id="ctrl-favicon-mode" class="w-full">
                             <option value="monogram" selected>Text Monogram Style</option>
                             <option value="emoji">Developer Emoji Style</option>
+                            <option value="svg">Custom SVG Upload</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- 2b. Custom SVG Upload & Presets (Conditional) -->
+                <div id="svg-settings-group" class="property-group hidden">
+                    <h3 class="text-[12px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400 mb-3 flex items-center gap-2"><i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Custom SVG Import</h3>
+                    <div class="space-y-3">
+                        <!-- Dropzone Area -->
+                        <div id="svg-dropzone" class="border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-xl p-4 text-center cursor-pointer hover:border-brand-500 dark:hover:border-brand-500 transition-colors bg-gray-50/50 dark:bg-zinc-900/30 flex flex-col items-center justify-center gap-2">
+                            <i data-lucide="upload" class="w-8 h-8 text-gray-400 dark:text-zinc-500"></i>
+                            <div class="space-y-0.5">
+                                <p class="text-xs font-semibold text-gray-700 dark:text-zinc-300">Drop your SVG here</p>
+                                <p class="text-[10px] text-gray-400 dark:text-zinc-500">or click to browse local files</p>
+                            </div>
+                            <input type="file" id="ctrl-svg-file" accept=".svg" class="hidden">
+                        </div>
+
+                        <!-- Canvas Labs Premium Presets -->
+                        <div>
+                            <label class="block text-[9px] uppercase text-gray-500 mb-2">Or Choose a Premium Preset</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" class="preset-btn p-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl hover:border-brand-500 dark:hover:border-brand-500 transition-all flex flex-col items-center gap-1.5 focus:outline-none" data-svg-preset="/favicon/favicon-white-trans.svg">
+                                    <div class="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-inner border border-gray-200"><img src="/favicon/favicon-white-trans.svg" class="w-5 h-5 object-contain" /></div>
+                                    <span class="text-[9px] font-medium text-gray-600 dark:text-zinc-400 truncate w-full text-center">White Trans</span>
+                                </button>
+                                <button type="button" class="preset-btn p-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl hover:border-brand-500 dark:hover:border-brand-500 transition-all flex flex-col items-center gap-1.5 focus:outline-none" data-svg-preset="/favicon/favicon-gradeint-trans.svg">
+                                    <div class="w-7 h-7 bg-gray-900 rounded-lg flex items-center justify-center shadow-inner"><img src="/favicon/favicon-gradeint-trans.svg" class="w-5 h-5 object-contain" /></div>
+                                    <span class="text-[9px] font-medium text-gray-600 dark:text-zinc-400 truncate w-full text-center">Gradient</span>
+                                </button>
+                                <button type="button" class="preset-btn p-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl hover:border-brand-500 dark:hover:border-brand-500 transition-all flex flex-col items-center gap-1.5 focus:outline-none" data-svg-preset="/favicon/favicon-dark-trans.svg">
+                                    <div class="w-7 h-7 bg-zinc-950 rounded-lg flex items-center justify-center shadow-inner border border-zinc-800"><img src="/favicon/favicon-dark-trans.svg" class="w-5 h-5 object-contain" /></div>
+                                    <span class="text-[9px] font-medium text-gray-600 dark:text-zinc-400 truncate w-full text-center">Dark Trans</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- SVG Scale Settings -->
+                        <div class="grid grid-cols-2 gap-3 mt-2">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Vector Scale</label><span id="val-svg-scale" class="text-[9px]">1x</span></div>
+                                <input type="range" id="ctrl-svg-scale" min="0.3" max="1.5" step="0.05" value="1">
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-[9px] text-gray-500">Y Offset</label><span id="val-svg-y" class="text-[9px]">0px</span></div>
+                                <input type="range" id="ctrl-svg-y" min="-40" max="40" value="0">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -499,6 +559,7 @@ import Favicon from '../../components/Favicon.astro';
             canvas: document.getElementById('master-favicon-canvas'),
             text: document.getElementById('master-favicon-text'),
             emoji: document.getElementById('master-favicon-emoji'),
+            svgContainer: document.getElementById('master-favicon-svg-container'),
             ring: document.getElementById('favicon-ring'),
             dot: document.getElementById('favicon-dot'),
             
@@ -517,6 +578,7 @@ import Favicon from '../../components/Favicon.astro';
         };
 
         let chromeMockupTheme = 'light'; // Light mode tab mockup by default
+        let uploadedSvgContent = ''; // Custom SVG content (raw string)
 
         // Helper to bind label updates dynamically
         function bindLabel(id, suffix='') {
@@ -524,9 +586,77 @@ import Favicon from '../../components/Favicon.astro';
             const val = document.getElementById(`val-${id}`);
             if(el && val) el.addEventListener('input', () => val.innerText = el.value + suffix);
         }
-        ['mono-ang','mono-scale','mono-y','emoji-scale','emoji-y','bg-ang','bg-rad','bg-pad'].forEach(id => {
+        ['mono-ang','mono-scale','mono-y','emoji-scale','emoji-y','svg-scale','svg-y','bg-ang','bg-rad','bg-pad'].forEach(id => {
             const suffix = id.includes('scale') ? 'x' : (id.includes('ang') ? '°' : 'px');
             bindLabel(id, suffix);
+        });
+
+        // SVG Upload Handlers
+        const fileInput = document.getElementById('ctrl-svg-file');
+        const dropzone = document.getElementById('svg-dropzone');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-brand-500', 'bg-brand-50/10');
+        });
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('border-brand-500', 'bg-brand-50/10');
+        });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-brand-500', 'bg-brand-50/10');
+            const file = e.dataTransfer.files[0];
+            if(file && file.name.endsWith('.svg')) {
+                handleSvgFile(file);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) handleSvgFile(file);
+        });
+
+        function handleSvgFile(file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                uploadedSvgContent = event.target.result;
+                updateSvgContainer();
+                updateUI();
+            };
+            reader.readAsText(file);
+        }
+
+        async function loadPreset(url) {
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                uploadedSvgContent = text;
+                updateSvgContainer();
+                updateUI();
+            } catch (err) {
+                console.error("Failed to load preset:", err);
+            }
+        }
+
+        function updateSvgContainer() {
+            dom.svgContainer.innerHTML = uploadedSvgContent;
+            const svgEl = dom.svgContainer.querySelector('svg');
+            if(svgEl) {
+                svgEl.style.width = '100%';
+                svgEl.style.height = '100%';
+                svgEl.style.maxWidth = '100%';
+                svgEl.style.maxHeight = '100%';
+                svgEl.setAttribute('width', '100%');
+                svgEl.setAttribute('height', '100%');
+            }
+        }
+
+        // Preset button click listeners
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const url = btn.getAttribute('data-svg-preset');
+                loadPreset(url);
+            });
         });
 
         // Mode Toggles
@@ -534,17 +664,27 @@ import Favicon from '../../components/Favicon.astro';
             const mode = e.target.value;
             const monoGroup = document.getElementById('monogram-settings-group');
             const emojiGroup = document.getElementById('emoji-settings-group');
+            const svgGroup = document.getElementById('svg-settings-group');
+            
+            monoGroup.classList.add('hidden');
+            emojiGroup.classList.add('hidden');
+            svgGroup.classList.add('hidden');
+            dom.text.classList.add('hidden');
+            dom.emoji.classList.add('hidden');
+            dom.svgContainer.classList.add('hidden');
             
             if(mode === 'monogram') {
                 monoGroup.classList.remove('hidden');
-                emojiGroup.classList.add('hidden');
                 dom.text.classList.remove('hidden');
-                dom.emoji.classList.add('hidden');
-            } else {
-                monoGroup.classList.add('hidden');
+            } else if (mode === 'emoji') {
                 emojiGroup.classList.remove('hidden');
-                dom.text.classList.add('hidden');
                 dom.emoji.classList.remove('hidden');
+            } else {
+                svgGroup.classList.remove('hidden');
+                dom.svgContainer.classList.remove('hidden');
+                if(!uploadedSvgContent) {
+                    loadPreset('/favicon/favicon-white-trans.svg');
+                }
             }
             updateUI();
         });
@@ -680,9 +820,11 @@ import Favicon from '../../components/Favicon.astro';
                 dom.text.style.fontWeight = val('mono-weight');
                 dom.text.style.transform = `scale(${val('mono-scale')}) translateY(${val('mono-y')}px)`;
                 applyTextFill(dom.text, 'mono');
-            } else {
+            } else if (mode === 'emoji') {
                 dom.emoji.innerText = val('emoji-text');
                 dom.emoji.style.transform = `scale(${val('emoji-scale')}) translateY(${val('emoji-y')}px)`;
+            } else {
+                dom.svgContainer.style.transform = `scale(${val('svg-scale')}) translateY(${val('svg-y')}px)`;
             }
 
             // 3. Ring Accents
@@ -717,6 +859,7 @@ import Favicon from '../../components/Favicon.astro';
                     // Scale text element
                     const textNode = child.querySelector('#master-favicon-text');
                     const emojiNode = child.querySelector('#master-favicon-emoji');
+                    const svgNode = child.querySelector('#master-favicon-svg-container');
                     if (textNode) {
                         textNode.style.fontSize = `${120 * (parseInt(size) / 256)}px`;
                         textNode.style.transform = `scale(${val('mono-scale')}) translateY(${parseInt(val('mono-y')) * (parseInt(size) / 256)}px)`;
@@ -724,6 +867,9 @@ import Favicon from '../../components/Favicon.astro';
                     if (emojiNode) {
                         emojiNode.style.fontSize = `${140 * (parseInt(size) / 256)}px`;
                         emojiNode.style.transform = `scale(${val('emoji-scale')}) translateY(${parseInt(val('emoji-y')) * (parseInt(size) / 256)}px)`;
+                    }
+                    if (svgNode) {
+                        svgNode.style.transform = `scale(${val('svg-scale')}) translateY(${parseInt(val('svg-y')) * (parseInt(size) / 256)}px)`;
                     }
                     
                     // Scale accents
@@ -747,19 +893,8 @@ import Favicon from '../../components/Favicon.astro';
         }
 
         function updateChromeTabFavicon() {
-            const configFavicon = siteConfig?.tabPreferences?.favicon;
-            if (configFavicon && configFavicon.useSvgIcon) {
-                // Render configured high-fidelity SVG Favicon Icon
-                const svgUrl = chromeMockupTheme === 'dark' ? configFavicon.darkTabSvg : configFavicon.lightTabSvg;
-                dom.tabFaviconContainer.innerHTML = `<img src="${svgUrl}" class="w-4.5 h-4.5 object-contain" style="image-rendering: -webkit-optimize-contrast; max-width: 100%; max-height: 100%;" />`;
-            } else if (configFavicon && (configFavicon.darkTabEmoji || configFavicon.lightTabEmoji)) {
-                // Render configured Emoji Icon
-                const emoji = chromeMockupTheme === 'dark' ? configFavicon.darkTabEmoji : configFavicon.lightTabEmoji;
-                dom.tabFaviconContainer.innerHTML = `<span class="text-xs leading-none select-none flex items-center justify-center h-full w-full">${emoji}</span>`;
-            } else {
-                // Fallback to custom-drawn live workspace canvas
-                dom.tabFaviconContainer.innerHTML = document.querySelector('.size-preview-16').innerHTML;
-            }
+            // Live tab favicon mock synced dynamically with the exact 16px visual workspace!
+            dom.tabFaviconContainer.innerHTML = document.querySelector('.size-preview-16').innerHTML;
         }
 
         // Toggle White/Dark Chrome Mockup bar
@@ -815,6 +950,7 @@ import Favicon from '../../components/Favicon.astro';
                 
                 const tNode = targetNode.querySelector('#master-favicon-text');
                 const eNode = targetNode.querySelector('#master-favicon-emoji');
+                const sNode = targetNode.querySelector('#master-favicon-svg-container');
                 if(tNode) {
                     tNode.style.fontSize = `${120 * (size / 256)}px`;
                     tNode.style.transform = `scale(${val('mono-scale')}) translateY(${parseInt(val('mono-y')) * (size / 256)}px)`;
@@ -822,6 +958,9 @@ import Favicon from '../../components/Favicon.astro';
                 if(eNode) {
                     eNode.style.fontSize = `${140 * (size / 256)}px`;
                     eNode.style.transform = `scale(${val('emoji-scale')}) translateY(${parseInt(val('emoji-y')) * (size / 256)}px)`;
+                }
+                if(sNode) {
+                    sNode.style.transform = `scale(${val('svg-scale')}) translateY(${parseInt(val('svg-y')) * (size / 256)}px)`;
                 }
                 
                 const ringNode = targetNode.querySelector('#favicon-ring');
@@ -845,7 +984,8 @@ import Favicon from '../../components/Favicon.astro';
                 style: { transform: 'scale(1)', transformOrigin: 'top left' }
             }).then(dataUrl => {
                 const link = document.createElement('a');
-                const nameLabel = val('favicon-mode') === 'monogram' ? val('mono-text') : 'emoji';
+                const mode = val('favicon-mode');
+                const nameLabel = mode === 'monogram' ? val('mono-text') : (mode === 'emoji' ? 'emoji' : 'custom');
                 link.download = `favicon-${nameLabel}-${size}x${size}.png`;
                 link.href = dataUrl;
                 link.click();
@@ -864,13 +1004,150 @@ import Favicon from '../../components/Favicon.astro';
                 pixelRatio: 1
             }).then(dataUrl => {
                 const link = document.createElement('a');
-                const nameLabel = val('favicon-mode') === 'monogram' ? val('mono-text') : 'emoji';
+                const mode = val('favicon-mode');
+                const nameLabel = mode === 'monogram' ? val('mono-text') : (mode === 'emoji' ? 'emoji' : 'custom');
                 link.download = `favicon-${nameLabel}.svg`;
                 link.href = dataUrl;
                 link.click();
             }).catch(err => {
                 console.error(err);
             });
+        }
+
+        // Generate Complete ZIP Kit
+        async function generateFaviconKit() {
+            const zip = new JSZip();
+            const mode = val('favicon-mode');
+            const nameLabel = mode === 'monogram' ? val('mono-text') : (mode === 'emoji' ? 'emoji' : 'custom');
+            
+            // Show custom loading status
+            const exportBtn = document.querySelector('.bg-brand-600');
+            const originalHTML = exportBtn.innerHTML;
+            exportBtn.setAttribute('disabled', 'true');
+            exportBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Bundling Kit...`;
+            lucide.createIcons();
+
+            try {
+                // 1. Export standard sizes
+                const sizes = [16, 32, 48, 180, 192, 512];
+                const imagePromises = sizes.map(async size => {
+                    const tempBox = document.createElement('div');
+                    tempBox.style.width = `${size}px`;
+                    tempBox.style.height = `${size}px`;
+                    tempBox.style.position = 'fixed';
+                    tempBox.style.top = '-9999px';
+                    tempBox.style.left = '-9999px';
+                    
+                    const sourceSize = size === 16 || size === 32 || size === 48 || size === 128 || size === 180 ? size : '128';
+                    tempBox.innerHTML = document.querySelector(`.size-preview-${sourceSize}`).innerHTML;
+                    document.body.appendChild(tempBox);
+                    
+                    const targetNode = tempBox.firstElementChild;
+                    targetNode.style.width = `${size}px`;
+                    targetNode.style.height = `${size}px`;
+                    targetNode.style.borderRadius = `${parseInt(val('bg-rad')) * (size / 256)}px`;
+                    targetNode.style.padding = `${parseInt(val('bg-pad')) * (size / 256)}px`;
+                    
+                    const tNode = targetNode.querySelector('#master-favicon-text');
+                    const eNode = targetNode.querySelector('#master-favicon-emoji');
+                    const sNode = targetNode.querySelector('#master-favicon-svg-container');
+                    
+                    if(tNode) {
+                        tNode.style.fontSize = `${120 * (size / 256)}px`;
+                        tNode.style.transform = `scale(${val('mono-scale')}) translateY(${parseInt(val('mono-y')) * (size / 256)}px)`;
+                    }
+                    if(eNode) {
+                        eNode.style.fontSize = `${140 * (size / 256)}px`;
+                        eNode.style.transform = `scale(${val('emoji-scale')}) translateY(${parseInt(val('emoji-y')) * (size / 256)}px)`;
+                    }
+                    if(sNode) {
+                        sNode.style.transform = `scale(${val('svg-scale')}) translateY(${parseInt(val('svg-y')) * (size / 256)}px)`;
+                    }
+                    
+                    const ringNode = targetNode.querySelector('#favicon-ring');
+                    const dotNode = targetNode.querySelector('#favicon-dot');
+                    if (ringNode) {
+                        ringNode.style.borderWidth = `${10 * (size / 256)}px`;
+                        ringNode.style.borderRadius = `${parseInt(val('bg-rad')) * (size / 256)}px`;
+                    }
+                    if (dotNode) {
+                        dotNode.style.width = `${10 * (size / 64)}px`;
+                        dotNode.style.height = `${10 * (size / 64)}px`;
+                        dotNode.style.bottom = `${4 * (size / 256)}px`;
+                        dotNode.style.right = `${4 * (size / 256)}px`;
+                    }
+
+                    const dataUrl = await htmlToImage.toPng(targetNode, {
+                        width: size,
+                        height: size,
+                        pixelRatio: 1,
+                        style: { transform: 'scale(1)', transformOrigin: 'top left' }
+                    });
+                    document.body.removeChild(tempBox);
+
+                    const response = await fetch(dataUrl);
+                    const blob = await response.blob();
+                    
+                    let filename = `favicon-${size}x${size}.png`;
+                    if (size === 180) filename = 'apple-touch-icon.png';
+                    if (size === 192) filename = 'android-chrome-192x192.png';
+                    if (size === 512) filename = 'android-chrome-512x512.png';
+                    
+                    zip.file(filename, blob);
+                });
+
+                await Promise.all(imagePromises);
+
+                // 2. Export vector SVG
+                const svgDataUrl = await htmlToImage.toSvg(dom.canvas, {
+                    width: 256,
+                    height: 256,
+                    pixelRatio: 1
+                });
+                const svgResponse = await fetch(svgDataUrl);
+                const svgBlob = await svgResponse.blob();
+                zip.file('favicon.svg', svgBlob);
+
+                // 3. Export high-compatibility favicon.ico (We can package the 32px PNG as a fallback favicon.ico)
+                const icoDataUrl = await htmlToImage.toPng(document.querySelector('.size-preview-32').firstElementChild, {
+                    width: 32,
+                    height: 32,
+                    pixelRatio: 1
+                });
+                const icoResponse = await fetch(icoDataUrl);
+                const icoBlob = await icoResponse.blob();
+                zip.file('favicon.ico', icoBlob);
+
+                // 4. Generate site.webmanifest JSON
+                const manifest = {
+                    name: "Canvas Labs App",
+                    short_name: "App",
+                    icons: [
+                        { src: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+                        { src: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" }
+                    ],
+                    theme_color: val('bg-type') === 'solid' ? val('bg-color') : '#8b5cf6',
+                    background_color: val('bg-type') === 'solid' ? val('bg-color') : '#8b5cf6',
+                    display: "standalone"
+                };
+                zip.file('site.webmanifest', JSON.stringify(manifest, null, 2));
+
+                // 5. Package ZIP and trigger download
+                const content = await zip.generateAsync({ type: 'blob' });
+                const link = document.createElement('a');
+                link.download = `favicon-kit-${nameLabel}.zip`;
+                link.href = URL.createObjectURL(content);
+                link.click();
+
+            } catch (err) {
+                console.error("Failed to generate zip bundle:", err);
+                alert("An error occurred during favicon kit packaging. Please try individual exports.");
+            } finally {
+                // Restore button
+                exportBtn.removeAttribute('disabled');
+                exportBtn.innerHTML = originalHTML;
+                lucide.createIcons();
+            }
         }
 
         lucide.createIcons();

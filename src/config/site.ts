@@ -21,11 +21,11 @@ export const SITE_CONFIG = {
     favicon: {
       default: "/favicon/favicon-white-trans.svg",
       // Set 'useSvgIcon' to true to display SVG files inside browser tab mockups, or false to use the Emojis below
-      useSvgIcon: false,
+      useSvgIcon: true,
       darkTabEmoji: "⭐",     
       lightTabEmoji: "👉",
-      darkTabSvg: "/favicon/favicon-dark-trans.svg",
-      lightTabSvg: "/favicon/favicon-white-trans.svg",
+      darkTabSvg: "/favicon/favicon-white-trans.svg",
+      lightTabSvg: "/favicon/favicon-dark-trans.svg",
     }
   }
 };

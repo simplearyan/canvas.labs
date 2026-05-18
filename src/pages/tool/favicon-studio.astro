@@ -1,0 +1,810 @@
+---
+import { SITE_CONFIG } from '@/config/site';
+import Favicon from '@/components/Favicon.astro';
+---
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <Favicon />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Labs | CapCut Favicon Studio</title>
+    
+    <!-- Tailwind CSS -->
+    <script is:inline src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script is:inline src="https://unpkg.com/lucide@latest"></script>
+    <!-- HTML to Image Library -->
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <!-- JSZip Library -->
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
+    
+    <script is:inline>
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                        },
+                        capcut: {
+                            bg: '#09090b',
+                            panel: '#121214',
+                            card: '#1a1a1e',
+                            cyan: '#00f2fe',
+                            border: '#2a2a30'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style is:inline>
+        /* Custom scrollbar matching dark panel */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #09090b;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2a2a30;
+            border-radius: 999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #3a3a42;
+        }
+        /* Custom checker pattern for transparency previews */
+        .bg-checker {
+            background-color: #121214;
+            background-image: linear-gradient(45deg, #18181c 25%, transparent 25%), 
+                              linear-gradient(-45deg, #18181c 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #18181c 75%), 
+                              linear-gradient(-45deg, transparent 75%, #18181c 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        }
+    </style>
+</head>
+<body class="bg-capcut-bg text-gray-200 font-sans min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+    <!-- Header navigation (Ultra-minimal 44px) -->
+    <header class="h-11 shrink-0 bg-capcut-panel border-b border-capcut-border/50 px-5 flex items-center justify-between select-none z-30 shadow-md">
+        <div class="flex items-center gap-2">
+            <a href="/" class="flex items-center gap-1.5 group">
+                <div class="w-6 h-6 rounded bg-gradient-to-tr from-brand-600 to-capcut-cyan flex items-center justify-center shadow-inner transform transition-transform group-hover:scale-105">
+                    <span class="text-[10px] font-black tracking-tighter text-black select-none font-outfit">CL</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-white select-none leading-none">Canvas Labs</span>
+                    <span class="text-[7px] text-zinc-500 tracking-widest font-mono mt-0.5 leading-none">FAVICON STUDIO</span>
+                </div>
+            </a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <a href="/tool/favicon-generator" class="text-[9.5px] font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors flex items-center gap-1 bg-zinc-900 px-2.5 py-0.5 rounded-full border border-zinc-800">
+                <i data-lucide="sliders" class="w-2.5 h-2.5"></i> Generator
+            </a>
+            
+            <!-- Complete Exporter Button -->
+            <button onclick="generateFaviconKit()" class="bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-600 text-white px-3 py-1 rounded-md text-[10px] font-bold shadow-lg shadow-brand-600/10 transition-all flex items-center gap-1">
+                <i data-lucide="archive" class="w-3 h-3"></i> Export kit
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Studio Space -->
+    <main class="flex-1 flex flex-col lg:flex-row min-h-[calc(100vh-2.75rem)]">
+        
+        <!-- Left Column: Properties and Presets (CapCut dark style) -->
+        <aside class="w-full lg:w-[320px] bg-capcut-panel lg:border-r border-capcut-border/40 flex flex-col shrink-0 p-5 space-y-5">
+            
+            <!-- 1. Header Info -->
+            <div class="border-b border-capcut-border/40 pb-3">
+                <h1 class="text-base font-black font-outfit text-white tracking-tight flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-4.5 h-4.5 text-capcut-cyan animate-pulse"></i> Studio Canvas
+                </h1>
+                <p class="text-[10px] text-zinc-500 mt-0.5 leading-relaxed">Sleek workspace for premium high-fidelity vector favicons.</p>
+            </div>
+
+            <!-- 2. Presets Selector -->
+            <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                    <label class="text-[9px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                        <i data-lucide="layers" class="w-3 h-3"></i> Presets
+                    </label>
+                    <span class="text-[8px] text-zinc-600 font-mono">SVG vector</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" class="preset-btn p-2 bg-capcut-card hover:bg-zinc-800/80 border border-capcut-border rounded-xl transition-all flex flex-col items-center gap-1 focus:outline-none" data-svg-preset="/favicon/favicon-dark-trans.svg">
+                        <div class="w-7 h-7 bg-zinc-950 rounded-lg flex items-center justify-center border border-zinc-850"><img src="/favicon/favicon-dark-trans.svg" class="w-5 h-5 object-contain" /></div>
+                        <span class="text-[8px] font-medium text-zinc-400 truncate w-full text-center">Matte Dark</span>
+                    </button>
+                    <button type="button" class="preset-btn p-2 bg-capcut-card hover:bg-zinc-800/80 border border-capcut-border rounded-xl transition-all flex flex-col items-center gap-1 focus:outline-none" data-svg-preset="/favicon/favicon-gradeint-trans.svg">
+                        <div class="w-7 h-7 bg-zinc-900 rounded-lg flex items-center justify-center"><img src="/favicon/favicon-gradeint-trans.svg" class="w-5 h-5 object-contain" /></div>
+                        <span class="text-[8px] font-medium text-zinc-400 truncate w-full text-center">Gradient</span>
+                    </button>
+                    <button type="button" class="preset-btn p-2 bg-capcut-card hover:bg-zinc-800/80 border border-capcut-border rounded-xl transition-all flex flex-col items-center gap-1 focus:outline-none" data-svg-preset="/favicon/favicon-white-trans.svg">
+                        <div class="w-7 h-7 bg-white rounded-lg flex items-center justify-center border border-gray-250"><img src="/favicon/favicon-white-trans.svg" class="w-5 h-5 object-contain" /></div>
+                        <span class="text-[8px] font-medium text-zinc-400 truncate w-full text-center">White</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. SVG Drag-and-Drop Zone -->
+            <div class="space-y-2">
+                <label class="text-[9px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                    <i data-lucide="upload" class="w-3 h-3"></i> SVG Upload
+                </label>
+                <div id="svg-dropzone" class="border border-dashed border-capcut-border hover:border-capcut-cyan rounded-xl p-4 text-center cursor-pointer transition-all bg-capcut-card/50 flex flex-col items-center justify-center gap-1.5 group">
+                    <div class="w-8 h-8 rounded-full bg-zinc-900 border border-capcut-border flex items-center justify-center text-zinc-500 group-hover:text-capcut-cyan transition-colors">
+                        <i data-lucide="file-up" class="w-4 h-4"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <p class="text-[11px] font-semibold text-zinc-300">Drop vector SVG here</p>
+                        <p class="text-[8px] text-zinc-500">or click to browse files</p>
+                    </div>
+                    <input type="file" id="ctrl-svg-file" accept=".svg" class="hidden">
+                </div>
+            </div>
+
+            <!-- 4. Canvas settings -->
+            <div class="space-y-3">
+                <label class="text-[9px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                    <i data-lucide="sliders-horizontal" class="w-3 h-3"></i> Board Customizer
+                </label>
+                
+                <div class="bg-capcut-card rounded-xl p-3 border border-capcut-border/50 space-y-3">
+                    <!-- Background Type -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[9px] text-zinc-450 uppercase tracking-wider font-semibold">Background board</span>
+                            <span class="text-[8px] text-zinc-500 font-mono" id="val-bg-type">Gradient</span>
+                        </div>
+                        <select id="ctrl-bg-type" class="w-full bg-zinc-950 border border-capcut-border rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-capcut-cyan">
+                            <option value="transparent">Transparent background</option>
+                            <option value="solid">Solid background color</option>
+                            <option value="gradient" selected>Linear gradient fill</option>
+                        </select>
+                    </div>
+
+                    <!-- Solid BG Color Picker -->
+                    <div id="bg-solid-ctrl" class="hidden flex justify-between items-center bg-zinc-950/60 p-1.5 rounded border border-capcut-border">
+                        <span class="text-[9px] text-zinc-400">Solid color hex</span>
+                        <input type="color" id="ctrl-bg-color" value="#09090b" class="w-12 h-5 border-0 bg-transparent cursor-pointer rounded">
+                    </div>
+
+                    <!-- Gradient BG Color Picker -->
+                    <div id="bg-grad-ctrl" class="space-y-2">
+                        <div class="flex gap-2">
+                            <input type="color" id="ctrl-bg-g1" value="#1f1f23" class="flex-1 h-6 border-0 bg-transparent cursor-pointer rounded shadow-inner">
+                            <input type="color" id="ctrl-bg-g2" value="#09090b" class="flex-1 h-6 border-0 bg-transparent cursor-pointer rounded shadow-inner">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-0.5">
+                                <span class="text-[8px] text-zinc-500 uppercase">Gradient angle</span>
+                                <span class="text-[8px] text-zinc-400 font-mono" id="val-bg-ang">135°</span>
+                            </div>
+                            <input type="range" id="ctrl-bg-ang" min="0" max="360" value="135" class="w-full h-1 bg-zinc-950 rounded appearance-none cursor-pointer accent-capcut-cyan">
+                        </div>
+                    </div>
+
+                    <!-- Border Radius and Padding -->
+                    <div class="grid grid-cols-2 gap-2 pt-0.5">
+                        <div>
+                            <div class="flex justify-between items-center mb-0.5">
+                                <span class="text-[8px] text-zinc-500 uppercase font-semibold">Radius</span>
+                                <span class="text-[8px] text-zinc-400 font-mono" id="val-bg-rad">64px</span>
+                            </div>
+                            <input type="range" id="ctrl-bg-rad" min="0" max="128" value="64" class="w-full h-1 bg-zinc-950 rounded appearance-none cursor-pointer accent-capcut-cyan">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-0.5">
+                                <span class="text-[8px] text-zinc-500 uppercase font-semibold">Padding</span>
+                                <span class="text-[8px] text-zinc-400 font-mono" id="val-bg-pad">16px</span>
+                            </div>
+                            <input type="range" id="ctrl-bg-pad" min="0" max="60" value="16" class="w-full h-1 bg-zinc-950 rounded appearance-none cursor-pointer accent-capcut-cyan">
+                        </div>
+                    </div>
+
+                    <!-- Custom SVG Scale & Translation -->
+                    <div class="grid grid-cols-2 gap-2 border-t border-capcut-border/40 pt-2.5">
+                        <div>
+                            <div class="flex justify-between items-center mb-0.5">
+                                <span class="text-[8px] text-zinc-500 uppercase font-semibold">Scale</span>
+                                <span class="text-[8px] text-zinc-400 font-mono" id="val-svg-scale">1x</span>
+                            </div>
+                            <input type="range" id="ctrl-svg-scale" min="0.3" max="1.5" step="0.05" value="1" class="w-full h-1 bg-zinc-950 rounded appearance-none cursor-pointer accent-capcut-cyan">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-0.5">
+                                <span class="text-[8px] text-zinc-500 uppercase font-semibold">Offset Y</span>
+                                <span class="text-[8px] text-zinc-400 font-mono" id="val-svg-y">0px</span>
+                            </div>
+                            <input type="range" id="ctrl-svg-y" min="-40" max="40" value="0" class="w-full h-1 bg-zinc-950 rounded appearance-none cursor-pointer accent-capcut-cyan">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. App Splash Screen Customizer -->
+            <div class="space-y-3">
+                <label class="text-[9px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> App open splash
+                </label>
+                <div class="bg-capcut-card rounded-xl p-3 border border-capcut-border/50 space-y-3">
+                    <div>
+                        <label class="block text-[8px] text-zinc-550 uppercase mb-0.5 font-bold tracking-wider">App subtitle text</label>
+                        <input type="text" id="ctrl-splash-sub" value="Canvas Labs Engine" placeholder="Type app name..." class="w-full bg-zinc-950 border border-capcut-border rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-capcut-cyan">
+                    </div>
+                    
+                    <!-- Webmanifest Theme & Splash Customizer -->
+                    <div class="border-t border-capcut-border/30 pt-2 space-y-2">
+                        <span class="text-[8px] text-zinc-500 uppercase font-black tracking-widest block">Webmanifest configuration</span>
+                        
+                        <div class="flex items-center justify-between bg-zinc-950/60 p-1.5 rounded border border-capcut-border/40">
+                            <span class="text-[8.5px] text-zinc-400">Theme Color</span>
+                            <input type="color" id="ctrl-manifest-theme" value="#8b5cf6" class="w-10 h-5 border-0 bg-transparent cursor-pointer rounded">
+                        </div>
+
+                        <div class="flex items-center justify-between bg-zinc-950/60 p-1.5 rounded border border-capcut-border/40">
+                            <span class="text-[8.5px] text-zinc-400">Splash Background</span>
+                            <input type="color" id="ctrl-manifest-bg" value="#09090b" class="w-10 h-5 border-0 bg-transparent cursor-pointer rounded">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Center Column: High-res Workspace Board & Legibility Matrix (Spacious preview canvas in standard viewport) -->
+        <section class="flex-1 bg-capcut-bg flex flex-col items-center justify-center p-6 space-y-6">
+            
+            <!-- Master Preview Title -->
+            <div class="w-full max-w-lg flex items-center justify-between border-b border-capcut-border/40 pb-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-capcut-cyan animate-pulse"></span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400 font-outfit">Visual Workspace</span>
+                </div>
+                <div class="text-[9px] text-zinc-500 flex items-center gap-1">
+                    <i data-lucide="scan" class="w-3 h-3"></i> 256px resolution
+                </div>
+            </div>
+
+            <!-- Master board container scaled dynamically to fit small screen heights -->
+            <div class="relative bg-checker border border-capcut-border/30 rounded-3xl p-4 shadow-2xl flex items-center justify-center overflow-hidden transition-all duration-300">
+                <div id="master-favicon-canvas" class="relative flex items-center justify-center shadow-lg transition-all" style="width: 220px; height: 220px; background-color: #8b5cf6; border-radius: 64px; padding: 16px;">
+                    <!-- Content: Custom SVG Container overlay -->
+                    <div id="master-favicon-svg-container" class="absolute inset-0 flex items-center justify-center select-none pointer-events-none transition-transform duration-100 p-inherit"></div>
+                </div>
+            </div>
+
+            <!-- Hidden sizes container for pixel-perfect image compilation -->
+            <div class="hidden">
+                <div class="size-preview-128 flex items-center justify-center shrink-0"></div>
+            </div>
+
+            <!-- Multi-Resolution Asset Preview Grid -->
+            <div class="w-full max-w-lg bg-capcut-panel border border-capcut-border/40 p-4 rounded-2xl space-y-3 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-black uppercase tracking-wider text-zinc-400 font-outfit">Legibility preview grid</span>
+                    <span class="text-[8px] text-capcut-cyan font-mono tracking-widest uppercase">Auto-scaled renders</span>
+                </div>
+                <div class="grid grid-cols-3 gap-3 bg-zinc-950/40 p-3 rounded-xl border border-capcut-border/20">
+                    <!-- 1. Apple Touch Icon (180px) -->
+                    <div class="bg-capcut-card/80 border border-capcut-border/30 rounded-xl p-2 flex flex-col items-center justify-between gap-1.5 h-[84px] transition-all hover:border-capcut-cyan/40 animate-fade-in">
+                        <div class="w-9 h-9 bg-checker rounded-lg border border-capcut-border/20 flex items-center justify-center overflow-hidden shadow-inner">
+                            <div class="w-7.5 h-7.5 size-preview-180"></div>
+                        </div>
+                        <span class="text-[8px] text-zinc-450 font-bold tracking-tight">180px Apple</span>
+                    </div>
+
+                    <!-- 2. PWA Android (192px) -->
+                    <div class="bg-capcut-card/80 border border-capcut-border/30 rounded-xl p-2 flex flex-col items-center justify-between gap-1.5 h-[84px] transition-all hover:border-capcut-cyan/40 animate-fade-in">
+                        <div class="w-9 h-9 bg-checker rounded-lg border border-capcut-border/20 flex items-center justify-center overflow-hidden shadow-inner">
+                            <div class="w-7.5 h-7.5 size-preview-192"></div>
+                        </div>
+                        <span class="text-[8px] text-zinc-450 font-bold tracking-tight">192px Android</span>
+                    </div>
+
+                    <!-- 3. Store Master (512px) -->
+                    <div class="bg-capcut-card/80 border border-capcut-border/30 rounded-xl p-2 flex flex-col items-center justify-between gap-1.5 h-[84px] transition-all hover:border-capcut-cyan/40 animate-fade-in">
+                        <div class="w-9 h-9 bg-checker rounded-lg border border-capcut-border/20 flex items-center justify-center overflow-hidden shadow-inner">
+                            <div class="w-7.5 h-7.5 size-preview-512"></div>
+                        </div>
+                        <span class="text-[8px] text-zinc-450 font-bold tracking-tight">512px Store</span>
+                    </div>
+
+                    <!-- 4. Windows App (48px) -->
+                    <div class="bg-capcut-card/80 border border-capcut-border/30 rounded-xl p-2 flex flex-col items-center justify-between gap-1.5 h-[84px] transition-all hover:border-capcut-cyan/40 animate-fade-in">
+                        <div class="w-9 h-9 bg-checker rounded-lg border border-capcut-border/20 flex items-center justify-center overflow-hidden shadow-inner">
+                            <div class="w-5.5 h-5.5 size-preview-48"></div>
+                        </div>
+                        <span class="text-[8px] text-zinc-450 font-bold tracking-tight">48px Windows</span>
+                    </div>
+
+                    <!-- 5. Browser Tab (32px) -->
+                    <div class="bg-capcut-card/80 border border-capcut-border/30 rounded-xl p-2 flex flex-col items-center justify-between gap-1.5 h-[84px] transition-all hover:border-capcut-cyan/40 animate-fade-in">
+                        <div class="w-9 h-9 bg-checker rounded-lg border border-capcut-border/20 flex items-center justify-center overflow-hidden shadow-inner">
+                            <div class="w-4.5 h-4.5 size-preview-32"></div>
+                        </div>
+                        <span class="text-[8px] text-zinc-450 font-bold tracking-tight">32px Tab</span>
+                    </div>
+
+                    <!-- 6. Micro Favicon (16px) -->
+                    <div class="bg-capcut-card/80 border border-capcut-border/30 rounded-xl p-2 flex flex-col items-center justify-between gap-1.5 h-[84px] transition-all hover:border-capcut-cyan/40 animate-fade-in">
+                        <div class="w-9 h-9 bg-checker rounded-lg border border-capcut-border/20 flex items-center justify-center overflow-hidden shadow-inner">
+                            <div class="w-3.5 h-3.5 size-preview-16"></div>
+                        </div>
+                        <span class="text-[8px] text-zinc-450 font-bold tracking-tight">16px Micro</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Combined Browser Tab Previews Card -->
+            <div class="w-full max-w-lg bg-capcut-panel border border-capcut-border/40 p-4 rounded-2xl space-y-3 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-black uppercase tracking-wider text-zinc-400 font-outfit">Browser Web Previews</span>
+                    <span class="text-[8px] text-capcut-cyan font-mono tracking-widest uppercase">Legibility inside tabs</span>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-950/40 p-3 rounded-xl border border-capcut-border/20">
+                    <!-- 1. LIGHT THEME TAB MOCKUP -->
+                    <div class="w-full bg-[#f1f3f4] rounded-lg shadow border border-gray-300/30 text-gray-800 p-1">
+                        <div class="h-7 px-2 flex items-center relative select-none">
+                            <div class="flex items-center gap-0.5 absolute left-2">
+                                <div class="w-1.5 h-1.5 rounded-full bg-[#ff5f56]"></div>
+                                <div class="w-1.5 h-1.5 rounded-full bg-[#ffbd2e]"></div>
+                                <div class="w-1.5 h-1.5 rounded-full bg-[#27c93f]"></div>
+                            </div>
+                            <div class="h-5 bg-white rounded-t px-2 flex items-center gap-1 border-t border-x border-gray-300/10 shadow-sm mx-auto w-[110px]">
+                                <div class="w-2.5 h-2.5 flex items-center justify-center shrink-0 overflow-hidden rounded-[1px]" id="chrome-light-tab-favicon"></div>
+                                <span class="text-[7.5px] font-semibold truncate text-gray-600">Light App</span>
+                                <i data-lucide="x" class="w-1.5 h-1.5 text-gray-400 ml-auto"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. DARK THEME TAB MOCKUP -->
+                    <div class="w-full bg-[#202124] rounded-lg shadow border border-zinc-800 text-zinc-300 p-1">
+                        <div class="h-7 px-2 flex items-center relative select-none">
+                            <div class="flex items-center gap-0.5 absolute left-2">
+                                <div class="w-1.5 h-1.5 rounded-full bg-[#ff5f56]"></div>
+                                <div class="w-1.5 h-1.5 rounded-full bg-[#ffbd2e]"></div>
+                                <div class="w-1.5 h-1.5 rounded-full bg-[#27c93f]"></div>
+                            </div>
+                            <div class="h-5 bg-[#35363a] rounded-t px-2 flex items-center gap-1 border-t border-x border-white/5 shadow-sm mx-auto w-[110px]">
+                                <div class="w-2.5 h-2.5 flex items-center justify-center shrink-0 overflow-hidden rounded-[1px]" id="chrome-dark-tab-favicon"></div>
+                                <span class="text-[7.5px] font-semibold truncate text-zinc-300">Dark App</span>
+                                <i data-lucide="x" class="w-1.5 h-1.5 text-zinc-500 ml-auto"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Column 3: Mobile 9:16 Grand PWA Simulator -->
+        <aside class="w-full lg:w-[380px] bg-capcut-panel lg:border-l border-capcut-border/40 flex flex-col shrink-0 p-5 space-y-5">
+            
+            <!-- Simulators header -->
+            <div class="border-b border-capcut-border/40 pb-2 flex items-center justify-between">
+                <span class="text-[9px] font-bold uppercase tracking-widest text-zinc-400 font-mono flex items-center gap-1">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5 text-capcut-cyan"></i> PWA Simulator
+                </span>
+                <button onclick="triggerSplashPreview()" class="bg-zinc-900 border border-capcut-border hover:bg-zinc-850 text-capcut-cyan text-[8px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded transition-all flex items-center gap-0.5">
+                    <i data-lucide="play" class="w-2.5 h-2.5"></i> Play
+                </button>
+            </div>
+
+            <!-- Mobile App Open simulator (styled in grand standard 9:16 ratio) -->
+            <div class="bg-capcut-card border border-capcut-border/50 rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg relative overflow-hidden flex-1 min-h-[500px]">
+                
+                <!-- Animated mobile phone frame scaled perfectly to exact 9:16 ratio (w-270px, h-480px) -->
+                <div class="relative w-[270px] h-[480px] bg-zinc-950 border-[5px] border-zinc-900 rounded-[36px] shadow-2xl overflow-hidden flex flex-col justify-between p-5 transition-all">
+                    <!-- Phone top dots -->
+                    <div class="flex justify-between items-center w-full select-none text-[8px] text-zinc-555 font-mono z-10">
+                        <span>9:41</span>
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="wifi" class="w-3 h-3"></i>
+                            <i data-lucide="battery" class="w-3 h-3"></i>
+                        </div>
+                    </div>
+
+                    <!-- Inner Mock UI dashboard -->
+                    <div class="flex-1 flex flex-col justify-center items-center gap-5 text-center mt-6 z-10">
+                        <div class="w-14 h-14 rounded-2xl bg-zinc-900 border border-capcut-border/60 flex items-center justify-center shadow-inner" id="phone-app-icon-container"></div>
+                        <div class="space-y-1">
+                            <h4 class="text-[13px] font-bold text-white uppercase tracking-wider" id="phone-app-title">Canvas Labs</h4>
+                            <p class="text-[9px] text-zinc-500 leading-normal">Creative vector tools suite.</p>
+                        </div>
+                        
+                        <!-- Reactive Launch Button (linked to Webmanifest Theme Color) -->
+                        <div id="phone-launch-btn" onclick="triggerSplashPreview()" class="w-full max-w-[130px] h-7.5 rounded-lg text-black font-black text-[10px] tracking-wide flex items-center justify-center shadow-sm select-none mt-2 cursor-pointer hover:opacity-90 transition-all font-outfit" style="background-color: #8b5cf6;">
+                            Launch app
+                        </div>
+                    </div>
+
+                    <!-- Bottom Indicator bar -->
+                    <div class="w-24 h-[4px] bg-zinc-800 rounded-full mx-auto select-none mt-auto z-10"></div>
+
+                    <!-- Animated Overlay Splash Container (Background color customized dynamically) -->
+                    <div id="mobile-splash-overlay" class="absolute inset-0 bg-[#09090b] flex flex-col justify-between items-center p-9 opacity-0 pointer-events-none transition-all duration-700 z-20">
+                        <div class="flex-1 flex flex-col justify-center items-center gap-6">
+                            <!-- High-fidelity Splash Icon rendering -->
+                            <div id="splash-icon-holder" class="w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl border border-zinc-800/80 transition-all duration-500 transform scale-75 opacity-0"></div>
+                            
+                            <!-- Splash application subtitle -->
+                            <div id="splash-title-holder" class="text-center opacity-0 transform translate-y-2 transition-all duration-700">
+                                <h3 class="text-[13px] font-black tracking-widest text-white font-outfit uppercase">Canvas Studio</h3>
+                                <p id="splash-sub-text" class="text-[9px] text-zinc-500 font-mono tracking-widest mt-1 uppercase">ENGINE ACTIVE</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Splash loading circle -->
+                        <div class="w-5 h-5 rounded-full border border-zinc-800 border-t-capcut-cyan animate-spin opacity-60"></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </aside>
+
+    </main>
+
+    <!-- Client-side logic workspace -->
+    <script is:inline>
+        let uploadedSvgContent = ''; // Raw SVG content string
+
+        // DOM Nodes Map
+        const dom = {
+            canvas: document.getElementById('master-favicon-canvas'),
+            svgContainer: document.getElementById('master-favicon-svg-container'),
+            fileInput: document.getElementById('ctrl-svg-file'),
+            dropzone: document.getElementById('svg-dropzone'),
+            
+            // Simulators
+            lightTabFavicon: document.getElementById('chrome-light-tab-favicon'),
+            darkTabFavicon: document.getElementById('chrome-dark-tab-favicon'),
+            phoneAppIcon: document.getElementById('phone-app-icon-container'),
+            
+            // App Splash Simulator
+            splashOverlay: document.getElementById('mobile-splash-overlay'),
+            splashIcon: document.getElementById('splash-icon-holder'),
+            splashTitle: document.getElementById('splash-title-holder'),
+            splashSubText: document.getElementById('splash-sub-text'),
+        };
+
+        // Helper selectors
+        const val = (id) => document.getElementById(`ctrl-${id}`).value;
+
+        // Helper to convert Hex to RGB
+        const hexToRgb = (hex) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        };
+
+        // Helper to bind label updates dynamically
+        function bindLabel(id, suffix='') {
+            const el = document.getElementById(`ctrl-${id}`);
+            const valEl = document.getElementById(`val-${id}`);
+            if(el && valEl) el.addEventListener('input', () => valEl.innerText = el.value + suffix);
+        }
+        ['bg-ang','bg-rad','bg-pad','svg-scale','svg-y'].forEach(id => {
+            const suffix = id.includes('scale') ? 'x' : (id.includes('ang') ? '°' : 'px');
+            bindLabel(id, suffix);
+        });
+
+        // Background Board selector handling
+        document.getElementById('ctrl-bg-type').addEventListener('change', (e) => {
+            const type = e.target.value;
+            document.getElementById('bg-solid-ctrl').classList.toggle('hidden', type !== 'solid');
+            document.getElementById('bg-grad-ctrl').classList.toggle('hidden', type !== 'gradient');
+            document.getElementById('val-bg-type').innerText = type.charAt(0).toUpperCase() + type.slice(1);
+            updateUI();
+        });
+
+        // Dropzone drag-and-drop listener binds
+        dom.dropzone.addEventListener('click', () => dom.fileInput.click());
+        dom.dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dom.dropzone.classList.add('border-capcut-cyan', 'bg-capcut-card/80');
+        });
+        dom.dropzone.addEventListener('dragleave', () => {
+            dom.dropzone.classList.remove('border-capcut-cyan', 'bg-capcut-card/80');
+        });
+        dom.dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dom.dropzone.classList.remove('border-capcut-cyan', 'bg-capcut-card/80');
+            const file = e.dataTransfer.files[0];
+            if(file && file.name.endsWith('.svg')) {
+                handleSvgFile(file);
+            }
+        });
+        dom.fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) handleSvgFile(file);
+        });
+
+        function handleSvgFile(file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                uploadedSvgContent = event.target.result;
+                updateSvgContainer();
+                updateUI();
+            };
+            reader.readAsText(file);
+        }
+
+        async function loadPreset(url) {
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                uploadedSvgContent = text;
+                updateSvgContainer();
+                updateUI();
+            } catch (err) {
+                console.error("Failed to load preset:", err);
+            }
+        }
+
+        function updateSvgContainer() {
+            dom.svgContainer.innerHTML = uploadedSvgContent;
+            const svgEl = dom.svgContainer.querySelector('svg');
+            if(svgEl) {
+                svgEl.style.width = '100%';
+                svgEl.style.height = '100%';
+                svgEl.style.maxWidth = '100%';
+                svgEl.style.maxHeight = '100%';
+                svgEl.setAttribute('width', '100%');
+                svgEl.setAttribute('height', '100%');
+            }
+        }
+
+        // Preset button clicks
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const url = btn.getAttribute('data-svg-preset');
+                loadPreset(url);
+            });
+        });
+
+        function updateUI() {
+            // 1. Background Config
+            const bgType = val('bg-type');
+            if (bgType === 'gradient') {
+                dom.canvas.style.background = `linear-gradient(${val('bg-ang')}deg, ${val('bg-g1')}, ${val('bg-g2')})`;
+            } else if (bgType === 'transparent') {
+                dom.canvas.style.background = 'transparent';
+            } else {
+                dom.canvas.style.background = val('bg-color');
+            }
+            dom.canvas.style.borderRadius = `${val('bg-rad')}px`;
+            dom.canvas.style.padding = `${val('bg-pad')}px`;
+
+            // 2. Vector Scale Transformations
+            dom.svgContainer.style.transform = `scale(${val('svg-scale')}) translateY(${val('svg-y')}px)`;
+
+            // 3. Clone sandbox preview layers to size simulators dynamically!
+            const canvasHTML = dom.canvas.outerHTML;
+            ['16', '32', '48', '128', '180', '192', '512'].forEach(size => {
+                const containers = document.querySelectorAll(`.size-preview-${size}`);
+                containers.forEach(box => {
+                    box.innerHTML = canvasHTML;
+                    
+                    const child = box.firstElementChild;
+                    child.id = `preview-clone-${size}`;
+                    child.style.width = '100%';
+                    child.style.height = '100%';
+                    child.style.borderRadius = `${parseInt(val('bg-rad')) * (parseInt(size) / 256)}px`;
+                    child.style.padding = `${parseInt(val('bg-pad')) * (parseInt(size) / 256)}px`;
+                    
+                    const svgNode = child.querySelector('#master-favicon-svg-container');
+                    if (svgNode) {
+                        svgNode.style.transform = `scale(${val('svg-scale')}) translateY(${parseInt(val('svg-y')) * (parseInt(size) / 256)}px)`;
+                    }
+                });
+            });
+
+            // 4. Update the side-by-side browser tabs and phone app icons
+            dom.lightTabFavicon.innerHTML = document.querySelector('.size-preview-16').innerHTML;
+            dom.darkTabFavicon.innerHTML = document.querySelector('.size-preview-16').innerHTML;
+            dom.phoneAppIcon.innerHTML = document.querySelector('.size-preview-48').innerHTML;
+
+            // 5. Update Webmanifest theme color elements dynamically
+            const themeColor = document.getElementById('ctrl-manifest-theme').value;
+            const launchBtn = document.getElementById('phone-launch-btn');
+            if (launchBtn) {
+                launchBtn.style.backgroundColor = themeColor;
+                // Dynamically adjust text contrast for launch button
+                const rgb = hexToRgb(themeColor);
+                if (rgb) {
+                    const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+                    launchBtn.style.color = brightness > 125 ? '#000000' : '#ffffff';
+                }
+            }
+
+            // Sync static overlay bg as well so that it is instantly colored
+            if (dom.splashOverlay) {
+                dom.splashOverlay.style.backgroundColor = document.getElementById('ctrl-manifest-bg').value;
+            }
+        }
+
+        // Animated Mobile Splash Sequence
+        function triggerSplashPreview() {
+            // Update splash app subtitle metadata
+            dom.splashSubText.innerText = document.getElementById('ctrl-splash-sub').value.toUpperCase() || 'ENGINE ACTIVE';
+            
+            // Sync mobile icon frame with dynamic workspace canvas
+            dom.splashIcon.innerHTML = document.querySelector('.size-preview-180').innerHTML;
+            
+            // Overlay entrance
+            dom.splashOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            dom.splashOverlay.classList.add('opacity-100');
+            
+            // Reset transforms
+            dom.splashIcon.style.transform = 'scale(0.7)';
+            dom.splashIcon.style.opacity = '0';
+            dom.splashTitle.style.transform = 'translateY(10px)';
+            dom.splashTitle.style.opacity = '0';
+            
+            // Morph scale delay animations
+            setTimeout(() => {
+                dom.splashIcon.style.transform = 'scale(1)';
+                dom.splashIcon.style.opacity = '1';
+            }, 300);
+            
+            setTimeout(() => {
+                dom.splashTitle.style.transform = 'translateY(0px)';
+                dom.splashTitle.style.opacity = '1';
+            }, 600);
+            
+            // Auto fadeout transition
+            setTimeout(() => {
+                dom.splashOverlay.classList.remove('opacity-100');
+                dom.splashOverlay.classList.add('opacity-0', 'pointer-events-none');
+            }, 3200);
+        }
+
+        // Unified Exporter kit compiler
+        async function generateFaviconKit() {
+            const zip = new JSZip();
+            
+            // Show custom loading status on exporter buttons
+            const exportBtn = document.querySelector('button[onclick="generateFaviconKit()"]');
+            const originalHTML = exportBtn.innerHTML;
+            exportBtn.setAttribute('disabled', 'true');
+            exportBtn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Compiling ZIP...`;
+            lucide.createIcons();
+
+            try {
+                // 1. Export standard sizes
+                const sizes = [16, 32, 48, 180, 192, 512];
+                const imagePromises = sizes.map(async size => {
+                    const tempBox = document.createElement('div');
+                    tempBox.style.width = `${size}px`;
+                    tempBox.style.height = `${size}px`;
+                    tempBox.style.position = 'fixed';
+                    tempBox.style.top = '-9999px';
+                    tempBox.style.left = '-9999px';
+                    
+                    const sourceSize = size === 16 || size === 32 || size === 48 || size === 128 || size === 180 ? size : '128';
+                    tempBox.innerHTML = document.querySelector(`.size-preview-${sourceSize}`).innerHTML;
+                    document.body.appendChild(tempBox);
+                    
+                    const targetNode = tempBox.firstElementChild;
+                    targetNode.style.width = `${size}px`;
+                    targetNode.style.height = `${size}px`;
+                    targetNode.style.borderRadius = `${parseInt(val('bg-rad')) * (size / 256)}px`;
+                    targetNode.style.padding = `${parseInt(val('bg-pad')) * (size / 256)}px`;
+                    
+                    const sNode = targetNode.querySelector('#master-favicon-svg-container');
+                    if(sNode) {
+                        sNode.style.transform = `scale(${val('svg-scale')}) translateY(${parseInt(val('svg-y')) * (size / 256)}px)`;
+                    }
+
+                    const dataUrl = await htmlToImage.toPng(targetNode, {
+                        width: size,
+                        height: size,
+                        pixelRatio: 1,
+                        style: { transform: 'scale(1)', transformOrigin: 'top left' }
+                    });
+                    document.body.removeChild(tempBox);
+
+                    const response = await fetch(dataUrl);
+                    const blob = await response.blob();
+                    
+                    let filename = `favicon-${size}x${size}.png`;
+                    if (size === 180) filename = 'apple-touch-icon.png';
+                    if (size === 192) filename = 'android-chrome-192x192.png';
+                    if (size === 512) filename = 'android-chrome-512x512.png';
+                    
+                    zip.file(filename, blob);
+                });
+
+                await Promise.all(imagePromises);
+
+                // 2. Export vector SVG
+                const svgDataUrl = await htmlToImage.toSvg(dom.canvas, {
+                    width: 256,
+                    height: 256,
+                    pixelRatio: 1
+                });
+                const svgResponse = await fetch(svgDataUrl);
+                const svgBlob = await svgResponse.blob();
+                zip.file('favicon.svg', svgBlob);
+
+                // 3. Export high-compatibility favicon.ico
+                const icoDataUrl = await htmlToImage.toPng(document.querySelector('.size-preview-32').firstElementChild, {
+                    width: 32,
+                    height: 32,
+                    pixelRatio: 1
+                });
+                const icoResponse = await fetch(icoDataUrl);
+                const icoBlob = await icoResponse.blob();
+                zip.file('favicon.ico', icoBlob);
+
+                // 4. Generate site.webmanifest JSON
+                const manifest = {
+                    name: document.getElementById('ctrl-splash-sub').value || "Canvas Labs App",
+                    short_name: "App",
+                    icons: [
+                        { src: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+                        { src: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" }
+                    ],
+                    theme_color: document.getElementById('ctrl-manifest-theme').value,
+                    background_color: document.getElementById('ctrl-manifest-bg').value,
+                    display: "standalone"
+                };
+                zip.file('site.webmanifest', JSON.stringify(manifest, null, 2));
+
+                // 5. Package ZIP and trigger download
+                const content = await zip.generateAsync({ type: 'blob' });
+                const link = document.createElement('a');
+                link.download = `favicon-studio-kit.zip`;
+                link.href = URL.createObjectURL(content);
+                link.click();
+
+            } catch (err) {
+                console.error("Failed to generate zip bundle:", err);
+                alert("An error occurred during favicon studio kit packaging. Please try individual exports.");
+            } finally {
+                // Restore button
+                exportBtn.removeAttribute('disabled');
+                exportBtn.innerHTML = originalHTML;
+                lucide.createIcons();
+            }
+        }
+
+        // Watch properties adjustments to sync UI instantly
+        document.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('input', updateUI);
+            el.addEventListener('change', updateUI);
+        });
+
+        // Initial setup sequence
+        lucide.createIcons();
+        loadPreset('/favicon/favicon-gradeint-trans.svg'); // Default to beautiful hyper-gradient preset first
+    </script>
+</body>
+</html>
