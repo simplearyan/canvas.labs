@@ -26,10 +26,10 @@
         uncomment this block, then inside the style section below 
         change 'fill: #ffffff;' to 'fill: url(#textGradient);'
     -->
-    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#60a5fa" />   
-      <stop offset="100%" stop-color="#a78bfa" />  
-    </linearGradient>
+    <!-- <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%"> -->
+      <!-- <stop offset="0%" stop-color="#60a5fa" />   Text Gradient Start (Light Blue) -->
+      <!-- <stop offset="100%" stop-color="#a78bfa" />  Text Gradient End (Lavender) -->
+    <!-- </linearGradient> -->
 
     <!-- 
       3. DESIGN & TYPOGRAPHY STYLES
@@ -53,8 +53,8 @@
           TEXT FILL OPTION: Solid Color vs Gradient!
           (Set to '#ffffff' for solid white, or 'url(#textGradient)' for gradient text)
         */
-        <!-- fill: #ffffff;          -->
-        fill: url(#textGradient); 
+        fill: #1d1d1dff;         
+        /* fill: url(#textGradient); */
 
         letter-spacing: -4px;  /* LETTER SPACING: Adjust letter separation */
       }

@@ -19,9 +19,13 @@ export const SITE_CONFIG = {
     marqueeTitle: "Canvas Labs — Premium Animated Background Templates    ",
     marqueeSpeedMs: 250,
     favicon: {
-      default: "/favicon/favicon-CL-192x192-transparent.png",
-      darkTabEmoji: "⭐",
+      default: "/favicon/favicon-white-trans.svg",
+      // Set 'useSvgIcon' to true to display SVG files inside browser tab mockups, or false to use the Emojis below
+      useSvgIcon: false,
+      darkTabEmoji: "⭐",     
       lightTabEmoji: "👉",
+      darkTabSvg: "/favicon/favicon-dark-trans.svg",
+      lightTabSvg: "/favicon/favicon-white-trans.svg",
     }
   }
 };

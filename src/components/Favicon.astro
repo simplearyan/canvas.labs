@@ -1,0 +1,12 @@
+---
+import { SITE_CONFIG } from '../config/site';
+---
+
+{SITE_CONFIG.tabPreferences.favicon.useSvgIcon ? (
+	<>
+		<link rel="icon" type="image/svg+xml" href={SITE_CONFIG.tabPreferences.favicon.lightTabSvg} media="(prefers-color-scheme: light)" />
+		<link rel="icon" type="image/svg+xml" href={SITE_CONFIG.tabPreferences.favicon.darkTabSvg} media="(prefers-color-scheme: dark)" />
+	</>
+) : (
+	<link rel="icon" type="image/svg+xml" href={SITE_CONFIG.tabPreferences.favicon.default} />
+)}

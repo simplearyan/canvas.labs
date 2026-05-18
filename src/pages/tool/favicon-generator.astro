@@ -1,7 +1,12 @@
+---
+import { SITE_CONFIG } from '../../config/site';
+import Favicon from '../../components/Favicon.astro';
+---
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <Favicon />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canvas Labs | Favicon & Browser Tab Studio</title>
     
@@ -484,8 +489,11 @@
             </div>
         </aside>
     </main>
-
+    <script id="site-config-data" type="application/json">{JSON.stringify(SITE_CONFIG)}</script>
     <script is:inline>
+        // Parse global SITE_CONFIG
+        const siteConfig = JSON.parse(document.getElementById('site-config-data').textContent);
+
         // DOM Nodes Map
         const dom = {
             canvas: document.getElementById('master-favicon-canvas'),
@@ -734,8 +742,24 @@
                 });
             });
 
-            // 5. Clone direct to chrome tab container at 16x16px size
-            dom.tabFaviconContainer.innerHTML = document.querySelector('.size-preview-16').innerHTML;
+            // 5. Dynamic Tab Mockup favicon icon driven by SITE_CONFIG choices (SVG or Emoji)
+            updateChromeTabFavicon();
+        }
+
+        function updateChromeTabFavicon() {
+            const configFavicon = siteConfig?.tabPreferences?.favicon;
+            if (configFavicon && configFavicon.useSvgIcon) {
+                // Render configured high-fidelity SVG Favicon Icon
+                const svgUrl = chromeMockupTheme === 'dark' ? configFavicon.darkTabSvg : configFavicon.lightTabSvg;
+                dom.tabFaviconContainer.innerHTML = `<img src="${svgUrl}" class="w-4.5 h-4.5 object-contain" style="image-rendering: -webkit-optimize-contrast; max-width: 100%; max-height: 100%;" />`;
+            } else if (configFavicon && (configFavicon.darkTabEmoji || configFavicon.lightTabEmoji)) {
+                // Render configured Emoji Icon
+                const emoji = chromeMockupTheme === 'dark' ? configFavicon.darkTabEmoji : configFavicon.lightTabEmoji;
+                dom.tabFaviconContainer.innerHTML = `<span class="text-xs leading-none select-none flex items-center justify-center h-full w-full">${emoji}</span>`;
+            } else {
+                // Fallback to custom-drawn live workspace canvas
+                dom.tabFaviconContainer.innerHTML = document.querySelector('.size-preview-16').innerHTML;
+            }
         }
 
         // Toggle White/Dark Chrome Mockup bar
@@ -749,6 +773,7 @@
                 dom.browserBar.className = 'chrome-tab-light h-11 px-4 flex items-center justify-between transition-colors duration-300 relative select-none';
                 dom.activeTab.className = 'h-8 bg-white text-gray-700 rounded-t-lg px-4 flex items-center gap-2 border-t border-x border-gray-300/40 shadow-sm min-w-[160px] max-w-[200px] transition-colors duration-300';
             }
+            updateChromeTabFavicon();
         }
 
         // Blanket Listeners

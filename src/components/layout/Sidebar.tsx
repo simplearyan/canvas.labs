@@ -135,9 +135,9 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
         >
           <div class="h-16 flex items-center px-6 gap-3 border-b border-border-color">
             <div class="w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center">
-              <span class="font-sans font-black text-white dark:text-gray-900 tracking-tighter" style="font-size: 15px;">{SITE_CONFIG.branding.acronym}</span>
+              <span class="font-sans font-black text-white dark:text-gray-900 tracking-tighter leading-none flex items-center justify-center" style="font-size: 14px; margin-top: 1px;">{SITE_CONFIG.branding.acronym}</span>
             </div>
-            <span class="text-xl font-bold tracking-tight text-text-main">{SITE_CONFIG.branding.name}</span>
+            <span class="text-base sm:text-xl font-bold tracking-tight text-text-main leading-none flex items-center h-8">{SITE_CONFIG.branding.name}</span>
           </div>
 
           <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1">

@@ -38,11 +38,10 @@ export default function Header() {
 
           {/* Brand Monogram */}
           <a href="#" class="flex items-center gap-3 group">
-            <div class="relative w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-0.5">
-              <span class="font-sans font-black text-white dark:text-gray-900 tracking-tighter" style="font-size: 15px;">{SITE_CONFIG.branding.acronym}</span>
-              <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-brand-500 rounded-full border-2 border-app-bg"></div>
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#2c2c2c] to-[#121212] border border-white/5 flex items-center justify-center">
+              <span class="font-sans font-black text-white tracking-tighter leading-none flex items-center justify-center" style="font-size: 14px; margin-top: 1px;">{SITE_CONFIG.branding.acronym}</span>
             </div>
-            <span class="text-base sm:text-xl font-bold tracking-tight text-text-main leading-none block">{SITE_CONFIG.branding.name}</span>
+            <span class="text-base sm:text-xl font-bold tracking-tight text-text-main leading-none flex items-center">{SITE_CONFIG.branding.name}</span>
           </a>
         </div>
 

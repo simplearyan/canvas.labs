@@ -50,20 +50,28 @@ export default function Portal() {
     const interval = setInterval(() => {
       // Dynamic sensor for Chrome/Firefox prefers-color-scheme
       const isSystemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      let svg = "";
+      const configFavicon = SITE_CONFIG.tabPreferences.favicon;
       
-      if (isSystemDark) {
-        // Dynamic dark tab emoji from config
-        faviconAngle = (faviconAngle + 6) % 360;
-        svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80' transform='rotate(${faviconAngle} 50 55)'>${SITE_CONFIG.tabPreferences.favicon.darkTabEmoji}</text></svg>`;
+      if (configFavicon && configFavicon.useSvgIcon) {
+        // Render static brand SVG files depending on dark/light theme prefers
+        const svgUrl = isSystemDark ? configFavicon.darkTabSvg : configFavicon.lightTabSvg;
+        faviconEl.href = svgUrl;
+      } else if (configFavicon && (configFavicon.darkTabEmoji || configFavicon.lightTabEmoji)) {
+        // Render interactive animated Emojis
+        let svg = "";
+        if (isSystemDark) {
+          faviconAngle = (faviconAngle + 6) % 360;
+          svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80' transform='rotate(${faviconAngle} 50 55)'>${configFavicon.darkTabEmoji}</text></svg>`;
+        } else {
+          faviconOffset += 1.5 * faviconDir;
+          if (faviconOffset > 18 || faviconOffset < 0) faviconDir *= -1;
+          svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' x='${faviconOffset}' font-size='80'>${configFavicon.lightTabEmoji}</text></svg>`;
+        }
+        faviconEl.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
       } else {
-        // Dynamic light tab emoji from config
-        faviconOffset += 1.5 * faviconDir;
-        if (faviconOffset > 18 || faviconOffset < 0) faviconDir *= -1;
-        svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' x='${faviconOffset}' font-size='80'>${SITE_CONFIG.tabPreferences.favicon.lightTabEmoji}</text></svg>`;
+        // Fallback default
+        faviconEl.href = configFavicon.default;
       }
-      
-      faviconEl.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
     }, 100);
 
     onCleanup(() => clearInterval(interval));

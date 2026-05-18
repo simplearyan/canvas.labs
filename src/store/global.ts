@@ -75,7 +75,7 @@ export const closeFloatingSidebar = () => {
 export const isSecondaryPage = () => {
   if (typeof window === 'undefined') return false;
   const path = window.location.pathname;
-  return path.includes('/terms') || path.includes('/privacy') || path.includes('/contact');
+  return path.includes('/terms') || path.includes('/privacy') || path.includes('/contact') || path.includes('/press');
 };
 
 export const handleHamburgerClick = () => {

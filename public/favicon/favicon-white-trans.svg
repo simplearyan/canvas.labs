@@ -15,10 +15,10 @@
         Horizontal (90°): x1="0%" y1="0%" x2="100%" y2="0%"
         Vertical (180°):  x1="0%" y1="0%" x2="0%" y2="100%"
     -->
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#a78bfa" />   <!-- Start Gradient Color (Lavender) -->
-      <stop offset="100%" stop-color="#7c3aed" />  <!-- End Gradient Color (Purple) -->
-    </linearGradient>
+    <!-- <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%"> -->
+      <!-- <stop offset="0%" stop-color="#a78bfa" />   Start Gradient Color (Lavender) -->
+      <!-- <stop offset="100%" stop-color="#7c3aed" />  End Gradient Color (Purple) -->
+    <!-- </linearGradient> -->
 
     <!-- 
       2. TEXT GRADIENT CONFIGURATION (Optional)
@@ -26,10 +26,10 @@
         uncomment this block, then inside the style section below 
         change 'fill: #ffffff;' to 'fill: url(#textGradient);'
     -->
-    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#60a5fa" />   <!-- Text Gradient Start (Light Blue) -->
-      <stop offset="100%" stop-color="#a78bfa" />  <!-- Text Gradient End (Lavender) -->
-    </linearGradient>
+    <!-- <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%"> -->
+      <!-- <stop offset="0%" stop-color="#60a5fa" />   Text Gradient Start (Light Blue) -->
+      <!-- <stop offset="100%" stop-color="#a78bfa" />  Text Gradient End (Lavender) -->
+    <!-- </linearGradient> -->
 
     <!-- 
       3. DESIGN & TYPOGRAPHY STYLES
@@ -38,18 +38,15 @@
       - Edit 'font-weight' to change boldness (100 to 900).
     -->
     <style>
-      /* Import Google Fonts directly into the SVG */
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
-
       .monogram-label {
         /* 
           FONT FAMILY OPTION: Choose between sans-serif or serif!
           (Just comment/uncomment the line of your choice)
         */
-        font-family: 'Outfit', sans-serif;           /* OPTION A: Modern Clean Sans-Serif */
-        /* font-family: 'Playfair Display', serif; */   /* OPTION B: Elegant Editorial Serif */
+        font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;  /* OPTION A: Modern Clean Sans-Serif */
+        /* font-family: 'Playfair Display', Georgia, serif; */                 /* OPTION B: Elegant Editorial Serif */
 
-        font-size: 160px;      /* TEXT SIZE: Change to scale monogram. Stays 100% centered! */
+        font-size: 200px;      /* TEXT SIZE: Change to scale monogram. Stays 100% centered! */
         font-weight: 800;      /* TEXT WEIGHT: Change thickness (100-900) */
         
         /* 

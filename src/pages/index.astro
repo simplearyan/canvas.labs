@@ -2,12 +2,13 @@
 import '../styles/global.css';
 import Portal from '../components/Portal';
 import { SITE_CONFIG } from '../config/site';
+import Favicon from '../components/Favicon.astro';
 ---
 
 <html lang="en" data-theme-palette={SITE_CONFIG.branding.darkModePalette}>
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href={SITE_CONFIG.tabPreferences.favicon.default} />
+		<Favicon />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 		<meta name="generator" content={Astro.generator} />
 		
