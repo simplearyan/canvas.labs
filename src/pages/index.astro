@@ -3,6 +3,8 @@ import '@/styles/global.css';
 import Portal from '@/components/Portal';
 import { SITE_CONFIG } from '@/config/site';
 import Favicon from '@/components/Favicon.astro';
+
+const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
 ---
 
 <html lang="en" data-theme-palette={SITE_CONFIG.branding.darkModePalette}>
@@ -55,6 +57,22 @@ import Favicon from '@/components/Favicon.astro';
 					document.documentElement.classList.add("route-loading");
 				}
 			})();
+		</script>
+
+		<!-- Dynamic theme-color bar matching CapCut dark grey and light mode gray -->
+		<meta name="theme-color" content="#f9fafb" media="(prefers-color-scheme: light)" />
+		<meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
+
+		<!-- PWA Service Worker Registration -->
+		<script is:inline define:vars={{ base }}>
+			if ('serviceWorker' in navigator) {
+				window.addEventListener('load', () => {
+					const swUrl = `${base}/sw.js`;
+					navigator.serviceWorker.register(swUrl)
+						.then((reg) => console.log('[PWA] Service Worker registered successfully, scope:', reg.scope))
+						.catch((err) => console.error('[PWA] Service Worker registration failed:', err));
+				});
+			}
 		</script>
 
 		<!-- Google Fonts Outfit & Inter -->
