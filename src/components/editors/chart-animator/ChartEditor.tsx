@@ -1,7 +1,9 @@
 import { createEffect, createSignal, onMount, onCleanup } from 'solid-js';
-import { chartStore, loadStateFromUrl, updateChartOptions, updateChartMetadata } from '../../../store/chartStore';
+import { Portal } from 'solid-js/web';
+import { chartStore, loadStateFromUrl, updateChartOptions, updateChartMetadata, setChartStore } from '../../../store/chartStore';
 import { ChartEngine } from '../../../engines/chart-animator/ChartEngine';
-import type { ChartType, ColorPalette } from '../../../engines/chart-animator/types';
+import type { ChartType, ColorPalette, ChartState } from '../../../engines/chart-animator/types';
+import { CHART_PRESETS, type ChartPreset } from '../../../engines/chart-animator/presets';
 
 export default function ChartEditor() {
   let canvasRef!: HTMLCanvasElement;
@@ -10,6 +12,7 @@ export default function ChartEditor() {
   const [isLoaded, setIsLoaded] = createSignal(false);
   const [activeTab, setActiveTab] = createSignal<'grid' | 'csv'>('csv');
   const [isExporting, setIsExporting] = createSignal(false);
+  const [customPresets, setCustomPresets] = createSignal<Array<{name: string, data: any}>>([]);
 
   // Parse configuration synchronously on client-side setup before first paint
   if (typeof window !== 'undefined') {
@@ -21,6 +24,16 @@ export default function ChartEditor() {
   }
 
   onMount(() => {
+    // Load custom presets
+    const saved = localStorage.getItem('chart_custom_presets');
+    if (saved) {
+      try {
+        setCustomPresets(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load custom presets:", e);
+      }
+    }
+
     engine = new ChartEngine(canvasRef);
     setIsLoaded(true);
 
@@ -52,6 +65,43 @@ export default function ChartEditor() {
     }
   });
 
+  const handleLoadPreset = (preset: ChartPreset) => {
+    setChartStore({
+      title: preset.title,
+      subtitle: preset.subtitle,
+      source: preset.source,
+      type: preset.type,
+      rawData: preset.rawData,
+      options: {
+        ...chartStore.options,
+        colorPalette: preset.options.colorPalette,
+        fontFamily: preset.options.fontFamily,
+        bgColor: preset.options.bgColor
+      }
+    });
+  };
+
+  const handleSaveCustomPreset = () => {
+    const name = prompt("Enter a name for your custom preset:", `My Preset ${customPresets().length + 1}`);
+    if (!name) return;
+    
+    const currentConfig = JSON.parse(JSON.stringify(chartStore));
+    const newPresets = [...customPresets(), { name, data: currentConfig }];
+    setCustomPresets(newPresets);
+    localStorage.setItem('chart_custom_presets', JSON.stringify(newPresets));
+  };
+
+  const handleLoadCustomPreset = (data: any) => {
+    setChartStore(data);
+  };
+
+  const handleDeleteCustomPreset = (e: Event, index: number) => {
+    e.stopPropagation();
+    const newPresets = customPresets().filter((_, idx) => idx !== index);
+    setCustomPresets(newPresets);
+    localStorage.setItem('chart_custom_presets', JSON.stringify(newPresets));
+  };
+
   const handlePlay = () => engine.play();
 
   return (
@@ -61,6 +111,61 @@ export default function ChartEditor() {
       <aside class="w-full md:w-[420px] bg-white dark:bg-zinc-950 border-b md:border-b-0 md:border-r border-blueprint-900 dark:border-zinc-800 p-5 flex flex-col gap-6 overflow-y-auto z-10 shrink-0 custom-scrollbar shadow-xl">
         
         <div class="text-[10px] font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-widest bg-blueprint-100 dark:bg-brand-500/10 px-2 py-1 inline-block w-max mb-[-12px]">Tool Properties</div>
+
+        {/* Built-in Preset Templates */}
+        <div class="flex flex-col gap-3 shrink-0">
+          <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Preset Templates</h2>
+          <div class="grid grid-cols-2 gap-2">
+            {Object.entries(CHART_PRESETS).map(([key, preset]) => (
+              <button 
+                onClick={() => handleLoadPreset(preset)}
+                class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-200 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer"
+              >
+                <span class="truncate pr-2">{preset.title}</span>
+                <span class="text-[8px] uppercase tracking-wider text-slate-400 dark:text-text-muted font-normal">{preset.type}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Presets */}
+        <div class="flex flex-col gap-3 shrink-0">
+          <div class="flex items-center justify-between">
+            <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Custom Presets</h2>
+            <button 
+              onClick={handleSaveCustomPreset}
+              class="px-2 py-1 bg-blueprint-900 dark:bg-brand-500 text-white font-bold text-[9px] uppercase tracking-widest shadow-sm hover:scale-105 transition cursor-pointer"
+            >
+              + Save Current
+            </button>
+          </div>
+          {customPresets().length === 0 ? (
+            <div class="p-3 border border-dashed border-blueprint-200 dark:border-zinc-800 text-center text-[10px] text-slate-400 dark:text-text-muted font-medium bg-slate-50/50 dark:bg-zinc-900/50">
+              No custom presets saved.
+            </div>
+          ) : (
+            <div class="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto custom-scrollbar">
+              {customPresets().map((preset, idx) => (
+                <div 
+                  onClick={() => handleLoadCustomPreset(preset.data)}
+                  class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-205 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer justify-between"
+                >
+                  <span class="truncate pr-4">{preset.name}</span>
+                  <span class="text-[8px] uppercase tracking-wider text-slate-400 dark:text-text-muted font-normal">{preset.data.type}</span>
+                  <button 
+                    onClick={(e) => handleDeleteCustomPreset(e, idx)}
+                    class="absolute top-1 right-1 text-slate-400 hover:text-brand-red opacity-0 group-hover:opacity-100 transition p-0.5"
+                    title="Delete Preset"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div class="w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
 
         {/* Content Editor */}
         <div class="flex flex-col gap-3 shrink-0">
@@ -218,15 +323,6 @@ export default function ChartEditor() {
             </div>
           </div>
           
-          <div class="flex flex-col sm:flex-row justify-center gap-2 mt-4">
-            <button onClick={handlePlay} class="flex items-center justify-center gap-2 px-4 py-3 w-full sm:flex-1 bg-blueprint-100 dark:bg-zinc-900 hover:bg-blueprint-200 dark:hover:bg-zinc-800 text-blueprint-900 dark:text-text-main font-bold text-xs uppercase tracking-widest transition-colors border border-blueprint-300 dark:border-zinc-800">
-               Preview
-            </button>
-            <button onClick={() => setIsExporting(true)} class="flex items-center justify-center gap-2 px-4 py-3 w-full sm:flex-[2] bg-blueprint-900 dark:bg-brand-500 hover:bg-blueprint-800 dark:hover:bg-brand-600 text-white font-black text-sm uppercase tracking-widest transition-colors shadow-lg">
-               Export Video
-            </button>
-          </div>
-
         </div>
       </aside>
 
@@ -239,41 +335,59 @@ export default function ChartEditor() {
       
       {/* MINIMAL EXPORT MODAL */}
       {isExporting() && (
-        <div class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity">
-          <div class="bg-white border-2 border-blueprint-900 shadow-2xl p-8 max-w-md w-full relative flex flex-col gap-6">
-            <button onClick={() => setIsExporting(false)} class="absolute top-4 right-4 text-slate-400 hover:text-brand-red transition">
-              ✕
+        <div class="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 flex items-center justify-center p-4 transition-opacity">
+          <div class="bg-white dark:bg-zinc-950 border-2 border-blueprint-900 dark:border-zinc-800 shadow-2xl p-8 max-w-md w-full relative flex flex-col gap-6 text-slate-800 dark:text-text-main">
+            <button onClick={() => setIsExporting(false)} class="absolute top-4 right-4 text-slate-400 dark:text-text-muted hover:text-red-500 dark:hover:text-red-400 transition cursor-pointer">
+               ✕
             </button>
             
             <div class="flex flex-col gap-1">
-              <h3 class="text-xl font-black text-blueprint-900 uppercase tracking-tighter">Export Animation</h3>
-              <p class="text-xs text-slate-500 font-medium">Select your preferred rendering format.</p>
+              <h3 class="text-xl font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-tighter">Export Animation</h3>
+              <p class="text-xs text-slate-500 dark:text-text-muted font-medium">Select your preferred rendering format.</p>
             </div>
             
             <div class="flex flex-col gap-4">
               <div class="flex flex-col gap-1.5">
-                <label class="text-[10px] font-bold text-blueprint-900 uppercase tracking-widest">Resolution</label>
-                <select class="w-full px-3 py-2 bg-slate-50 border border-blueprint-200 text-sm font-medium outline-none">
+                <label class="text-[10px] font-bold text-blueprint-900 dark:text-brand-500 uppercase tracking-widest">Resolution</label>
+                <select class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-slate-800 dark:text-text-main text-sm font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 cursor-pointer">
                   <option value="1080">1080p (HD)</option>
                   <option value="1440">1440p (2K)</option>
                   <option value="2160">2160p (4K)</option>
                 </select>
               </div>
               <div class="flex flex-col gap-1.5">
-                <label class="text-[10px] font-bold text-blueprint-900 uppercase tracking-widest">Format</label>
+                <label class="text-[10px] font-bold text-blueprint-900 dark:text-brand-500 uppercase tracking-widest">Format</label>
                 <div class="flex gap-2">
-                  <button class="flex-1 py-2 border-2 border-blueprint-900 bg-blueprint-50 text-blueprint-900 font-bold text-xs uppercase tracking-wider">WebM</button>
-                  <button class="flex-1 py-2 border border-slate-200 bg-white text-slate-500 hover:border-blueprint-300 font-bold text-xs uppercase tracking-wider transition">GIF</button>
+                  <button class="flex-1 py-2 border-2 border-blueprint-900 dark:border-brand-500 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-900 dark:text-brand-500 font-bold text-xs uppercase tracking-wider cursor-pointer">WebM</button>
+                  <button class="flex-1 py-2 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-500 dark:text-text-muted hover:border-blueprint-300 dark:hover:border-brand-500 font-bold text-xs uppercase tracking-wider transition cursor-pointer">GIF</button>
                 </div>
               </div>
             </div>
             
-            <button onClick={() => { alert("Export Pipeline requires Media Bunny Worker integration. Coming next!"); setIsExporting(false); }} class="w-full py-3 bg-brand-red text-white font-black uppercase tracking-widest hover:bg-red-600 transition shadow-[4px_4px_0px_rgba(0,51,102,0.1)] mt-2">
+            <button onClick={() => { alert("Export Pipeline requires Media Bunny Worker integration. Coming next!"); setIsExporting(false); }} class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest transition shadow-[4px_4px_0px_rgba(0,51,102,0.1)] mt-2 cursor-pointer">
               Start Render
             </button>
           </div>
         </div>
       )}
+
+      {/* Portaling controls to header to keep editor interface premium */}
+      <Portal mount={document.getElementById('editor-header-controls') || undefined}>
+        <div class="flex items-center gap-3">
+          <button 
+            onClick={handlePlay} 
+            class="flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
+          >
+             Preview
+          </button>
+          <button 
+            onClick={() => setIsExporting(true)} 
+            class="flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-blueprint-900 hover:bg-blueprint-800 dark:bg-brand-500 dark:hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-widest transition cursor-pointer shadow-md"
+          >
+             Export Video
+          </button>
+        </div>
+      </Portal>
     </div>
   );
 }
