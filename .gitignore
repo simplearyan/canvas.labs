@@ -25,3 +25,5 @@ pnpm-debug.log*
 
 # scratch directory for temporary debug/verification scripts
 scratch/
+
+preview-automator/
