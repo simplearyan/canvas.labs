@@ -7,9 +7,19 @@ interface PresetCardProps {
 }
 
 export default function PresetCard(props: PresetCardProps) {
+  const handleClick = () => {
+    if (props.preset.url) {
+      // It's a dedicated Astro Page template (like our new Chart Animators)
+      window.location.href = props.preset.url;
+    } else {
+      // It's an internal SPA canvas component
+      openQuickEditor(props.preset);
+    }
+  };
+
   return (
     <div 
-      onClick={() => openQuickEditor(props.preset)}
+      onClick={handleClick}
       class="group flex flex-col gap-3.5 cursor-pointer bg-card-bg border border-border-color rounded-2xl p-4 transition-colors duration-200"
     >
       {/* Thumbnail Placeholder with color gradient */}

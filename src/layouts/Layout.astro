@@ -7,9 +7,10 @@ import Favicon from "@/components/Favicon.astro";
 interface Props {
 	title: string;
 	description?: string;
+	useSecondaryLayout?: boolean;
 }
 
-const { title, description = SITE_CONFIG.seo.description } = Astro.props;
+const { title, description = SITE_CONFIG.seo.description, useSecondaryLayout = true } = Astro.props;
 ---
 
 <html lang="en" data-theme-palette={SITE_CONFIG.branding.darkModePalette}>
@@ -56,8 +57,12 @@ const { title, description = SITE_CONFIG.seo.description } = Astro.props;
 		/>
 	</head>
 	<body>
-		<SecondaryLayout client:load>
+		{useSecondaryLayout ? (
+			<SecondaryLayout client:load>
+				<slot />
+			</SecondaryLayout>
+		) : (
 			<slot />
-		</SecondaryLayout>
+		)}
 	</body>
 </html>

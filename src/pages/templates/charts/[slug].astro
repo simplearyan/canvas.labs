@@ -1,0 +1,42 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { SITE_CONFIG } from '@/config/site';
+import ChartPresetTemplate from '@/components/editors/chart-animator/ChartPresetTemplate';
+import Header from '@/components/layout/Header';
+import Sidebar from '@/components/layout/Sidebar';
+
+export function getStaticPaths() {
+  return [
+    { params: { slug: 'energy' } },
+    { params: { slug: 'consoles' } },
+    { params: { slug: 'sp500' } },
+    { params: { slug: 'social' } },
+    { params: { slug: 'tech' } },
+    { params: { slug: 'hero' } },
+    { params: { slug: 'pie' } },
+    { params: { slug: 'bar' } },
+    { params: { slug: 'line' } },
+  ];
+}
+
+const { slug } = Astro.params;
+const baseUrl = import.meta.env.BASE_URL;
+
+// This page acts as a simplified wrapper around the Chart Animator.
+// It pre-loads a preset template and offers a restricted set of controls.
+---
+
+<Layout title={`Template: ${slug} | ${SITE_CONFIG.branding.name}`} useSecondaryLayout={false}>
+  <div class="min-h-screen relative transition-colors duration-300 antialiased font-sans bg-app-bg text-text-main flex flex-col">
+    {/* Global Header */}
+    <Header client:load />
+    
+    {/* Sidebar is required for Mobile Drawer functionality */}
+    <Sidebar client:load hideDesktop={true} />
+
+    {/* Main Workspace (Push below fixed header) */}
+    <main class="flex-1 w-full flex flex-col relative pt-16">
+      <ChartPresetTemplate client:only="solid-js" slug={slug as string} />
+    </main>
+  </div>
+</Layout>

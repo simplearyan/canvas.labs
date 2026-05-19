@@ -8,14 +8,24 @@ export interface Preset {
   color: string;
   bgHex: string;
   accentHex: string;
-  type: "waveform" | "sumi" | "orbit" | "grid";
+  type: "waveform" | "sumi" | "orbit" | "grid" | "chart";
+  url?: string;
 }
 
 export const templatesData: Preset[] = [
+  // Existing Presets
   { id: 101, title: "Waveform Pro: Spectrum", category: "charts", color: "bg-[#0a0a0c]", bgHex: "#0a0a0c", accentHex: "#06b6d4", type: "waveform" },
   { id: 102, title: "Sumi-e: Ink Flow", category: "backgrounds", color: "bg-[#fcfaf2]", bgHex: "#fcfaf2", accentHex: "#111827", type: "sumi" },
   { id: 103, title: "Neon Orbit: Pulse", category: "ui", color: "bg-[#050508]", bgHex: "#050508", accentHex: "#ff00ff", type: "orbit" },
-  { id: 104, title: "Retro Grid Synthwave", category: "backgrounds", color: "bg-[#180828]", bgHex: "#180828", accentHex: "#38bdf8", type: "grid" }
+  { id: 104, title: "Retro Grid Synthwave", category: "backgrounds", color: "bg-[#180828]", bgHex: "#180828", accentHex: "#38bdf8", type: "grid" },
+  
+  // New Chart Templates (Using dedicated SolidJS Astro Pages)
+  { id: 201, title: "Energy Transition", category: "charts", color: "bg-[#0f172a]", bgHex: "#0f172a", accentHex: "#3b82f6", type: "chart", url: "/canvas.labs/templates/charts/energy" },
+  { id: 202, title: "Hero Tech Growth", category: "charts", color: "bg-[#18181b]", bgHex: "#18181b", accentHex: "#8b5cf6", type: "chart", url: "/canvas.labs/templates/charts/hero" },
+  { id: 203, title: "Tech Sector S&P 500", category: "charts", color: "bg-[#0f172a]", bgHex: "#0f172a", accentHex: "#10b981", type: "chart", url: "/canvas.labs/templates/charts/tech" },
+  { id: 204, title: "Pie Chart: Market Share", category: "charts", color: "bg-[#1e1e2e]", bgHex: "#1e1e2e", accentHex: "#f43f5e", type: "chart", url: "/canvas.labs/templates/charts/pie" },
+  { id: 205, title: "Bar Chart: Revenue", category: "charts", color: "bg-[#0f172a]", bgHex: "#0f172a", accentHex: "#f59e0b", type: "chart", url: "/canvas.labs/templates/charts/bar" },
+  { id: 206, title: "Line Chart: Analytics", category: "charts", color: "bg-[#18181b]", bgHex: "#18181b", accentHex: "#06b6d4", type: "chart", url: "/canvas.labs/templates/charts/line" }
 ];
 
 // Global Navigation & View Signals
@@ -75,7 +85,12 @@ export const closeFloatingSidebar = () => {
 export const isSecondaryPage = () => {
   if (typeof window === 'undefined') return false;
   const path = window.location.pathname;
-  return path.includes('/terms') || path.includes('/privacy') || path.includes('/contact') || path.includes('/press');
+  return path.includes('/terms') || 
+         path.includes('/privacy') || 
+         path.includes('/contact') || 
+         path.includes('/press') || 
+         path.includes('/templates/') || 
+         path.includes('/editor/');
 };
 
 export const handleHamburgerClick = () => {

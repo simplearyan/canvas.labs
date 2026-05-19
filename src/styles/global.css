@@ -8,9 +8,9 @@
 
   --color-brand-50: #f5f3ff;
   --color-brand-100: #ede9fe;
-  --color-brand-500: #8b5cf6;
-  --color-brand-600: #7c3aed;
-  --color-brand-700: #6d28d9;
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
 
   --color-app-bg: var(--app-bg);
   --color-header-bg: var(--header-bg);
@@ -24,6 +24,10 @@
 }
 
 :root {
+  --brand-500: #8b5cf6;
+  --brand-600: #7c3aed;
+  --brand-700: #6d28d9;
+
   --app-bg: #f9fafb;
   --header-bg: rgba(255, 255, 255, 0.98);
   --sidebar-bg: #f9fafb;
@@ -39,6 +43,10 @@
 }
 
 .dark {
+  --brand-500: #a78bfa; /* High-contrast bright lavender in dark mode */
+  --brand-600: #c084fc;
+  --brand-700: #d8b4fe;
+
   --app-bg: #050505;
   --header-bg: rgba(5, 5, 5, 0.85);
   --sidebar-bg: #050505;
@@ -180,6 +188,10 @@ html.route-loading body {
 
 /* Dynamic Dark Mode Palette Overrides */
 html.dark[data-theme-palette="capcut-v2"] {
+  --brand-500: #a78bfa; /* Vibrant lavender-violet for matte CapCut grey backdrop contrast */
+  --brand-600: #c084fc;
+  --brand-700: #d8b4fe;
+
   --app-bg: #111111;
   --header-bg: rgba(17, 17, 17, 0.85);
   --sidebar-bg: #111111;

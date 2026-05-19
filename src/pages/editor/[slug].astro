@@ -1,0 +1,57 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { SITE_CONFIG } from '@/config/site';
+import ChartEditor from '@/components/editors/chart-animator/ChartEditor';
+
+export function getStaticPaths() {
+  return [
+    { params: { slug: 'chart-animator' } },
+    { params: { slug: 'typography-studio' } },
+    { params: { slug: 'kinetic-studio' } },
+  ];
+}
+
+const { slug } = Astro.params;
+
+// In Astro, we can extract the base url and format correctly
+const baseUrl = import.meta.env.BASE_URL;
+
+// Retrieve configuration from URL if transitioning from a template
+// This will be handled on the client-side by SolidJS components.
+---
+
+<Layout title={`Advanced Editor: ${slug} | ${SITE_CONFIG.branding.name}`} useSecondaryLayout={false}>
+  <main class="w-full h-screen overflow-hidden bg-app-bg text-text-main flex flex-col">
+    {/* Editor Header */}
+    <header class="h-14 border-b border-border-color bg-header-bg flex items-center justify-between px-4 shrink-0 z-50">
+      <div class="flex items-center gap-3">
+        <a href={baseUrl} class="flex items-center justify-center w-8 h-8 rounded bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black text-sm hover:scale-105 transition-transform">
+          {SITE_CONFIG.branding.acronym}
+        </a>
+        <span class="font-bold tracking-tight uppercase text-sm text-text-muted">
+          {slug?.replace('-', ' ')}
+        </span>
+      </div>
+      
+      {/* Editor specific controls will be injected here via Portal or embedded in the Editor Component */}
+      <div id="editor-header-controls"></div>
+    </header>
+
+    {/* Mount SolidJS Editor Component here based on the slug */}
+    <div class="flex-1 relative flex overflow-hidden">
+      {slug === 'chart-animator' && (
+        <ChartEditor client:only="solid-js" />
+      )}
+      {slug === 'typography-studio' && (
+        <div class="w-full h-full flex items-center justify-center text-text-muted">
+          <p>Typography Studio Loading...</p>
+        </div>
+      )}
+      {slug === 'kinetic-studio' && (
+        <div class="w-full h-full flex items-center justify-center text-text-muted">
+          <p>Kinetic Studio Loading...</p>
+        </div>
+      )}
+    </div>
+  </main>
+</Layout>
