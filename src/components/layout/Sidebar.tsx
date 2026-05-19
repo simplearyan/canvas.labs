@@ -60,7 +60,8 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
     if (isLargeDesktop()) {
       return !isDesktopPushMini() || isHovered();
     } else {
-      return isSidebarFloating() || isHovered();
+      // Disabled hover expansion on iPad/tablet: only expand via the hamburger menu
+      return isSidebarFloating();
     }
   };
 
