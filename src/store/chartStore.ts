@@ -4,16 +4,20 @@ import LZString from 'lz-string';
 
 // Initial default state
 const initialState: ChartState = {
-  title: 'Global Electricity Generation',
+  type: 'vertical',
+  title: 'Global Electricity Generation (TWh)',
   subtitle: 'The transition to renewable energy sources.',
   source: 'SOURCE: EMBER CLIMATE',
-  type: 'stacked',
-  labels: ['2018', '2019', '2020'],
-  series: [
-    { label: 'Fossil', data: [16800, 16600, 15900] },
-    { label: 'Renewables', data: [6600, 7000, 7500] }
-  ],
-  options: { ...DEFAULT_CHART_OPTIONS }
+  rawData: `Label,Fossil,Nuclear,Renewables
+2018,16800,2700,6600
+2019,16600,2800,7000
+2020,15900,2700,7500
+2021,16800,2800,8000
+2022,17000,2700,8600
+2023,17100,2700,9200`,
+  labels: [],
+  series: [],
+  options: DEFAULT_CHART_OPTIONS,
 };
 
 export const [chartStore, setChartStore] = createStore<ChartState>(initialState);
@@ -50,6 +54,6 @@ export function updateChartOptions(updates: Partial<typeof DEFAULT_CHART_OPTIONS
   setChartStore('options', (opts) => ({ ...opts, ...updates }));
 }
 
-export function updateChartMetadata(updates: Partial<Pick<ChartState, 'title' | 'subtitle' | 'source' | 'type'>>) {
+export function updateChartMetadata(updates: Partial<Pick<ChartState, 'title' | 'subtitle' | 'source' | 'type' | 'rawData'>>) {
   setChartStore(updates);
 }

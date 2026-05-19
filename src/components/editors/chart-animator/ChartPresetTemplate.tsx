@@ -1,23 +1,20 @@
 import { createEffect, createSignal, onMount, onCleanup } from 'solid-js';
-import { chartStore, setChartStore, serializeChartState, updateChartOptions } from '../../../store/chartStore';
+import { chartStore, setChartStore, serializeChartState, updateChartOptions, updateChartMetadata } from '../../../store/chartStore';
 import { ChartEngine } from '../../../engines/chart-animator/ChartEngine';
+import { CHART_PRESETS } from '../../../engines/chart-animator/presets';
 
-// Hardcoded preset logic for now - in production this would fetch from /presets/charts/[slug].json
 const getPresetBySlug = (slug: string) => {
-  if (slug === 'energy') {
-    return {
-      title: 'Global Electricity Generation (TWh)',
-      subtitle: 'The transition to renewable energy sources.',
-      type: 'stacked',
-      options: { bgColor: '#f0f4f8', colorPalette: 'vibrant' }
-    };
-  }
-  // Default fallback
+  const preset = CHART_PRESETS[slug];
+  if (preset) return preset;
+  
+  // Default fallback if slug not found
   return {
     title: 'Custom Chart Data',
     subtitle: 'Editing preset: ' + slug,
+    source: 'SOURCE: UNKNOWN',
     type: 'vertical',
-    options: { bgColor: '#ffffff', colorPalette: 'pastel' }
+    options: { bgColor: '#ffffff', colorPalette: 'pastel', fontFamily: 'Inter' },
+    rawData: `Label,Value\nA,10\nB,20`
   };
 };
 
@@ -32,6 +29,8 @@ export default function ChartPresetTemplate(props: { slug: string }) {
     const presetData = getPresetBySlug(props.slug);
     setChartStore('title', presetData.title);
     setChartStore('subtitle', presetData.subtitle);
+    setChartStore('source', presetData.source);
+    setChartStore('rawData', presetData.rawData);
     setChartStore('type', presetData.type as any);
     updateChartOptions(presetData.options as any);
 
@@ -82,7 +81,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   const handlePlay = () => engine.play();
 
   return (
-    <div class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10 space-y-6 animate-fade-in flex flex-col overflow-y-auto custom-scrollbar">
+    <div class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10 space-y-6 flex flex-col overflow-y-auto custom-scrollbar">
       
       {/* Breadcrumb Back Button */}
       <a 

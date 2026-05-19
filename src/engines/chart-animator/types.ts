@@ -23,28 +23,26 @@ export interface ChartConfigOptions {
   bgColor: string;
   titleColor: string;
   textColor: string;
-  
+  valueFormat: "number" | "currency" | "percent";
   titleSize: number;
   subtitleSize: number;
   sourceSize: number;
-  
-  duration: number; // in seconds
-  glow: number;
+
+  // Effects & Camera
+  lineGlow: number;
   zoom: number;
   panX: number;
   panY: number;
-  format: ValueFormat;
 }
 
 export interface ChartState {
+  type: ChartType;
   title: string;
   subtitle: string;
   source: string;
-  type: ChartType;
-  
-  labels: string[]; // X-axis labels or Pie slice labels
-  series: ChartDataSeries[];
-  
+  rawData: string;
+  labels: string[]; // parsed X-axis labels
+  series: ChartDataSeries[]; // parsed data series
   options: ChartConfigOptions;
 }
 
@@ -62,13 +60,12 @@ export const DEFAULT_CHART_OPTIONS: ChartConfigOptions = {
   bgColor: '#ffffff',
   titleColor: '#1e293b',
   textColor: '#64748b',
+  valueFormat: 'number',
   titleSize: 64,
   subtitleSize: 38,
   sourceSize: 20,
-  duration: 2.0,
-  glow: 15,
+  lineGlow: 15,
   zoom: 1.0,
   panX: 0,
-  panY: 0,
-  format: 'number'
+  panY: 0
 };

@@ -109,10 +109,10 @@ export class ChartEngine {
 
     // --- Core Render Logic Delegated Here based on ChartType ---
     // (We will extract these to separate renderers later to keep engine clean)
-    this.drawTitleAndMetadata(ctx, this.state, width, height);
+    const bounds = this.drawTitleAndMetadata(ctx, this.state, width, height);
     
     // Example: placeholder for actual chart drawing
-    this.drawChartPlaceholder(ctx, this.state, progress, width, height);
+    this.drawChartPlaceholder(ctx, this.state, progress, width, bounds.chartStartY, bounds.chartBottomY);
 
     ctx.restore();
   }
@@ -125,19 +125,28 @@ export class ChartEngine {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
+    let hasTopText = false;
     if (opts.showTitle && state.title) {
       ctx.font = `900 ${opts.titleSize}px "${opts.fontFamily}"`;
       ctx.fillStyle = opts.titleColor;
       ctx.fillText(state.title, margin, yPos);
       yPos += opts.titleSize + 15;
+      hasTopText = true;
     }
 
     if (opts.showSubtitle && state.subtitle) {
       ctx.font = `500 ${opts.subtitleSize}px "${opts.fontFamily}"`;
       ctx.fillStyle = opts.textColor;
       ctx.fillText(state.subtitle, margin, yPos);
+      yPos += opts.subtitleSize + 15;
+      hasTopText = true;
     }
 
+    if (hasTopText) {
+      yPos += 40; // extra padding between titles and chart
+    }
+
+    let bottomUsed = margin;
     if (opts.showSource && state.source) {
       ctx.font = `600 ${opts.sourceSize}px "${opts.fontFamily}"`;
       ctx.fillStyle = opts.textColor;
@@ -145,27 +154,30 @@ export class ChartEngine {
       ctx.textAlign = 'right';
       ctx.textBaseline = 'bottom';
       ctx.fillText(state.source, w - margin, h - margin);
+      bottomUsed += opts.sourceSize + 20;
     }
+
+    return { chartStartY: yPos, chartBottomY: h - bottomUsed };
   }
 
-  private drawChartPlaceholder(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, state: ChartState, progress: number, w: number, h: number) {
+  private drawChartPlaceholder(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, state: ChartState, progress: number, w: number, startY: number, bottomY: number) {
      const margin = 100;
      const chartW = w - (margin * 2);
-     const chartH = h - 300; // Leave room for title at top
+     const chartH = bottomY - startY;
 
      // Background plate for chart area
      ctx.fillStyle = 'rgba(139, 92, 246, 0.1)';
-     ctx.fillRect(margin, 250, chartW, chartH);
+     ctx.fillRect(margin, startY, chartW, chartH);
 
      // Animated fill bar
      ctx.fillStyle = 'rgba(139, 92, 246, 0.8)';
      const currentWidth = chartW * progress;
-     ctx.fillRect(margin, 250, currentWidth, chartH);
+     ctx.fillRect(margin, startY, currentWidth, chartH);
      
      ctx.textAlign = 'center';
      ctx.textBaseline = 'middle';
      ctx.fillStyle = '#ffffff';
      ctx.font = `bold 64px "${state.options.fontFamily}"`;
-     ctx.fillText(`${state.type.toUpperCase()} CHART (${(progress*100).toFixed(0)}%)`, margin + (currentWidth/2), 250 + (chartH/2));
+     ctx.fillText(`${state.type.toUpperCase()} CHART (${(progress*100).toFixed(0)}%)`, margin + (currentWidth/2), startY + (chartH/2));
   }
 }

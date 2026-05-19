@@ -1,0 +1,38 @@
+@theme {
+  --color-blueprint-50: #f0f4f8;
+  --color-blueprint-100: #d9e2ec;
+  --color-blueprint-200: #bcccdc;
+  --color-blueprint-300: #9fb3c8;
+  --color-blueprint-400: #829ab1;
+  --color-blueprint-500: #627d98;
+  --color-blueprint-800: #102a43;
+  --color-blueprint-900: #003366;
+}
+
+/* Blueprint Custom Shadows */
+@utility blueprint-shadow {
+  box-shadow: 6px 6px 0px rgba(0, 51, 102, 0.1);
+}
+.dark @utility blueprint-shadow {
+  box-shadow: 6px 6px 0px rgba(255, 255, 255, 0.05);
+}
+
+@utility blueprint-shadow-hover {
+  box-shadow: 2px 2px 0px rgba(0, 51, 102, 0.5);
+}
+
+/* Responsive Blueprint Grid Background */
+@utility blueprint-grid-bg {
+  background-color: #f4f7fa;
+  background-image: 
+    linear-gradient(rgba(0, 51, 102, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 51, 102, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.dark @utility blueprint-grid-bg {
+  background-color: #050505;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
