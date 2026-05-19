@@ -2,6 +2,7 @@ import { createEffect, createSignal, onMount, onCleanup } from 'solid-js';
 import { chartStore, setChartStore, serializeChartState, updateChartOptions, updateChartMetadata } from '../../../store/chartStore';
 import { ChartEngine } from '../../../engines/chart-animator/ChartEngine';
 import { CHART_PRESETS } from '../../../engines/chart-animator/presets';
+import { exportProject, type ExportConfig } from '../../../engines/chart-animator/ExportEngine';
 
 const getPresetBySlug = (slug: string) => {
   const preset = CHART_PRESETS[slug];
@@ -23,6 +24,67 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   let engine: ChartEngine;
   const [isLoaded, setIsLoaded] = createSignal(false);
   const [transitionUrl, setTransitionUrl] = createSignal('/editor/chart-animator');
+
+  // Export State
+  const [isExporting, setIsExporting] = createSignal(false);
+  const [exportRes, setExportRes] = createSignal<'720' | '1080' | '1440' | '2160'>('1080');
+  const [exportFormat, setExportFormat] = createSignal<'webm' | 'mp4' | 'mov' | 'zip'>('webm');
+  const [exportFps, setExportFps] = createSignal<number>(60);
+  const [exportProgress, setExportProgress] = createSignal(0);
+  const [exportStatus, setExportStatus] = createSignal('');
+  const [exportActive, setExportActive] = createSignal(false);
+  const [exportPaused, setExportPaused] = createSignal(false);
+  const [exportCancelled, setExportCancelled] = createSignal(false);
+
+  const startExport = async () => {
+    setExportActive(true);
+    setExportPaused(false);
+    setExportCancelled(false);
+    setExportProgress(0);
+    setExportStatus('Starting...');
+
+    try {
+      const config: ExportConfig = {
+        format: exportFormat(),
+        resolution: exportRes(),
+        fps: exportFps()
+      };
+      
+      const controller = {
+        isPaused: () => exportPaused(),
+        isCancelled: () => exportCancelled()
+      };
+      
+      const snapshot = JSON.parse(JSON.stringify(chartStore));
+
+      const result = await exportProject(
+        config, 
+        snapshot, 
+        (p, s) => { setExportProgress(p); setExportStatus(s); }, 
+        controller
+      );
+
+      // Trigger download
+      let ext = exportFormat() === 'zip' ? 'zip' : exportFormat();
+      let mime = exportFormat() === 'zip' ? 'application/zip' : `video/${ext}`;
+      
+      const blob = new Blob([result], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${chartStore.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_export.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      setIsExporting(false);
+    } catch (e: any) {
+      if (e.message !== 'Export Cancelled') {
+        alert("Export Error: " + e.message);
+      }
+    } finally {
+      setExportActive(false);
+    }
+  };
 
   onMount(() => {
     // 1. Hydrate the store with the template data
@@ -147,15 +209,27 @@ export default function ChartPresetTemplate(props: { slug: string }) {
             </p>
           </div>
 
-          <a 
-            href={transitionUrl()}
-            class="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-100 font-bold py-3.5 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer text-sm"
-          >
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><rect width="14" height="14" x="5" y="5" rx="1" ry="1"/>
-            </svg> 
-            Open in Full Editor
-          </a>
+          <div class="flex flex-col gap-2.5">
+            <a 
+              href={transitionUrl()}
+              class="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-100 font-bold py-3.5 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer text-sm"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><rect width="14" height="14" x="5" y="5" rx="1" ry="1"/>
+              </svg> 
+              Open in Full Editor
+            </a>
+            
+            <button 
+              onClick={() => setIsExporting(true)}
+              class="w-full border-2 border-brand-500 text-brand-500 hover:bg-brand-500 hover:text-white dark:hover:text-black font-bold py-3 px-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer text-sm"
+            >
+              <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+              </svg>
+              Export Video
+            </button>
+          </div>
 
           <div class="border-t border-border-color/50 pt-5 space-y-4">
             <h3 class="font-bold text-xs text-text-main uppercase tracking-widest flex items-center gap-2">
@@ -209,6 +283,86 @@ export default function ChartPresetTemplate(props: { slug: string }) {
         </div>
 
       </div>
+
+      {/* EXPORT MODAL */}
+      {isExporting() && (
+        <div class="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 flex items-center justify-center p-4 transition-opacity">
+          <div class="bg-card-bg border border-border-color shadow-2xl p-8 max-w-md w-full relative flex flex-col gap-6 text-text-main rounded-2xl">
+            {!exportActive() && (
+              <button onClick={() => setIsExporting(false)} class="absolute top-4 right-4 text-text-muted hover:text-red-500 transition cursor-pointer">
+                 ✕
+              </button>
+            )}
+            
+            <div class="flex flex-col gap-1">
+              <h3 class="text-xl font-black text-brand-500 uppercase tracking-tighter">
+                {exportActive() ? 'Rendering Animation' : 'Export Animation'}
+              </h3>
+              <p class="text-xs text-text-muted font-medium">
+                {exportActive() ? exportStatus() : 'Select your preferred rendering format.'}
+              </p>
+            </div>
+            
+            {!exportActive() ? (
+              <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Resolution</label>
+                  <select value={exportRes()} onInput={(e) => setExportRes(e.currentTarget.value as any)} class="w-full px-3 py-2 bg-black/5 border border-border-color text-text-main text-sm font-medium outline-none focus:border-brand-500 cursor-pointer rounded-xl">
+                    <option class="bg-card-bg" value="720">720p (HD)</option>
+                    <option class="bg-card-bg" value="1080">1080p (FHD)</option>
+                    <option class="bg-card-bg" value="1440">1440p (2K)</option>
+                    <option class="bg-card-bg" value="2160">2160p (4K)</option>
+                  </select>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Framerate</label>
+                  <div class="flex gap-2">
+                    {[24, 30, 60].map(fps => (
+                      <button onClick={() => setExportFps(fps)} class={`flex-1 py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${exportFps() === fps ? 'border-2 border-brand-500 bg-brand-500/10 text-brand-500' : 'border border-border-color bg-black/5 text-text-muted hover:border-brand-500'}`}>
+                        {fps}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Format</label>
+                  <div class="grid grid-cols-2 gap-2">
+                    {['webm', 'mp4', 'mov', 'zip'].map(fmt => (
+                      <button onClick={() => setExportFormat(fmt as any)} class={`py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${exportFormat() === fmt ? 'border-2 border-brand-500 bg-brand-500/10 text-brand-500' : 'border border-border-color bg-black/5 text-text-muted hover:border-brand-500'}`}>
+                        {fmt.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <button onClick={startExport} class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-black font-black uppercase tracking-widest transition rounded-xl mt-2 cursor-pointer shadow-md">
+                  Start Render
+                </button>
+              </div>
+            ) : (
+              <div class="flex flex-col gap-6">
+                <div class="w-full bg-black/5 h-4 overflow-hidden border border-border-color relative rounded-full">
+                  <div class="h-full bg-brand-500 transition-all duration-300 ease-out" style={{ width: `${exportProgress()}%` }}></div>
+                </div>
+                <div class="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-text-muted">
+                  <span>{exportProgress()}%</span>
+                </div>
+                
+                <div class="flex gap-2">
+                  <button onClick={() => setExportPaused(!exportPaused())} class="flex-1 py-3 bg-black/5 hover:bg-black/10 text-text-main font-bold uppercase tracking-widest transition border border-border-color cursor-pointer rounded-xl">
+                    {exportPaused() ? 'Resume' : 'Pause'}
+                  </button>
+                  <button onClick={() => setExportCancelled(true)} class="flex-1 py-3 border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white font-bold uppercase tracking-widest transition cursor-pointer rounded-xl">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
