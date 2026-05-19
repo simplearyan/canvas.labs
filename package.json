@@ -15,7 +15,9 @@
     "@astrojs/solid-js": "^6.0.1",
     "@tailwindcss/vite": "^4.3.0",
     "astro": "^6.3.3",
+    "jszip": "^3.10.1",
     "lz-string": "^1.5.0",
+    "mediabunny": "^1.45.2",
     "solid-js": "^1.9.13",
     "tailwindcss": "^4.3.0"
   }

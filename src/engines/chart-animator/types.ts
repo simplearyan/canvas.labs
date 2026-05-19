@@ -33,6 +33,7 @@ export interface ChartConfigOptions {
   zoom: number;
   panX: number;
   panY: number;
+  duration: number;
 }
 
 export interface ChartState {
@@ -67,5 +68,6 @@ export const DEFAULT_CHART_OPTIONS: ChartConfigOptions = {
   lineGlow: 15,
   zoom: 1.0,
   panX: 0,
-  panY: 0
+  panY: 0,
+  duration: 5
 };

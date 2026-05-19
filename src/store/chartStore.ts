@@ -41,6 +41,8 @@ export function loadStateFromUrl(encodedState: string): boolean {
     if (!jsonString) return false;
     
     const parsedState = JSON.parse(jsonString) as ChartState;
+    // Merge options with defaults to prevent missing keys from old URL configs
+    parsedState.options = { ...DEFAULT_CHART_OPTIONS, ...parsedState.options };
     setChartStore(parsedState);
     return true;
   } catch (err) {

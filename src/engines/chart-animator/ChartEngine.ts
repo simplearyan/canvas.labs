@@ -71,7 +71,7 @@ export class ChartEngine {
 
     // Calculate progress (0.0 to 1.0)
     let elapsed = (timestamp - this.startTime) / 1000; // in seconds
-    let progress = Math.min(elapsed / this.state.options.duration, 1.0);
+    let progress = Math.min(elapsed / (this.state.options.duration || 5), 1.0);
 
     // Easing function (Cubic Out)
     const easedProgress = 1 - Math.pow(1 - progress, 3);
