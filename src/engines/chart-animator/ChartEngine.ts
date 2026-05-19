@@ -85,6 +85,8 @@ export class ChartEngine {
     }
   };
 
+  public isTransparent: boolean = false;
+
   public render() {
     this.seek(1.0); // Render fully complete state by default
   }
@@ -96,8 +98,12 @@ export class ChartEngine {
     const { options } = this.state;
 
     // 1. Clear background
-    ctx.fillStyle = options.bgColor;
-    ctx.fillRect(0, 0, width, height);
+    if (this.isTransparent) {
+      ctx.clearRect(0, 0, width, height);
+    } else {
+      ctx.fillStyle = options.bgColor;
+      ctx.fillRect(0, 0, width, height);
+    }
 
     // 2. Apply Zoom and Pan (Transformations)
     ctx.save();
@@ -212,46 +218,111 @@ export class ChartEngine {
 
   private drawTitleAndMetadata(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, state: ChartState, w: number, h: number) {
     const opts = state.options;
-    let yPos = 70; // Top padding
+    const scale = w / 1920;
+    
+    const titleSize = Math.max(28, Math.round(opts.titleSize * scale));
+    const subtitleSize = Math.max(18, Math.round(opts.subtitleSize * scale));
+    const sourceSize = Math.max(14, Math.round(opts.sourceSize * scale));
+    
+    let yPos = Math.round(70 * scale); // Scale top padding
 
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
     let hasTopText = false;
     if (opts.showTitle && state.title) {
-      ctx.font = `800 ${opts.titleSize}px "${opts.fontFamily}"`;
+      ctx.font = `800 ${titleSize}px "${opts.fontFamily}"`;
       ctx.fillStyle = opts.titleColor;
-      ctx.fillText(state.title, 80, yPos);
-      yPos += opts.titleSize + 16;
+      ctx.fillText(state.title, Math.round(80 * scale), yPos);
+      yPos += titleSize + Math.round(16 * scale);
       hasTopText = true;
     }
 
     if (opts.showSubtitle && state.subtitle) {
-      ctx.font = `400 ${opts.subtitleSize}px "${opts.fontFamily}"`;
+      ctx.font = `400 ${subtitleSize}px "${opts.fontFamily}"`;
       ctx.fillStyle = opts.textColor;
-      ctx.fillText(state.subtitle, 80, yPos);
-      yPos += opts.subtitleSize + 16;
+      ctx.fillText(state.subtitle, Math.round(80 * scale), yPos);
+      yPos += subtitleSize + Math.round(16 * scale);
       hasTopText = true;
     }
 
-    let bottomY = h - 40; // Bottom padding
+    let bottomY = h - Math.round(40 * scale); // Position source close to bottom
     if (opts.showSource && state.source) {
-      ctx.font = `600 ${opts.sourceSize}px "${opts.fontFamily}"`;
+      ctx.font = `600 ${sourceSize}px "${opts.fontFamily}"`;
       ctx.fillStyle = opts.textColor;
       ctx.textBaseline = 'bottom';
-      ctx.fillText(state.source, 80, bottomY);
-      bottomY -= (opts.sourceSize + 20);
+      if (opts.sourcePosition === 'right') {
+        ctx.textAlign = 'right';
+        ctx.fillText(state.source, w - Math.round(80 * scale), bottomY);
+      } else {
+        ctx.textAlign = 'left';
+        ctx.fillText(state.source, Math.round(80 * scale), bottomY);
+      }
+      bottomY -= (sourceSize + Math.round((opts.sourcePadding ?? 40) * scale)); // Custom Source Top Gap
     }
 
     if (opts.showLegend && state.rawData) {
       const { data, seriesNames } = this.parseCSV(state.rawData);
       if (data.length > 0) {
-        this.drawLegend(ctx, w, bottomY - 20, opts.textColor, opts.colorPalette, opts.fontFamily, data, seriesNames);
-        bottomY -= 80;
+        if (opts.legendPosition === 'top-right') {
+          this.drawLegendTopRight(ctx, w, Math.round(70 * scale), opts.textColor, opts.colorPalette, opts.fontFamily, data, seriesNames, scale);
+        } else {
+          this.drawLegend(ctx, w, bottomY - Math.round(20 * scale), opts.textColor, opts.colorPalette, opts.fontFamily, data, seriesNames, scale);
+          bottomY -= Math.round(80 * scale);
+        }
       }
     }
 
-    return { chartStartY: hasTopText ? yPos + 40 : 70, chartBottomY: bottomY };
+    bottomY -= Math.round((opts.chartBottomGap ?? 40) * scale); // Custom Chart Bottom Gap Spacing
+
+    return { chartStartY: hasTopText ? yPos + Math.round(40 * scale) : Math.round(70 * scale), chartBottomY: bottomY };
+  }
+
+  private drawLegendTopRight(
+    ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    W: number,
+    legendStartY: number,
+    textColor: string,
+    colorPalette: string,
+    fontBase: string,
+    data: any[],
+    seriesNames: string[],
+    scale: number
+  ) {
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    
+    const legendFontSize = Math.max(14, Math.round(24 * scale));
+    ctx.font = `700 ${legendFontSize}px "${fontBase}"`;
+    
+    const boxSize = Math.round(20 * scale);
+    const itemSpacing = Math.round(30 * scale);
+    const palette = (this.palettes as any)[colorPalette] || this.palettes.vibrant;
+
+    const isMultiSeries = (this.state?.type === 'multiline' || this.state?.type === 'stacked') && seriesNames.length > 0;
+    const items = isMultiSeries ? seriesNames : data;
+    
+    let currentY = legendStartY;
+    const rightMargin = W - Math.round(80 * scale);
+    
+    items.forEach((item, idx) => {
+      const name = isMultiSeries ? (item as string) : (item as any).label;
+      const color = isMultiSeries ? palette[idx % palette.length] : (item as any).color || palette[idx % palette.length];
+      
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(rightMargin - boxSize, currentY - boxSize/2, boxSize, boxSize, Math.round(4 * scale));
+      } else {
+        ctx.fillRect(rightMargin - boxSize, currentY - boxSize/2, boxSize, boxSize);
+      }
+      ctx.fill();
+
+      ctx.fillStyle = textColor;
+      ctx.fillText(name, rightMargin - boxSize - Math.round(15 * scale), currentY);
+      
+      currentY += itemSpacing;
+    });
   }
 
   private drawLegend(
@@ -262,31 +333,37 @@ export class ChartEngine {
     colorPalette: string,
     fontBase: string,
     data: any[],
-    seriesNames: string[]
+    seriesNames: string[],
+    scale: number
   ) {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.font = `700 24px "${fontBase}"`;
+    
+    const legendFontSize = Math.max(14, Math.round(24 * scale));
+    ctx.font = `700 ${legendFontSize}px "${fontBase}"`;
     
     let totalWidth = 0;
-    const itemPadding = 40;
-    const boxSize = 20;
+    const itemPadding = Math.round(40 * scale);
+    const boxSize = Math.round(20 * scale);
     const palette = (this.palettes as any)[colorPalette] || this.palettes.vibrant;
 
     const isMultiSeries = (this.state?.type === 'multiline' || this.state?.type === 'stacked') && seriesNames.length > 0;
     
     if (isMultiSeries) {
       seriesNames.forEach((name) => {
-        totalWidth += boxSize + 10 + ctx.measureText(name).width + itemPadding;
+        totalWidth += boxSize + Math.round(10 * scale) + ctx.measureText(name).width + itemPadding;
       });
     } else {
       data.forEach(item => {
-        totalWidth += boxSize + 10 + ctx.measureText(item.label).width + itemPadding;
+        totalWidth += boxSize + Math.round(10 * scale) + ctx.measureText(item.label).width + itemPadding;
       });
     }
     totalWidth -= itemPadding; 
 
     let currentX = (W - totalWidth) / 2;
+    if (currentX < Math.round(40 * scale)) {
+      currentX = Math.round(40 * scale);
+    }
 
     if (isMultiSeries) {
       seriesNames.forEach((name, idx) => {
@@ -294,15 +371,15 @@ export class ChartEngine {
         ctx.fillStyle = color;
         ctx.beginPath();
         if (ctx.roundRect) {
-          ctx.roundRect(currentX, legendCenterY - boxSize/2, boxSize, boxSize, 4);
+          ctx.roundRect(currentX, legendCenterY - boxSize/2, boxSize, boxSize, Math.round(4 * scale));
         } else {
           ctx.fillRect(currentX, legendCenterY - boxSize/2, boxSize, boxSize);
         }
         ctx.fill();
 
         ctx.fillStyle = textColor;
-        ctx.fillText(name, currentX + boxSize + 10, legendCenterY + 2);
-        currentX += boxSize + 10 + ctx.measureText(name).width + itemPadding;
+        ctx.fillText(name, currentX + boxSize + Math.round(10 * scale), legendCenterY + Math.round(2 * scale));
+        currentX += boxSize + Math.round(10 * scale) + ctx.measureText(name).width + itemPadding;
       });
     } else {
       data.forEach((item, idx) => {
@@ -310,15 +387,15 @@ export class ChartEngine {
         ctx.fillStyle = color;
         ctx.beginPath();
         if (ctx.roundRect) {
-          ctx.roundRect(currentX, legendCenterY - boxSize/2, boxSize, boxSize, 4);
+          ctx.roundRect(currentX, legendCenterY - boxSize/2, boxSize, boxSize, Math.round(4 * scale));
         } else {
           ctx.fillRect(currentX, legendCenterY - boxSize/2, boxSize, boxSize);
         }
         ctx.fill();
 
         ctx.fillStyle = textColor;
-        ctx.fillText(item.label, currentX + boxSize + 10, legendCenterY + 2);
-        currentX += boxSize + 10 + ctx.measureText(item.label).width + itemPadding;
+        ctx.fillText(item.label, currentX + boxSize + Math.round(10 * scale), legendCenterY + Math.round(2 * scale));
+        currentX += boxSize + Math.round(10 * scale) + ctx.measureText(item.label).width + itemPadding;
       });
     }
   }
@@ -329,10 +406,13 @@ export class ChartEngine {
     const parsed = this.parseCSV(rawData);
     if (parsed.data.length === 0) return;
 
+    const scale = this.width / 1920;
+    const marginX = Math.round(120 * scale);
+    const rightMargin = options.legendPosition === 'top-right' ? Math.round(340 * scale) : marginX;
     const chartArea = {
-      x: 120,
+      x: marginX,
       y: startY,
-      w: this.width - 240,
+      w: this.width - marginX - rightMargin,
       h: Math.max(100, bottomY - startY)
     };
 
@@ -354,13 +434,14 @@ export class ChartEngine {
   }
 
   private drawVerticalChart(ctx: any, area: any, progress: number, textColor: string, gridColor: string, palette: string[], fontBase: string, parsed: any) {
+    const scale = this.width / 1920;
     const steps = 4;
     const valueRange = parsed.maxVal - parsed.minVal;
-    const leftPad = this.state!.options.showYAxis ? 100 : 20;
+    const leftPad = this.state!.options.showYAxis ? Math.round(100 * scale) : Math.round(20 * scale);
     
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    ctx.font = `600 20px "${fontBase}"`;
+    ctx.font = `600 ${Math.max(12, Math.round(20 * scale))}px "${fontBase}"`;
     ctx.fillStyle = textColor;
 
     for (let i = 0; i <= steps; i++) {
@@ -369,17 +450,17 @@ export class ChartEngine {
 
       if (this.state!.options.showGrid) {
         ctx.beginPath();
-        ctx.setLineDash([8, 8]);
-        ctx.moveTo(area.x + leftPad - 20, y);
+        ctx.setLineDash([Math.round(8 * scale), Math.round(8 * scale)]);
+        ctx.moveTo(area.x + leftPad - Math.round(20 * scale), y);
         ctx.lineTo(area.x + area.w, y);
         ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = Math.max(1, Math.round(2 * scale));
         ctx.stroke();
         ctx.setLineDash([]);
       }
       
       if (this.state!.options.showYAxis) {
-        ctx.fillText(this.formatValue(val, this.state!.options.valueFormat, parsed.maxVal, parsed.minVal), area.x + leftPad - 40, y);
+        ctx.fillText(this.formatValue(val, this.state!.options.valueFormat, parsed.maxVal, parsed.minVal), area.x + leftPad - Math.round(40 * scale), y);
       }
     }
 
@@ -387,10 +468,10 @@ export class ChartEngine {
     
     if (this.state!.options.showXAxis || this.state!.options.showYAxis) {
       ctx.beginPath();
-      ctx.moveTo(area.x + leftPad - 20, zeroY);
+      ctx.moveTo(area.x + leftPad - Math.round(20 * scale), zeroY);
       ctx.lineTo(area.x + area.w, zeroY);
       ctx.strokeStyle = gridColor;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = Math.max(1, Math.round(3 * scale));
       ctx.stroke();
     }
 
@@ -412,10 +493,10 @@ export class ChartEngine {
       ctx.fillRect(x, y, barWidth, currentPixelHeight);
 
       ctx.textBaseline = 'top';
-      ctx.font = `700 24px "${fontBase}"`;
+      ctx.font = `700 ${Math.max(12, Math.round(24 * scale))}px "${fontBase}"`;
       ctx.fillStyle = textColor;
       ctx.globalAlpha = Math.min(1, progress * 2); 
-      const lblY = parsed.minVal < 0 ? area.y + area.h + 15 : zeroY + 15;
+      const lblY = parsed.minVal < 0 ? area.y + area.h + Math.round(15 * scale) : zeroY + Math.round(15 * scale);
       
       if (this.state!.options.showXAxis) {
         ctx.fillText(item.label, x + barWidth/2, lblY);
@@ -423,8 +504,8 @@ export class ChartEngine {
 
       if (this.state!.options.showValues && progress > 0.1) {
         ctx.textBaseline = actualValue >= 0 ? 'bottom' : 'top';
-        ctx.font = `800 28px "JetBrains Mono"`;
-        const valYOffset = actualValue >= 0 ? -10 : 10;
+        ctx.font = `800 ${Math.max(14, Math.round(28 * scale))}px "JetBrains Mono"`;
+        const valYOffset = actualValue >= 0 ? -Math.round(10 * scale) : Math.round(10 * scale);
         ctx.fillText(this.formatValue(actualValue * progress, this.state!.options.valueFormat, parsed.maxVal, parsed.minVal), x + barWidth/2, y + valYOffset);
       }
       ctx.globalAlpha = 1.0;
@@ -621,11 +702,6 @@ export class ChartEngine {
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       
-      if (this.state!.options.lineGlow > 0) {
-        ctx.shadowColor = color;
-        ctx.shadowBlur = this.state!.options.lineGlow;
-      }
-      
       let lastX = 0, lastY = 0;
       
       for (let i = 0; i < numPoints; i++) {
@@ -651,8 +727,7 @@ export class ChartEngine {
           }
         }
       }
-      ctx.stroke();
-      ctx.shadowBlur = 0; 
+      ctx.stroke(); 
       
       if (progress > 0) {
         ctx.beginPath();

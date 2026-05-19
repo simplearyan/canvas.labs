@@ -27,6 +27,10 @@ export interface ChartConfigOptions {
   titleSize: number;
   subtitleSize: number;
   sourceSize: number;
+  legendPosition: 'bottom' | 'top-right';
+  sourcePosition: 'left' | 'right';
+  sourcePadding: number;
+  chartBottomGap: number;
 
   // Effects & Camera
   lineGlow: number;
@@ -65,6 +69,10 @@ export const DEFAULT_CHART_OPTIONS: ChartConfigOptions = {
   titleSize: 64,
   subtitleSize: 38,
   sourceSize: 20,
+  legendPosition: 'bottom',
+  sourcePosition: 'left',
+  sourcePadding: 40,
+  chartBottomGap: 40,
   lineGlow: 15,
   zoom: 1.0,
   panX: 0,

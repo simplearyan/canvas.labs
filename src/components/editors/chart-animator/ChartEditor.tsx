@@ -14,8 +14,9 @@ export default function ChartEditor() {
   const [activeTab, setActiveTab] = createSignal<'grid' | 'csv'>('csv');
   const [isExporting, setIsExporting] = createSignal(false);
   const [customPresets, setCustomPresets] = createSignal<Array<{name: string, data: any}>>([]);
+  const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1'>('16:9');
 
-  // Export State
+  // Export & Snapshot State
   const [exportRes, setExportRes] = createSignal<'720' | '1080' | '1440' | '2160'>('1080');
   const [exportFormat, setExportFormat] = createSignal<'webm' | 'mp4' | 'mov' | 'zip'>('webm');
   const [exportFps, setExportFps] = createSignal<number>(60);
@@ -24,6 +25,10 @@ export default function ChartEditor() {
   const [exportActive, setExportActive] = createSignal(false);
   const [exportPaused, setExportPaused] = createSignal(false);
   const [exportCancelled, setExportCancelled] = createSignal(false);
+
+  const [snapshotRes, setSnapshotRes] = createSignal<'1080' | '1440' | '2160'>('1080');
+  const [snapshotTransparent, setSnapshotTransparent] = createSignal(false);
+  const [isExportingSnapshot, setIsExportingSnapshot] = createSignal(false);
 
   const startExport = async () => {
     setExportActive(true);
@@ -36,7 +41,8 @@ export default function ChartEditor() {
       const config: ExportConfig = {
         format: exportFormat(),
         resolution: exportRes(),
-        fps: exportFps()
+        fps: exportFps(),
+        aspectRatio: aspectRatio()
       };
       
       const controller = {
@@ -75,6 +81,47 @@ export default function ChartEditor() {
     }
   };
 
+  const exportSnapshotFrame = async () => {
+    try {
+      const targetH = parseInt(snapshotRes());
+      const aspect = aspectRatio();
+      let targetW = Math.round(targetH * (16 / 9));
+      if (aspect === '9:16') {
+        targetW = Math.round(targetH * (9 / 16));
+      } else if (aspect === '1:1') {
+        targetW = targetH;
+      } else if (aspect === '4:5') {
+        targetW = Math.round(targetH * (4 / 5));
+      } else if (aspect === '3:4') {
+        targetW = Math.round(targetH * (3 / 4));
+      } else if (aspect === '4:3') {
+        targetW = Math.round(targetH * (4 / 3));
+      } else if (aspect === '2:1') {
+        targetW = Math.round(targetH * (2 / 1));
+      }
+
+      const offscreen = new OffscreenCanvas(targetW, targetH);
+      const snapEngine = new ChartEngine(offscreen);
+      snapEngine.isTransparent = snapshotTransparent();
+      snapEngine.setDimensions(targetW, targetH, 1);
+      
+      const snapshot = JSON.parse(JSON.stringify(chartStore));
+      snapEngine.updateState(snapshot);
+      snapEngine.seek(1.0);
+
+      const blob = await offscreen.convertToBlob({ type: 'image/png' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${chartStore.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_snapshot_${snapshotRes()}p.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setIsExportingSnapshot(false);
+    } catch (err: any) {
+      alert("Failed to export snapshot: " + err.message);
+    }
+  };
+
   // Parse configuration synchronously on client-side setup before first paint
   if (typeof window !== 'undefined') {
     const urlParams = new URLSearchParams(window.location.search);
@@ -99,6 +146,7 @@ export default function ChartEditor() {
     setIsLoaded(true);
 
     handleResize();
+    setTimeout(handleResize, 100);
     window.addEventListener('resize', handleResize);
   });
 
@@ -109,15 +157,66 @@ export default function ChartEditor() {
 
   const handleResize = () => {
     if (!canvasRef || !engine) return;
-    const parent = canvasRef.parentElement;
-    if (parent) {
-      const width = parent.clientWidth - 32;
-      const height = (width * 9) / 16;
-      engine.setDimensions(1920, 1080, window.devicePixelRatio || 1);
-      canvasRef.style.width = `${width}px`;
-      canvasRef.style.height = `${height}px`;
+    const wrapper = canvasRef.parentElement;
+    if (wrapper) {
+      const container = wrapper.parentElement;
+      if (container) {
+        const maxW = container.clientWidth - 64;
+        const maxH = container.clientHeight - 64;
+        
+        let w = maxW;
+        let h = maxH;
+        
+        const aspect = aspectRatio();
+        let targetRatio = 16 / 9;
+        let nativeW = 1920;
+        let nativeH = 1080;
+        
+        if (aspect === '9:16') {
+          targetRatio = 9 / 16;
+          nativeW = 1080;
+          nativeH = 1920;
+        } else if (aspect === '1:1') {
+          targetRatio = 1;
+          nativeW = 1080;
+          nativeH = 1080;
+        } else if (aspect === '4:5') {
+          targetRatio = 4 / 5;
+          nativeW = 1080;
+          nativeH = 1350;
+        } else if (aspect === '3:4') {
+          targetRatio = 3 / 4;
+          nativeW = 1080;
+          nativeH = 1440;
+        } else if (aspect === '4:3') {
+          targetRatio = 4 / 3;
+          nativeW = 1440;
+          nativeH = 1080;
+        } else if (aspect === '2:1') {
+          targetRatio = 2 / 1;
+          nativeW = 2160;
+          nativeH = 1080;
+        }
+        
+        if (maxW / maxH > targetRatio) {
+          h = maxH;
+          w = h * targetRatio;
+        } else {
+          w = maxW;
+          h = w / targetRatio;
+        }
+        
+        engine.setDimensions(nativeW, nativeH, window.devicePixelRatio || 1);
+        canvasRef.style.width = `${w}px`;
+        canvasRef.style.height = `${h}px`;
+      }
     }
   };
+
+  createEffect(() => {
+    aspectRatio();
+    handleResize();
+  });
 
   createEffect(() => {
     if (isLoaded() && engine) {
@@ -292,25 +391,32 @@ export default function ChartEditor() {
             <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={chartStore.options.showYAxis} onInput={(e) => updateChartOptions({ showYAxis: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 border-blueprint-300 dark:border-zinc-850" /><span class="text-[11px] font-bold text-slate-700 dark:text-text-main uppercase tracking-wider">Y-Axis</span></label>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-3 gap-2">
             <div>
               <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Chart Type</label>
-              <select value={chartStore.type} onInput={(e) => updateChartMetadata({ type: e.currentTarget.value as ChartType })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+              <select value={chartStore.type} onInput={(e) => updateChartMetadata({ type: e.currentTarget.value as ChartType })} class="w-full px-2 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
                 <option value="vertical">Vertical Bar</option>
                 <option value="horizontal">Horizontal Bar</option>
-                <option value="multiline">Multi-Line Trend</option>
+                <option value="multiline">Multi-Line</option>
                 <option value="stacked">Stacked Bar</option>
                 <option value="pie">Pie Chart</option>
               </select>
             </div>
             <div>
               <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Color Palette</label>
-              <select value={chartStore.options.colorPalette} onInput={(e) => updateChartOptions({ colorPalette: e.currentTarget.value as ColorPalette })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+              <select value={chartStore.options.colorPalette} onInput={(e) => updateChartOptions({ colorPalette: e.currentTarget.value as ColorPalette })} class="w-full px-2 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
                 <option value="vibrant">Vibrant</option>
                 <option value="pastel">Pastel Colors</option>
                 <option value="neon">Cyberpunk Neon</option>
                 <option value="sunset">Sunset Glow</option>
                 <option value="ocean">Deep Ocean</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Legend Pos</label>
+              <select value={chartStore.options.legendPosition || 'bottom'} onInput={(e) => updateChartOptions({ legendPosition: e.currentTarget.value as any })} class="w-full px-2 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+                <option value="bottom">Bottom Horiz</option>
+                <option value="top-right">Top Right Vert</option>
               </select>
             </div>
           </div>
@@ -351,6 +457,31 @@ export default function ChartEditor() {
                 <option value="percent">% Percentage</option>
               </select>
             </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Source Position</label>
+              <select value={chartStore.options.sourcePosition || 'left'} onInput={(e) => updateChartOptions({ sourcePosition: e.currentTarget.value as any })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+                <option value="left">Bottom Left</option>
+                <option value="right">Bottom Right</option>
+              </select>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-1.5">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500">Source Top Gap</label>
+                <span class="text-[10px] font-bold text-slate-500 dark:text-text-muted">{chartStore.options.sourcePadding ?? 40}px</span>
+              </div>
+              <input type="range" min="10" max="150" step="5" value={chartStore.options.sourcePadding ?? 40} onInput={(e) => updateChartOptions({ sourcePadding: parseInt(e.currentTarget.value) })} class="w-full h-8 accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
+            </div>
+          </div>
+
+          <div class="flex flex-col p-3 bg-slate-50 dark:bg-zinc-900 border border-blueprint-100 dark:border-zinc-800">
+            <div class="flex justify-between items-center mb-2">
+              <label class="block text-[10px] font-bold uppercase tracking-widest text-blueprint-900 dark:text-brand-500">Chart Bottom Gap</label>
+              <span class="text-[10px] font-bold text-slate-500 dark:text-text-muted">{chartStore.options.chartBottomGap ?? 40}px</span>
+            </div>
+            <input type="range" min="10" max="150" step="5" value={chartStore.options.chartBottomGap ?? 40} onInput={(e) => updateChartOptions({ chartBottomGap: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
           </div>
 
           {/* Animation Duration */}
@@ -399,7 +530,7 @@ export default function ChartEditor() {
       {/* CANVAS AREA (Right) */}
       <section class="flex-1 relative overflow-hidden flex items-center justify-center p-4 sm:p-12">
         <div class="relative p-2 bg-white dark:bg-zinc-900 border-2 border-blueprint-900 dark:border-zinc-800 blueprint-shadow">
-           <canvas ref={canvasRef} class="block bg-white dark:bg-black w-full max-w-[1200px] aspect-video object-contain"></canvas>
+           <canvas ref={canvasRef} class="block bg-white dark:bg-black object-contain"></canvas>
         </div>
       </section>
       
@@ -483,18 +614,93 @@ export default function ChartEditor() {
         </div>
       )}
 
+      {/* SNAPSHOT EXPORT MODAL */}
+      {isExportingSnapshot() && (
+        <div class="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 flex items-center justify-center p-4 transition-opacity">
+          <div class="bg-white dark:bg-zinc-950 border-2 border-blueprint-900 dark:border-zinc-800 shadow-2xl p-8 max-w-md w-full relative flex flex-col gap-6 text-slate-800 dark:text-text-main">
+            <button onClick={() => setIsExportingSnapshot(false)} class="absolute top-4 right-4 text-slate-400 dark:text-text-muted hover:text-red-500 dark:hover:text-red-400 transition cursor-pointer">
+               ✕
+            </button>
+            
+            <div class="flex flex-col gap-1">
+              <h3 class="text-xl font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-tighter">
+                Export Frame Snapshot
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-text-muted font-medium">
+                Save the current frame as a high-resolution PNG image.
+              </p>
+            </div>
+            
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-bold text-blueprint-900 dark:text-brand-500 uppercase tracking-widest">Resolution</label>
+                <select value={snapshotRes()} onInput={(e) => setSnapshotRes(e.currentTarget.value as any)} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-slate-800 dark:text-text-main text-sm font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 cursor-pointer">
+                  <option value="1080">HD (1080p)</option>
+                  <option value="1440">2K (1440p)</option>
+                  <option value="2160">4K (2160p)</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between bg-slate-50 dark:bg-zinc-900/50 p-3 border border-blueprint-100 dark:border-zinc-800">
+                <div class="flex flex-col">
+                  <span class="text-xs font-bold text-slate-800 dark:text-text-main uppercase tracking-wider">Transparent Background</span>
+                  <span class="text-[9px] text-slate-400 dark:text-text-muted font-medium">PNG alpha layer with no background color fill.</span>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={snapshotTransparent()} 
+                  onChange={(e) => setSnapshotTransparent(e.currentTarget.checked)}
+                  class="w-5 h-5 accent-blueprint-900 dark:accent-brand-500 cursor-pointer"
+                />
+              </div>
+              
+              <button onClick={exportSnapshotFrame} class="w-full py-3.5 bg-red-650 hover:bg-red-750 bg-blueprint-900 dark:bg-brand-500 text-white font-black uppercase tracking-widest transition shadow-[4px_4px_0px_rgba(0,51,102,0.1)] mt-2 cursor-pointer">
+                Download PNG Frame
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Portaling controls to header to keep editor interface premium */}
       <Portal mount={document.getElementById('editor-header-controls') || undefined}>
         <div class="flex items-center gap-3">
+          {/* Aspect Ratio Selector Dropdown */}
+          <div class="relative flex items-center bg-slate-100 dark:bg-zinc-900/50 rounded-lg border border-slate-205 dark:border-zinc-800 px-3 py-1.5 gap-1.5 shadow-sm">
+            <span class="text-[9px] font-black text-slate-400 dark:text-text-muted uppercase tracking-wider select-none">Aspect:</span>
+            <select 
+              value={aspectRatio()} 
+              onInput={(e) => setAspectRatio(e.currentTarget.value as any)} 
+              class="bg-transparent border-none text-[11px] font-extrabold text-slate-700 dark:text-text-main outline-none cursor-pointer appearance-none pr-5 relative"
+            >
+              <option value="16:9" class="bg-white dark:bg-zinc-950">16:9 (Landscape)</option>
+              <option value="9:16" class="bg-white dark:bg-zinc-950">9:16 (Vertical)</option>
+              <option value="1:1" class="bg-white dark:bg-zinc-950">1:1 (Square)</option>
+              <option value="4:5" class="bg-white dark:bg-zinc-950">4:5 (Portrait)</option>
+              <option value="3:4" class="bg-white dark:bg-zinc-950">3:4 (Standard Vert.)</option>
+              <option value="4:3" class="bg-white dark:bg-zinc-950">4:3 (Standard Horiz.)</option>
+              <option value="2:1" class="bg-white dark:bg-zinc-950">2:1 (Panoramics)</option>
+            </select>
+            <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-text-muted text-[8px]">▼</div>
+          </div>
+
+          <button 
+            onClick={() => setIsExportingSnapshot(true)} 
+            class="flex items-center gap-1.5 px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
+            title="Export High-Res PNG Snapshot"
+          >
+             <span>Camera Snapshot</span>
+          </button>
+
           <button 
             onClick={handlePlay} 
-            class="flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
+            class="flex items-center gap-2 px-3.5 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
           >
              Preview
           </button>
           <button 
             onClick={() => setIsExporting(true)} 
-            class="flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-blueprint-900 hover:bg-blueprint-800 dark:bg-brand-500 dark:hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-widest transition cursor-pointer shadow-md"
+            class="flex items-center gap-2 px-3.5 py-2 rounded-md bg-blueprint-900 hover:bg-blueprint-800 dark:bg-brand-500 dark:hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-widest transition cursor-pointer shadow-md"
           >
              Export Video
           </button>

@@ -7,6 +7,7 @@ export interface ExportConfig {
   format: 'mp4' | 'webm' | 'mov' | 'zip';
   resolution: '720' | '1080' | '1440' | '2160';
   fps: number;
+  aspectRatio?: '16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1';
 }
 
 export const exportProject = async (
@@ -16,7 +17,21 @@ export const exportProject = async (
   controller?: { isPaused: () => boolean; isCancelled: () => boolean }
 ): Promise<ArrayBuffer | Blob> => {
   const targetH = parseInt(config.resolution);
-  const targetW = Math.round(targetH * (16 / 9)); // Default 16:9 aspect ratio
+  let aspect = config.aspectRatio || '16:9';
+  let targetW = Math.round(targetH * (16 / 9));
+  if (aspect === '9:16') {
+    targetW = Math.round(targetH * (9 / 16));
+  } else if (aspect === '1:1') {
+    targetW = targetH;
+  } else if (aspect === '4:5') {
+    targetW = Math.round(targetH * (4 / 5));
+  } else if (aspect === '3:4') {
+    targetW = Math.round(targetH * (3 / 4));
+  } else if (aspect === '4:3') {
+    targetW = Math.round(targetH * (4 / 3));
+  } else if (aspect === '2:1') {
+    targetW = Math.round(targetH * (2 / 1));
+  }
 
   const worker = config.format === 'zip' ? new ZipWorker() : new MediaWorker();
 

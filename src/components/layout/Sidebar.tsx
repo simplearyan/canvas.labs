@@ -67,17 +67,19 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
           class={`fixed top-16 left-0 bottom-0 hidden md:flex flex-col bg-sidebar-bg overflow-hidden ${
             isHydrated() ? 'transition-all duration-300' : ''
           } ${
-            isLargeDesktop()
-              ? isExpanded()
-                ? 'w-64 z-35' // Desktop expanded: flat layout (no dropshadow), standard z-index
-                : 'w-[72px] z-35' // Desktop collapsed: flat layout (no dropshadow)
-              : isExpanded()
-                ? 'w-64 shadow-2xl z-45 translate-x-0' // iPad/Tablet overlay: elevated floating state with drop shadow
-                : 'w-[72px] z-35' // iPad/Tablet mini: standard narrow state
+            isHydrated()
+              ? isLargeDesktop()
+                ? isExpanded()
+                  ? 'w-64 z-35' // Desktop expanded: flat layout (no dropshadow), standard z-index
+                  : 'w-[72px] z-35' // Desktop collapsed: flat layout (no dropshadow)
+                : isExpanded()
+                  ? 'w-64 shadow-2xl z-45 translate-x-0' // iPad/Tablet overlay: elevated floating state with drop shadow
+                  : 'w-[72px] z-35' // iPad/Tablet mini: standard narrow state
+              : 'w-[72px] z-35' // Default collapsed narrow state on server/before hydration to prevent iPad glitches
           }`}
         >
           <div class={`flex-1 custom-scrollbar p-3 space-y-1 ${
-            (!isExpanded() || isLargeDesktop()) 
+            (!isHydrated() || !isExpanded() || isLargeDesktop()) 
               ? 'overflow-y-hidden hover:overflow-y-auto' 
               : 'overflow-y-auto'
           }`}>
@@ -91,7 +93,7 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
                       isActive() 
                         ? 'bg-brand-500/10 text-brand-500 font-semibold ring-1 ring-brand-500/20' 
                         : 'text-text-muted hover:bg-black/5 dark:hover:bg-white/5 hover:text-text-main'
-                    } ${!isExpanded() ? 'justify-center px-1 py-3' : ''}`}
+                    } ${(!isHydrated() || !isExpanded()) ? 'justify-center px-1 py-3' : ''}`}
                   >
                     <Icon 
                       name={item.icon} 
@@ -100,7 +102,7 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
                       }`} 
                     />
                     <span class={`font-medium transition-all ${
-                      !isExpanded() ? 'hidden' : 'text-sm'
+                      (!isHydrated() || !isExpanded()) ? 'hidden' : 'text-sm'
                     }`}>
                       {item.label}
                     </span>
