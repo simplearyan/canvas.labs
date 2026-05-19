@@ -53,6 +53,20 @@ export default function PresetCard(props: PresetCardProps) {
         <span class="absolute top-3 left-3 z-10 text-[10px] font-extrabold uppercase tracking-widest bg-white/20 backdrop-blur-md px-2 py-0.5 rounded text-white border border-white/10">
           {props.preset.category}
         </span>
+
+        {/* Static End Frame Image (Lighthouse & SEO friendly, lazy loaded) */}
+        <Show when={slug}>
+          <img
+            src={`/canvas.labs/previews/charts/${slug}.png`}
+            alt={props.preset.title}
+            loading="lazy"
+            class={`absolute inset-0 w-full h-full object-cover transition-all duration-300 pointer-events-none ${isHovered() ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+            onError={(e) => {
+              // Hide image if it fails to load, gracefully falling back to styling gradients
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </Show>
         
         {/* Dynamic WebM Video Loop (Lazy Play on Hover) */}
         <Show when={previewVideoUrl}>
@@ -63,12 +77,12 @@ export default function PresetCard(props: PresetCardProps) {
             muted
             playsinline
             preload="none"
-            class={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${isHovered() ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}
+            class={`absolute inset-0 w-full h-full object-cover transition-all duration-300 pointer-events-none ${isHovered() ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}
           />
         </Show>
 
-        {/* Abstract Mock Canvas Graphic */}
-        <div class={`text-white font-black text-2xl tracking-tighter opacity-80 select-none transition-all duration-300 ${isHovered() && previewVideoUrl ? 'opacity-0 scale-95' : 'opacity-100'}`}>
+        {/* Abstract Mock Canvas Graphic (visible only if no static image loads) */}
+        <div class="text-white font-black text-2xl tracking-tighter opacity-80 select-none pointer-events-none">
           {props.preset.title.split(":")[0]}
         </div>
       </div>
