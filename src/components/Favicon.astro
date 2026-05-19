@@ -10,14 +10,11 @@ const lightEmojiData = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/sv
 const darkEmojiData = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">${SITE_CONFIG.tabPreferences.favicon.darkTabEmoji}</text></svg>`;
 ---
 
-{/* 1. Cross-platform & Social Launcher Fallbacks (Parsed first) */}
+{/* 1. Cross-platform & Social Launcher Fallbacks (PWA & iOS specific, will not hijack tab) */}
 <link rel="manifest" href={`${base}/site.webmanifest`} />
 <link rel="apple-touch-icon" sizes="180x180" href={`${base}/apple-touch-icon.png`} />
 <link rel="icon" type="image/png" sizes="512x512" href={`${base}/android-chrome-512x512.png`} />
 <link rel="icon" type="image/png" sizes="192x192" href={`${base}/android-chrome-192x192.png`} />
-<link rel="icon" type="image/png" sizes="32x32" href={`${base}/favicon-32x32.png`} />
-<link rel="icon" type="image/png" sizes="16x16" href={`${base}/favicon-16x16.png`} />
-<link rel="shortcut icon" href={`${base}/favicon.ico`} />
 
 {/* 2. Dynamic, High-Specificity Favicon Tags (Parsed last to override fallbacks) */}
 {SITE_CONFIG.tabPreferences.favicon.useSvgIcon ? (
