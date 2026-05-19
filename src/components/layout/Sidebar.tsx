@@ -12,10 +12,13 @@ import {
   isDrawerOpen,
   setIsDrawerOpen,
   isViewingDetail,
-  isViewingEditor
+  isViewingEditor,
+  isLargeDesktop,
+  isHydrated
 } from "../../store/global";
 
 const navItems = [
+  { id: "all", label: "All Templates", icon: "grid" },
   { id: "backgrounds", label: "Backgrounds", icon: "image" },
   { id: "charts", label: "Charts", icon: "bar-chart-2" },
   { id: "ui", label: "UI elements", icon: "layout" },
@@ -41,24 +44,13 @@ const navItems = [
 
 export default function Sidebar(props: { hideDesktop?: boolean }) {
   const [isHovered, setIsHovered] = createSignal(false);
-  const [isLargeDesktop, setIsLargeDesktop] = createSignal(
-    typeof window !== "undefined" ? window.matchMedia("(min-width: 1280px)").matches : true
-  );
-
-  if (typeof window !== "undefined") {
-    const mediaQuery = window.matchMedia("(min-width: 1280px)");
-    const handleMediaChange = (e: MediaQueryListEvent) => {
-      setIsLargeDesktop(e.matches);
-    };
-    mediaQuery.addEventListener("change", handleMediaChange);
-    onCleanup(() => mediaQuery.removeEventListener("change", handleMediaChange));
-  }
 
   const isFocusMode = () => isViewingDetail() || isViewingEditor();
   
   const isExpanded = () => {
     if (isLargeDesktop()) {
-      return !isDesktopPushMini() || isHovered();
+      // Temporarily commented out hover expandable animation for future use: || isHovered()
+      return !isDesktopPushMini();
     } else {
       // Disabled hover expansion on iPad/tablet: only expand via the hamburger menu
       return isSidebarFloating();
@@ -72,7 +64,9 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
         <aside 
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          class={`fixed top-16 left-0 bottom-0 hidden md:flex flex-col bg-sidebar-bg overflow-hidden transition-all duration-300 ${
+          class={`fixed top-16 left-0 bottom-0 hidden md:flex flex-col bg-sidebar-bg overflow-hidden ${
+            isHydrated() ? 'transition-all duration-300' : ''
+          } ${
             isLargeDesktop()
               ? isExpanded()
                 ? 'w-64 z-35' // Desktop expanded: flat layout (no dropshadow), standard z-index
@@ -83,7 +77,7 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
           }`}
         >
           <div class={`flex-1 custom-scrollbar p-3 space-y-1 ${
-            isLargeDesktop() 
+            (!isExpanded() || isLargeDesktop()) 
               ? 'overflow-y-hidden hover:overflow-y-auto' 
               : 'overflow-y-auto'
           }`}>

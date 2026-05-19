@@ -77,6 +77,10 @@ html.route-loading body {
 }
 
 /* Custom Scrollbars */
+.custom-scrollbar {
+  scrollbar-gutter: stable;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
   height: 5px;

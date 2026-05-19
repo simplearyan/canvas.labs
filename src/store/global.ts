@@ -34,9 +34,24 @@ export const templatesData: Preset[] = [
 ];
 
 // Global Navigation & View Signals
-export const [currentCategory, setCurrentCategory] = createSignal("backgrounds");
+export const [currentCategory, setCurrentCategory] = createSignal("all");
 export const [searchQuery, setSearchQuery] = createSignal("");
 export const [activeTemplate, setActiveTemplate] = createSignal<Preset>(templatesData[0]);
+
+// Global responsive check for large desktop viewports
+export const [isLargeDesktop, setIsLargeDesktop] = createSignal(
+  typeof window !== "undefined" ? window.matchMedia("(min-width: 1280px)").matches : true
+);
+
+// Global hydration status signal to bypass initial layout transitions on refresh
+export const [isHydrated, setIsHydrated] = createSignal(false);
+
+if (typeof window !== "undefined") {
+  const mediaQuery = window.matchMedia("(min-width: 1280px)");
+  mediaQuery.addEventListener("change", (e) => {
+    setIsLargeDesktop(e.matches);
+  });
+}
 
 // 3-State Responsive Layout Signals
 export const [isDesktopPushMini, setIsDesktopPushMini] = createSignal(false);
@@ -59,19 +74,20 @@ const getInitialTheme = () => {
     }
     return document.documentElement.classList.contains("dark");
   }
-  return true; // Fallback default
+  return false;
 };
 export const [isDarkTheme, setIsDarkTheme] = createSignal(getInitialTheme());
 
 export const toggleTheme = () => {
-  if (typeof window !== "undefined") {
-    document.documentElement.classList.add("theme-transition");
-    setIsDarkTheme(!isDarkTheme());
-    setTimeout(() => {
-      document.documentElement.classList.remove("theme-transition");
-    }, 400);
-  } else {
-    setIsDarkTheme(!isDarkTheme());
+  const next = !isDarkTheme();
+  setIsDarkTheme(next);
+  if (typeof window !== "undefined" && window.localStorage) {
+    localStorage.setItem("theme", next ? "dark" : "light");
+    if (next) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   }
 };
 
@@ -87,6 +103,7 @@ export const closeFloatingSidebar = () => {
   setIsDrawerOpen(false);
 };
 
+// --- MULTI-TRACK SEAMLESS ROUTING UTILS ---
 export const isSecondaryPage = () => {
   if (typeof window === 'undefined') return false;
   const path = window.location.pathname;
@@ -99,11 +116,10 @@ export const isSecondaryPage = () => {
 };
 
 export const handleHamburgerClick = () => {
-  const width = window.innerWidth;
   const isFocusMode = isViewingDetail() || isViewingEditor();
-  if (isFocusMode || isSecondaryPage() || width < 768) {
+  if (isFocusMode || isSecondaryPage() || (typeof window !== "undefined" && window.innerWidth < 768)) {
     setIsDrawerOpen(!isDrawerOpen());
-  } else if (width < 1280) {
+  } else if (!isLargeDesktop()) {
     setIsSidebarFloating(!isSidebarFloating());
   } else {
     setIsDesktopPushMini(!isDesktopPushMini());
@@ -259,6 +275,9 @@ export const filteredCards = () => {
   const query = searchQuery().trim().toLowerCase();
   if (query) {
     return templatesData.filter(t => t.title.toLowerCase().includes(query));
+  }
+  if (currentCategory() === "all") {
+    return templatesData;
   }
   return templatesData.filter(t => t.category === currentCategory());
 };

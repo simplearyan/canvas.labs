@@ -45,14 +45,13 @@ export default function PresetCard(props: PresetCardProps) {
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      class="group flex flex-col gap-3.5 cursor-pointer bg-card-bg border border-border-color rounded-2xl p-4 transition-all duration-300 hover:border-blueprint-900 dark:hover:border-brand-500 hover:shadow-lg"
+      class="group flex flex-col gap-3.5 cursor-pointer bg-card-bg rounded-2xl p-4 transition-all duration-300"
     >
       {/* Thumbnail Placeholder with color gradient */}
-      <div class={`w-full aspect-[4/3] rounded-xl flex items-center justify-center relative overflow-hidden transition-all duration-300 ${props.preset.color}`}>
-        {/* Dynamic category badge */}
-        <span class="absolute top-3 left-3 z-10 text-[10px] font-extrabold uppercase tracking-widest bg-white/20 backdrop-blur-md px-2 py-0.5 rounded text-white border border-white/10">
-          {props.preset.category}
-        </span>
+      <div 
+        class={`w-full aspect-[4/3] rounded-xl flex items-center justify-center relative overflow-hidden transition-all duration-500 isolate transform translate-z-0 ${props.preset.color}`}
+        style="-webkit-mask-image: -webkit-radial-gradient(white, black);"
+      >
 
         {/* Static End Frame Image (Lighthouse & SEO friendly, lazy loaded) */}
         <Show when={slug}>
@@ -60,7 +59,7 @@ export default function PresetCard(props: PresetCardProps) {
             src={`/canvas.labs/previews/charts/${slug}.png`}
             alt={props.preset.title}
             loading="lazy"
-            class={`absolute inset-0 w-full h-full object-cover transition-all duration-300 pointer-events-none ${isHovered() ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+            class={`absolute inset-0 w-full h-full object-cover transition-all duration-500 pointer-events-none z-0 ${isHovered() ? 'scale-[1.07]' : 'scale-[1.02]'}`}
             onError={(e) => {
               // Hide image if it fails to load, gracefully falling back to styling gradients
               e.currentTarget.style.display = 'none';
@@ -77,7 +76,7 @@ export default function PresetCard(props: PresetCardProps) {
             muted
             playsinline
             preload="none"
-            class={`absolute inset-0 w-full h-full object-cover transition-all duration-300 pointer-events-none ${isHovered() ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`}
+            class={`absolute inset-0 w-full h-full object-cover transition-all duration-500 pointer-events-none z-10 ${isHovered() ? 'opacity-100 scale-[1.07]' : 'opacity-0 scale-[1.02]'}`}
           />
         </Show>
 
@@ -89,10 +88,9 @@ export default function PresetCard(props: PresetCardProps) {
       
       {/* Info */}
       <div class="flex items-center justify-between px-1">
-        <h3 class="font-bold text-[15px] text-text-main group-hover:text-blueprint-900 dark:group-hover:text-brand-500 transition-colors">
+        <h3 class="font-bold text-[15px] text-text-main">
           {props.preset.title}
         </h3>
-        <Icon name="chevron-right" class="w-4 h-4 text-text-muted group-hover:translate-x-1 transition-all" />
       </div>
     </div>
   );

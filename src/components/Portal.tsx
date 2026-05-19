@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onCleanup, For, Show } from "solid-js";
+import { createSignal, createEffect, onCleanup, For, Show, onMount } from "solid-js";
 import { SITE_CONFIG } from "../config/site";
 import Icon from "./ui/Icon";
 import PresetCard from "./common/PresetCard";
@@ -6,6 +6,7 @@ import Header from "./layout/Header";
 import Sidebar from "./layout/Sidebar";
 import {
   currentCategory,
+  searchQuery,
   activeTemplate,
   isDesktopPushMini,
   isViewingDetail,
@@ -25,7 +26,14 @@ import {
   exitFullEditor,
   filteredCards,
   closeQuickEditor,
-  initUrlRouter
+  initUrlRouter,
+  templatesData,
+  handleCategorySelect,
+  isSidebarFloating,
+  setIsDesktopPushMini,
+  setIsSidebarFloating,
+  isHydrated,
+  setIsHydrated
 } from "../store/global";
 
 export default function Portal() {
@@ -36,6 +44,38 @@ export default function Portal() {
   // --- INITIALIZE DYNAMIC ROUTER popstate LISTENER ---
   createEffect(() => {
     initUrlRouter();
+  });
+
+  // --- SYNCHRONIZE SIDEBAR STATES TO LOCALSTORAGE ---
+  createEffect(() => {
+    if (typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem("isDesktopPushMini", isDesktopPushMini() ? "true" : "false");
+    }
+  });
+
+  createEffect(() => {
+    if (typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem("isSidebarFloating", isSidebarFloating() ? "true" : "false");
+    }
+  });
+
+  // --- CLIENT-SIDE STATE RESTORATION POST-HYDRATION ---
+  onMount(() => {
+    if (typeof window !== "undefined" && window.localStorage) {
+      const savedDesktop = localStorage.getItem("isDesktopPushMini");
+      if (savedDesktop) {
+        setIsDesktopPushMini(savedDesktop === "true");
+      }
+      const savedFloating = localStorage.getItem("isSidebarFloating");
+      if (savedFloating) {
+        setIsSidebarFloating(savedFloating === "true");
+      }
+    }
+    
+    // Set hydrated to true after a tiny frame delay to bypass initial render animations
+    setTimeout(() => {
+      setIsHydrated(true);
+    }, 50);
   });
 
   // --- ADAPTIVE TAB-THEME FAVICON ENGINE ---
@@ -276,7 +316,7 @@ export default function Portal() {
 
         {/* 3. MAIN CONTENT CONTAINER */}
         <main 
-          class={`flex-1 min-h-screen relative flex flex-col layout-transition ${
+          class={`flex-1 min-h-screen relative flex flex-col ${isHydrated() ? 'layout-transition' : ''} ${
             isFocusMode() 
               ? 'ml-0' 
               : isDesktopPushMini() 
@@ -292,21 +332,60 @@ export default function Portal() {
               {/* Category Header */}
               <div class="space-y-3 max-w-3xl">
                 <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight text-text-main capitalize">
-                  Premium animated {currentCategory()} templates
+                  {currentCategory() === "all" ? "Explore premium templates" : `Premium animated ${currentCategory()} templates`}
                 </h1>
                 <p class="text-base text-text-muted leading-relaxed">
                   Elevate your canvas and projects with our free, high-performance visual effects templates.
                 </p>
               </div>
 
-              {/* Grid of Preset Cards */}
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <For each={filteredCards()}>
-                  {(preset) => (
-                    <PresetCard preset={preset} />
-                  )}
-                </For>
-              </div>
+              {/* Grouped view switcher */}
+              <Show when={currentCategory() === "all" && searchQuery().trim() === ""} fallback={
+                /* Flat Grid of Preset Cards for specific categories or search queries */
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <For each={filteredCards()}>
+                    {(preset) => (
+                      <PresetCard preset={preset} />
+                    )}
+                  </For>
+                </div>
+              }>
+                {/* Grouped view by category, showing up to 4 from each */}
+                <div class="space-y-12">
+                  <For each={["backgrounds", "charts", "ui", "text"]}>
+                    {(catId) => {
+                      const catName = catId === "ui" ? "UI elements" : catId;
+                      // Get up to 4 cards from this category
+                      const catCards = () => templatesData.filter(t => t.category === catId).slice(0, 4);
+                      
+                      return (
+                        <Show when={catCards().length > 0}>
+                          <div class="space-y-5">
+                            <div class="flex items-center justify-between">
+                              <h2 class="text-xl md:text-2xl font-black tracking-tight text-text-main capitalize">
+                                {catName}
+                              </h2>
+                              <button 
+                                onClick={() => handleCategorySelect(catId)}
+                                class="text-xs font-extrabold text-brand-500 hover:text-brand-600 transition-colors flex items-center gap-1.5 cursor-pointer uppercase tracking-wider"
+                              >
+                                View all <Icon name="chevron-right" class="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                              <For each={catCards()}>
+                                {(preset) => (
+                                  <PresetCard preset={preset} />
+                                )}
+                              </For>
+                            </div>
+                          </div>
+                        </Show>
+                      );
+                    }}
+                  </For>
+                </div>
+              </Show>
 
               {/* Empty state */}
               <Show when={filteredCards().length === 0}>
