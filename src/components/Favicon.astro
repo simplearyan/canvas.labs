@@ -7,11 +7,20 @@ const darkSvg = base + SITE_CONFIG.tabPreferences.favicon.darkTabSvg;
 const defaultFav = base + SITE_CONFIG.tabPreferences.favicon.default;
 ---
 
-{/* Modern SVG Favicons with Dark/Light preference support */}
+{/* 1. Cross-platform & Social Launcher Fallbacks (Parsed first) */}
+<link rel="manifest" href={`${base}/site.webmanifest`} />
+<link rel="apple-touch-icon" sizes="180x180" href={`${base}/apple-touch-icon.png`} />
+<link rel="icon" type="image/png" sizes="512x512" href={`${base}/android-chrome-512x512.png`} />
+<link rel="icon" type="image/png" sizes="192x192" href={`${base}/android-chrome-192x192.png`} />
+<link rel="icon" type="image/png" sizes="32x32" href={`${base}/favicon-32x32.png`} />
+<link rel="icon" type="image/png" sizes="16x16" href={`${base}/favicon-16x16.png`} />
+<link rel="shortcut icon" href={`${base}/favicon.ico`} />
+
+{/* 2. Dynamic, High-Specificity Favicon Tags (Parsed last to override fallbacks) */}
 {SITE_CONFIG.tabPreferences.favicon.useSvgIcon ? (
 	<>
-		<link rel="icon" type="image/svg+xml" href={lightSvg} media="(prefers-color-scheme: light)" />
-		<link rel="icon" type="image/svg+xml" href={darkSvg} media="(prefers-color-scheme: dark)" />
+		<link rel="icon" type="image/svg+xml" href={lightSvg} sizes="any" media="(prefers-color-scheme: light)" />
+		<link rel="icon" type="image/svg+xml" href={darkSvg} sizes="any" media="(prefers-color-scheme: dark)" />
 	</>
 ) : (
 	<>
@@ -19,13 +28,3 @@ const defaultFav = base + SITE_CONFIG.tabPreferences.favicon.default;
 		<link rel="icon" href={`data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">${SITE_CONFIG.tabPreferences.favicon.darkTabEmoji}</text></svg>`} media="(prefers-color-scheme: dark)" />
 	</>
 )}
-
-{/* Cross-platform Legacy & Social Preview Fallback Icons */}
-<link rel="shortcut icon" href={`${base}/favicon.ico`} />
-<link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
-<link rel="icon" type="image/png" sizes="16x16" href={`${base}/favicon-16x16.png`} />
-<link rel="icon" type="image/png" sizes="32x32" href={`${base}/favicon-32x32.png`} />
-<link rel="icon" type="image/png" sizes="192x192" href={`${base}/android-chrome-192x192.png`} />
-<link rel="icon" type="image/png" sizes="512x512" href={`${base}/android-chrome-512x512.png`} />
-<link rel="apple-touch-icon" sizes="180x180" href={`${base}/apple-touch-icon.png`} />
-<link rel="manifest" href={`${base}/site.webmanifest`} />
