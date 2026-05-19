@@ -21,7 +21,8 @@ export const SITE_CONFIG = {
     favicon: {
       default: "/favicon/favicon-white-trans.svg",
       // Set 'useSvgIcon' to true to display SVG files inside browser tab mockups, or false to use the Emojis below
-      useSvgIcon: true,
+      useSvgIcon: false,
+      useLightDark: true, // Toggle between dynamic light/dark mode assets or the default static asset
       darkTabEmoji: "⭐",
       lightTabEmoji: "👉",
       darkTabSvg: "/favicon/favicon-white-trans.svg",
