@@ -1,5 +1,7 @@
-import { createEffect, createSignal, onMount, onCleanup } from 'solid-js';
+import { createEffect, createSignal, onMount, onCleanup, Show } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import { chartStore, setChartStore, serializeChartState, updateChartOptions, updateChartMetadata } from '../../../store/chartStore';
+import { isDarkTheme } from '../../../store/global';
 import { ChartEngine } from '../../../engines/chart-animator/ChartEngine';
 import { CHART_PRESETS } from '../../../engines/chart-animator/presets';
 import { exportProject, type ExportConfig } from '../../../engines/chart-animator/ExportEngine';
@@ -19,15 +21,65 @@ const getPresetBySlug = (slug: string) => {
   };
 };
 
+const ToggleSwitch = (props: { 
+  label: string; 
+  checked: boolean; 
+  onChange: (checked: boolean) => void; 
+}) => {
+  return (
+    <label class="flex items-center justify-between px-3 py-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.03] border border-border-color hover:border-brand-500/20 transition-all duration-300 cursor-pointer select-none">
+      <span class="text-[10px] font-extrabold uppercase tracking-wide text-text-muted mr-2">{props.label}</span>
+      <div class="relative inline-block w-8 h-5 transition duration-200 ease-in-out flex-shrink-0">
+        <input 
+          type="checkbox" 
+          checked={props.checked} 
+          onChange={(e) => props.onChange(e.currentTarget.checked)}
+          class="opacity-0 w-0 h-0 peer"
+        />
+        <span class={`absolute cursor-pointer inset-0 rounded-full transition-all duration-300 ${props.checked ? 'bg-brand-500' : 'bg-black/10 dark:bg-white/10'}`}>
+          <span class={`absolute left-0.5 bottom-0.5 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${props.checked ? 'translate-x-3' : 'translate-x-0'}`}></span>
+        </span>
+      </div>
+    </label>
+  );
+};
+
 export default function ChartPresetTemplate(props: { slug: string }) {
   let canvasRef!: HTMLCanvasElement;
   let engine: ChartEngine;
   const [isLoaded, setIsLoaded] = createSignal(false);
   const [transitionUrl, setTransitionUrl] = createSignal('/editor/chart-animator');
+  const [portalTarget, setPortalTarget] = createSignal<HTMLElement | undefined>(undefined);
 
   // Export State
   const [isExporting, setIsExporting] = createSignal(false);
   const [exportRes, setExportRes] = createSignal<'720' | '1080' | '1440' | '2160'>('1080');
+
+  // Playback Control State
+  const [isPlaying, setIsPlaying] = createSignal(false);
+  let playTimeoutId: any = null;
+
+  const handlePlayPause = () => {
+    if (!engine) return;
+    if (isPlaying()) {
+      engine.pause();
+      setIsPlaying(false);
+      if (playTimeoutId) {
+        clearTimeout(playTimeoutId);
+        playTimeoutId = null;
+      }
+    } else {
+      engine.play();
+      setIsPlaying(true);
+      if (playTimeoutId) clearTimeout(playTimeoutId);
+      
+      const durationMs = (chartStore.options.duration || 5) * 1000;
+      playTimeoutId = setTimeout(() => {
+        setIsPlaying(false);
+        playTimeoutId = null;
+      }, durationMs);
+    }
+  };
   const [exportFormat, setExportFormat] = createSignal<'webm' | 'mp4' | 'mov' | 'zip'>('webm');
   const [exportFps, setExportFps] = createSignal<number>(60);
   const [exportProgress, setExportProgress] = createSignal(0);
@@ -102,11 +154,25 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
     handleResize();
     window.addEventListener('resize', handleResize);
+
+    // Wait until #template-header-controls is available in the DOM
+    const findTarget = () => {
+      const el = document.getElementById('template-header-controls');
+      if (el) {
+        setPortalTarget(el);
+      } else {
+        requestAnimationFrame(findTarget);
+      }
+    };
+    findTarget();
   });
 
   onCleanup(() => {
     window.removeEventListener('resize', handleResize);
     if (engine) engine.pause();
+    if (playTimeoutId) {
+      clearTimeout(playTimeoutId);
+    }
   });
 
   const handleResize = () => {
@@ -145,10 +211,58 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   return (
     <div class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10 space-y-6 flex flex-col overflow-y-auto custom-scrollbar">
       
+      {/* Portal buttons to template-header-controls in Header */}
+      <Show when={portalTarget()}>
+        <Portal mount={portalTarget()}>
+          <div class="flex items-center gap-1.5 sm:gap-2">
+            {/* Play/Pause Button for Small Screens */}
+            <button 
+              onClick={handlePlayPause}
+              class="group flex md:hidden items-center justify-center gap-2 w-9 h-9 text-xs font-semibold text-text-main bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border-color rounded-xl hover:border-brand-500 transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98] shadow-sm flex-shrink-0"
+              title={isPlaying() ? "Pause Preview" : "Play Preview"}
+            >
+              <Show when={isPlaying()} fallback={
+                <svg class="w-4 h-4 text-text-muted group-hover:text-brand-500 transition-colors flex-shrink-0 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              }>
+                <svg class="w-4 h-4 text-brand-500 transition-colors flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="4" width="4" height="16" rx="1"/>
+                  <rect x="14" y="4" width="4" height="16" rx="1"/>
+                </svg>
+              </Show>
+            </button>
+
+            <a 
+              href={transitionUrl()}
+              class="group flex items-center justify-center gap-2 w-9 h-9 md:w-auto md:h-9 text-xs md:text-sm font-semibold text-text-main bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 px-0 md:px-3.5 border border-border-color rounded-xl hover:border-brand-500 transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+              title="Open in Full Editor"
+            >
+              <svg class="w-4 h-4 text-text-muted group-hover:text-brand-500 group-hover:rotate-6 transition-all duration-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><rect width="14" height="14" x="5" y="5" rx="1" ry="1"/>
+              </svg> 
+              <span class="hidden md:inline">Open in Full Editor</span>
+            </a>
+            
+            <button 
+              onClick={() => setIsExporting(true)}
+              class="group flex items-center justify-center gap-2 w-9 h-9 md:w-auto md:h-9 text-xs md:text-sm font-semibold bg-brand-500 hover:bg-brand-600 px-0 md:px-3.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] flex-shrink-0"
+              style={{ color: isDarkTheme() ? '#09090b' : '#ffffff' }}
+              title="Export Video"
+            >
+              <svg class="w-4 h-4 fill-current group-hover:translate-y-0.5 transition-transform duration-300 flex-shrink-0" viewBox="0 0 24 24">
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+              </svg>
+              <span class="hidden md:inline">Export Video</span>
+            </button>
+          </div>
+        </Portal>
+      </Show>
+
       {/* Breadcrumb Back Button */}
       <a 
         href="/canvas.labs"
-        class="flex items-center gap-2 text-sm font-semibold text-text-muted hover:text-text-main transition-colors w-fit group cursor-pointer"
+        class="hidden md:flex items-center gap-2 text-sm font-semibold text-text-muted hover:text-text-main transition-colors w-fit group cursor-pointer"
       >
         <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
@@ -174,12 +288,19 @@ export default function ChartPresetTemplate(props: { slug: string }) {
           <div class="flex items-center justify-between text-sm text-text-muted px-2">
             <div class="flex items-center gap-4">
               <button 
-                onClick={handlePlay}
+                onClick={handlePlayPause}
                 class="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-text-main transition-colors cursor-pointer"
               >
-                <svg class="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
+                <Show when={isPlaying()} fallback={
+                  <svg class="w-4 h-4 fill-current ml-0.5 text-text-muted hover:text-brand-500 transition-colors" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                }>
+                  <svg class="w-4 h-4 fill-current text-brand-500" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" rx="1"/>
+                    <rect x="14" y="4" width="4" height="16" rx="1"/>
+                  </svg>
+                </Show>
               </button>
               <div class="h-1.5 w-32 md:w-64 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                 <div class="h-full bg-brand-500" style={{ width: "0%" }}></div>
@@ -197,7 +318,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
         {/* Right panel: Adjustments Controls */}
         <div class="flex flex-col gap-6 bg-card-bg border border-border-color p-6 rounded-2xl shadow-sm">
           
-          <div>
+          <div class="hidden lg:block">
             <span class="text-[10px] font-extrabold uppercase tracking-widest text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20">
               Chart Animator
             </span>
@@ -209,7 +330,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
             </p>
           </div>
 
-          <div class="flex flex-col gap-2.5">
+          <div class="hidden lg:flex flex-col gap-2.5">
             <a 
               href={transitionUrl()}
               class="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-100 font-bold py-3.5 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer text-sm"
@@ -231,7 +352,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
             </button>
           </div>
 
-          <div class="border-t border-border-color/50 pt-5 space-y-4">
+          <div class="lg:border-t border-border-color/50 lg:pt-5 space-y-4">
             <h3 class="font-bold text-xs text-text-main uppercase tracking-widest flex items-center gap-2">
               <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="14" y2="14"/><line x1="4" x2="20" y1="7" y2="7"/>
@@ -277,6 +398,54 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                   </div>
                 </div>
               </div>
+
+              {/* Visibility Toggles Grid */}
+              <div class="border-t border-border-color/50 pt-4 space-y-2.5">
+                <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider">Visibility Toggles</label>
+                <div class="grid grid-cols-2 gap-2.5">
+                  <ToggleSwitch 
+                    label="Title" 
+                    checked={chartStore.options.showTitle} 
+                    onChange={(val) => updateChartOptions({ showTitle: val })}
+                  />
+                  <ToggleSwitch 
+                    label="Subtitle" 
+                    checked={chartStore.options.showSubtitle} 
+                    onChange={(val) => updateChartOptions({ showSubtitle: val })}
+                  />
+                  <ToggleSwitch 
+                    label="Source" 
+                    checked={chartStore.options.showSource} 
+                    onChange={(val) => updateChartOptions({ showSource: val })}
+                  />
+                  <ToggleSwitch 
+                    label="Legends" 
+                    checked={chartStore.options.showLegend} 
+                    onChange={(val) => updateChartOptions({ showLegend: val })}
+                  />
+                  <ToggleSwitch 
+                    label="X-Axis" 
+                    checked={chartStore.options.showXAxis} 
+                    onChange={(val) => updateChartOptions({ showXAxis: val })}
+                  />
+                  <ToggleSwitch 
+                    label="Y-Axis" 
+                    checked={chartStore.options.showYAxis} 
+                    onChange={(val) => updateChartOptions({ showYAxis: val })}
+                  />
+                  <ToggleSwitch 
+                    label="Grid Lines" 
+                    checked={chartStore.options.showGrid} 
+                    onChange={(val) => updateChartOptions({ showGrid: val })}
+                  />
+                  <ToggleSwitch 
+                    label="Values" 
+                    checked={chartStore.options.showValues} 
+                    onChange={(val) => updateChartOptions({ showValues: val })}
+                  />
+                </div>
+              </div>
+
             </div>
           </div>
 

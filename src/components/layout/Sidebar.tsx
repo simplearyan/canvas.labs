@@ -75,7 +75,9 @@ export default function Sidebar(props: { hideDesktop?: boolean }) {
                 : isExpanded()
                   ? 'w-64 shadow-2xl z-45 translate-x-0' // iPad/Tablet overlay: elevated floating state with drop shadow
                   : 'w-[72px] z-35' // iPad/Tablet mini: standard narrow state
-              : 'w-[72px] z-35' // Default collapsed narrow state on server/before hydration to prevent iPad glitches
+              : (typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches && !isDesktopPushMini())
+                ? 'w-64 z-35' // Immediately expanded on desktop initial render if not collapsed
+                : 'w-[72px] z-35' // Default collapsed narrow state on server/iPad before hydration
           }`}
         >
           <div class={`flex-1 custom-scrollbar p-3 space-y-1 ${

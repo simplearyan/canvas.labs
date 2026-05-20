@@ -234,9 +234,7 @@ export default function ChartEditor() {
       rawData: preset.rawData,
       options: {
         ...chartStore.options,
-        colorPalette: preset.options.colorPalette,
-        fontFamily: preset.options.fontFamily,
-        bgColor: preset.options.bgColor
+        ...preset.options
       }
     });
   };

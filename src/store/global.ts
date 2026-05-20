@@ -54,9 +54,25 @@ if (typeof window !== "undefined") {
 }
 
 // 3-State Responsive Layout Signals
-export const [isDesktopPushMini, setIsDesktopPushMini] = createSignal(false);
+const getInitialDesktopPushMini = () => {
+  if (typeof window !== "undefined" && window.localStorage) {
+    const saved = localStorage.getItem("isDesktopPushMini");
+    return saved ? saved === "true" : false;
+  }
+  return false;
+};
+
+const getInitialSidebarFloating = () => {
+  if (typeof window !== "undefined" && window.localStorage) {
+    const saved = localStorage.getItem("isSidebarFloating");
+    return saved ? saved === "true" : false;
+  }
+  return false;
+};
+
+export const [isDesktopPushMini, setIsDesktopPushMini] = createSignal(getInitialDesktopPushMini());
 export const [isDrawerOpen, setIsDrawerOpen] = createSignal(false);
-export const [isSidebarFloating, setIsSidebarFloating] = createSignal(false);
+export const [isSidebarFloating, setIsSidebarFloating] = createSignal(getInitialSidebarFloating());
 
 // View Routing State Signals
 export const [isViewingDetail, setIsViewingDetail] = createSignal(false);
