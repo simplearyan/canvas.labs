@@ -59,6 +59,9 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   const [isPlaying, setIsPlaying] = createSignal(false);
   let playTimeoutId: any = null;
 
+  // Active tab state for mobile Quick Adjustments
+  const [activeTab, setActiveTab] = createSignal<'general' | 'visibility'>('general');
+
   const handlePlayPause = () => {
     if (!engine) return;
     if (isPlaying()) {
@@ -353,14 +356,38 @@ export default function ChartPresetTemplate(props: { slug: string }) {
           </div>
 
           <div class="lg:border-t border-border-color/50 lg:pt-5 space-y-4">
-            <h3 class="font-bold text-xs text-text-main uppercase tracking-widest flex items-center gap-2">
+            <h3 class="hidden lg:flex font-bold text-xs text-text-main uppercase tracking-widest items-center gap-2">
               <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="14" y2="14"/><line x1="4" x2="20" y1="7" y2="7"/>
               </svg> 
               Quick Adjustments
             </h3>
 
-            <div class="space-y-3.5">
+            {/* Tab Switcher - only visible on small screens (< lg) */}
+            <div class="flex border-b border-border-color/30 lg:hidden mb-4">
+              <button 
+                onClick={() => setActiveTab('general')}
+                class={`flex-1 pb-2.5 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer ${
+                  activeTab() === 'general' 
+                    ? 'border-brand-500 text-brand-500' 
+                    : 'border-transparent text-text-muted hover:text-text-main'
+                }`}
+              >
+                Settings
+              </button>
+              <button 
+                onClick={() => setActiveTab('visibility')}
+                class={`flex-1 pb-2.5 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer ${
+                  activeTab() === 'visibility' 
+                    ? 'border-brand-500 text-brand-500' 
+                    : 'border-transparent text-text-muted hover:text-text-main'
+                }`}
+              >
+                Visibility
+              </button>
+            </div>
+
+            <div class={`space-y-3.5 lg:block ${activeTab() === 'general' ? 'block' : 'hidden'}`}>
               <div>
                 <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-1.5">Chart Title</label>
                 <input 
@@ -398,54 +425,53 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Visibility Toggles Grid */}
-              <div class="border-t border-border-color/50 pt-4 space-y-2.5">
-                <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider">Visibility Toggles</label>
-                <div class="grid grid-cols-2 gap-2.5">
-                  <ToggleSwitch 
-                    label="Title" 
-                    checked={chartStore.options.showTitle} 
-                    onChange={(val) => updateChartOptions({ showTitle: val })}
-                  />
-                  <ToggleSwitch 
-                    label="Subtitle" 
-                    checked={chartStore.options.showSubtitle} 
-                    onChange={(val) => updateChartOptions({ showSubtitle: val })}
-                  />
-                  <ToggleSwitch 
-                    label="Source" 
-                    checked={chartStore.options.showSource} 
-                    onChange={(val) => updateChartOptions({ showSource: val })}
-                  />
-                  <ToggleSwitch 
-                    label="Legends" 
-                    checked={chartStore.options.showLegend} 
-                    onChange={(val) => updateChartOptions({ showLegend: val })}
-                  />
-                  <ToggleSwitch 
-                    label="X-Axis" 
-                    checked={chartStore.options.showXAxis} 
-                    onChange={(val) => updateChartOptions({ showXAxis: val })}
-                  />
-                  <ToggleSwitch 
-                    label="Y-Axis" 
-                    checked={chartStore.options.showYAxis} 
-                    onChange={(val) => updateChartOptions({ showYAxis: val })}
-                  />
-                  <ToggleSwitch 
-                    label="Grid Lines" 
-                    checked={chartStore.options.showGrid} 
-                    onChange={(val) => updateChartOptions({ showGrid: val })}
-                  />
-                  <ToggleSwitch 
-                    label="Values" 
-                    checked={chartStore.options.showValues} 
-                    onChange={(val) => updateChartOptions({ showValues: val })}
-                  />
-                </div>
+            {/* Visibility Toggles Grid */}
+            <div class={`lg:border-t border-border-color/50 lg:pt-4 space-y-2.5 lg:block ${activeTab() === 'visibility' ? 'block' : 'hidden'}`}>
+              <label class="hidden lg:block text-[10px] font-extrabold text-text-muted uppercase tracking-wider">Visibility Toggles</label>
+              <div class="grid grid-cols-2 gap-2.5">
+                <ToggleSwitch 
+                  label="Title" 
+                  checked={chartStore.options.showTitle} 
+                  onChange={(val) => updateChartOptions({ showTitle: val })}
+                />
+                <ToggleSwitch 
+                  label="Subtitle" 
+                  checked={chartStore.options.showSubtitle} 
+                  onChange={(val) => updateChartOptions({ showSubtitle: val })}
+                />
+                <ToggleSwitch 
+                  label="Source" 
+                  checked={chartStore.options.showSource} 
+                  onChange={(val) => updateChartOptions({ showSource: val })}
+                />
+                <ToggleSwitch 
+                  label="Legends" 
+                  checked={chartStore.options.showLegend} 
+                  onChange={(val) => updateChartOptions({ showLegend: val })}
+                />
+                <ToggleSwitch 
+                  label="X-Axis" 
+                  checked={chartStore.options.showXAxis} 
+                  onChange={(val) => updateChartOptions({ showXAxis: val })}
+                />
+                <ToggleSwitch 
+                  label="Y-Axis" 
+                  checked={chartStore.options.showYAxis} 
+                  onChange={(val) => updateChartOptions({ showYAxis: val })}
+                />
+                <ToggleSwitch 
+                  label="Grid Lines" 
+                  checked={chartStore.options.showGrid} 
+                  onChange={(val) => updateChartOptions({ showGrid: val })}
+                />
+                <ToggleSwitch 
+                  label="Values" 
+                  checked={chartStore.options.showValues} 
+                  onChange={(val) => updateChartOptions({ showValues: val })}
+                />
               </div>
-
             </div>
           </div>
 
