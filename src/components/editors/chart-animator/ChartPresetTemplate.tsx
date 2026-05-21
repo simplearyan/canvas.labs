@@ -612,42 +612,18 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
         </div>
 
-      </div>
-
-      {/* EXPORT MODAL */}
+      </div>      {/* EXPORT MODAL */}
       {isExporting() && (
-        <div class="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 flex items-center justify-center p-4 transition-all duration-300 backdrop-blur-sm">
-          <div class="bg-card-bg border border-border-color shadow-2xl p-6 md:p-8 max-w-md md:max-w-2xl w-full relative flex flex-col md:flex-row gap-6 text-text-main rounded-2xl overflow-hidden animate-glow">
+        <div class="fixed inset-0 z-50 bg-slate-950/60 dark:bg-black/70 flex items-center justify-center p-4 transition-all duration-300 backdrop-blur-sm">
+          <div class="bg-card-bg border border-border-color shadow-lg p-6 md:p-8 max-w-md md:max-w-2xl w-full relative flex flex-col md:flex-row gap-6 text-text-main rounded-2xl overflow-hidden">
             
             <style>{`
-              @keyframes float {
-                0%, 100% { transform: translateY(0px) rotate(0deg); }
-                50% { transform: translateY(-8px) rotate(1deg); }
-              }
-              @keyframes pulseGlow {
-                0%, 100% { box-shadow: 0 10px 30px -10px rgba(168, 85, 247, 0.15); }
-                50% { box-shadow: 0 10px 40px 0px rgba(168, 85, 247, 0.3); }
-              }
-              @keyframes waveText {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(-5px); }
-              }
               @keyframes slideFadeIn {
-                0% { opacity: 0; transform: translateY(12px) scale(0.95); }
+                0% { opacity: 0; transform: translateY(8px) scale(0.98); }
                 100% { opacity: 1; transform: translateY(0) scale(1); }
               }
-              .animate-float {
-                animation: float 5s ease-in-out infinite;
-              }
-              .animate-glow {
-                animation: pulseGlow 4s ease-in-out infinite;
-              }
               .animate-slide-fade {
-                animation: slideFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-              }
-              .letter-wave span {
-                display: inline-block;
-                animation: waveText 1.4s ease-in-out infinite;
+                animation: slideFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
               }
             `}</style>
 
@@ -664,19 +640,19 @@ export default function ChartPresetTemplate(props: { slug: string }) {
             {/* Left Column: Export Controls & Progress */}
             <div class="flex-1 flex flex-col gap-5 justify-between">
               <div class="flex flex-col gap-1">
-                <h3 class="text-xl font-black text-brand-500 uppercase tracking-tighter">
+                <h3 class="text-lg font-black text-brand-500 uppercase tracking-tight">
                   {exportActive() ? 'Rendering Animation' : 'Export Animation'}
                 </h3>
                 <p class="text-xs text-text-muted font-medium">
-                  {exportActive() ? exportStatus() : 'Select your preferred rendering format.'}
+                  {exportActive() ? exportStatus() : 'Select your rendering options.'}
                 </p>
               </div>
               
               {!exportActive() ? (
                 <div class="flex flex-col gap-4">
                   <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Resolution</label>
-                    <select value={exportRes()} onInput={(e) => setExportRes(e.currentTarget.value as any)} class="w-full px-3 py-2 bg-black/5 border border-border-color text-text-main text-sm font-medium outline-none focus:border-brand-500 cursor-pointer rounded-xl">
+                    <label class="text-[10px] font-extrabold text-brand-500 uppercase tracking-wider">Resolution</label>
+                    <select value={exportRes()} onInput={(e) => setExportRes(e.currentTarget.value as any)} class="w-full px-3 py-2 bg-black/5 dark:bg-white/5 border border-border-color text-text-main text-sm font-semibold outline-none focus:border-brand-500 cursor-pointer rounded-xl transition">
                       <option class="bg-card-bg" value="720">720p (HD)</option>
                       <option class="bg-card-bg" value="1080">1080p (FHD)</option>
                       <option class="bg-card-bg" value="1440">1440p (2K)</option>
@@ -685,10 +661,17 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                   </div>
 
                   <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Framerate</label>
+                    <label class="text-[10px] font-extrabold text-brand-500 uppercase tracking-wider">Framerate</label>
                     <div class="flex gap-2">
                       {[24, 30, 60].map(fps => (
-                        <button onClick={() => setExportFps(fps)} class={`flex-1 py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${exportFps() === fps ? 'border-2 border-brand-500 bg-brand-500/10 text-brand-500' : 'border border-border-color bg-black/5 text-text-muted hover:border-brand-500'}`}>
+                        <button 
+                          onClick={() => setExportFps(fps)} 
+                          class={`flex-1 py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${
+                            exportFps() === fps 
+                              ? 'bg-brand-500/10 border border-brand-500 text-brand-500' 
+                              : 'border border-border-color bg-black/5 dark:bg-white/5 text-text-muted hover:text-text-main hover:border-brand-500/50'
+                          }`}
+                        >
                           {fps}
                         </button>
                       ))}
@@ -696,34 +679,42 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                   </div>
 
                   <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Format</label>
+                    <label class="text-[10px] font-extrabold text-brand-500 uppercase tracking-wider">Format</label>
                     <div class="grid grid-cols-2 gap-2">
                       {['webm', 'mp4', 'mov', 'zip'].map(fmt => (
-                        <button onClick={() => setExportFormat(fmt as any)} class={`py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${exportFormat() === fmt ? 'border-2 border-brand-500 bg-brand-500/10 text-brand-500' : 'border border-border-color bg-black/5 text-text-muted hover:border-brand-500'}`}>
+                        <button 
+                          onClick={() => setExportFormat(fmt as any)} 
+                          class={`py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${
+                            exportFormat() === fmt 
+                              ? 'bg-brand-500/10 border border-brand-500 text-brand-500' 
+                              : 'border border-border-color bg-black/5 dark:bg-white/5 text-text-muted hover:text-text-main hover:border-brand-500/50'
+                          }`}
+                        >
                           {fmt.toUpperCase()}
                         </button>
                       ))}
                     </div>
                   </div>
                   
-                  <button onClick={startExport} class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-black font-black uppercase tracking-widest transition rounded-xl mt-2 cursor-pointer shadow-md">
+                  <button onClick={startExport} class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-black font-extrabold uppercase tracking-wider transition rounded-xl mt-2 cursor-pointer shadow-sm">
                     Start Render
                   </button>
                 </div>
               ) : (
-                <div class="flex flex-col gap-6">
-                  <div class="w-full bg-black/5 h-4 overflow-hidden border border-border-color relative rounded-full">
+                <div class="flex flex-col gap-5">
+                  <div class="w-full bg-black/5 dark:bg-white/5 h-3 overflow-hidden border border-border-color relative rounded-full">
                     <div class="h-full bg-brand-500 transition-all duration-300 ease-out" style={{ width: `${exportProgress()}%` }}></div>
                   </div>
-                  <div class="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-text-muted">
+                  <div class="flex justify-between items-center text-[10px] font-extrabold uppercase tracking-wider text-text-muted">
+                    <span>Progress</span>
                     <span>{exportProgress()}%</span>
                   </div>
                   
                   <div class="flex gap-2">
-                    <button onClick={() => setExportPaused(!exportPaused())} class="flex-1 py-3 bg-black/5 hover:bg-black/10 text-text-main font-bold uppercase tracking-widest transition border border-border-color cursor-pointer rounded-xl">
+                    <button onClick={() => setExportPaused(!exportPaused())} class="flex-1 py-2.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-text-main font-bold uppercase tracking-wider transition border border-border-color cursor-pointer rounded-xl">
                       {exportPaused() ? 'Resume' : 'Pause'}
                     </button>
-                    <button onClick={() => setExportCancelled(true)} class="flex-1 py-3 border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white font-bold uppercase tracking-widest transition cursor-pointer rounded-xl">
+                    <button onClick={() => setExportCancelled(true)} class="flex-1 py-2.5 border border-red-600/30 text-red-500 hover:bg-red-500 hover:text-white font-bold uppercase tracking-wider transition cursor-pointer rounded-xl">
                       Cancel
                     </button>
                   </div>
@@ -731,70 +722,65 @@ export default function ChartPresetTemplate(props: { slug: string }) {
               )}
             </div>
 
-            {/* Right Column: Interactive looping support animations */}
-            <div class="w-full md:w-[260px] rounded-xl border border-brand-500/20 bg-gradient-to-br from-brand-500/[0.03] via-purple-500/[0.02] to-pink-500/[0.04] p-5 flex flex-col items-center justify-center text-center overflow-hidden min-h-[240px] md:min-h-full relative group/right">
-              {/* Decorative background glows */}
-              <div class="absolute -top-12 -right-12 w-24 h-24 bg-brand-500/10 rounded-full blur-2xl group-hover/right:bg-brand-500/25 transition-all duration-700"></div>
-              <div class="absolute -bottom-12 -left-12 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover/right:bg-purple-500/25 transition-all duration-700"></div>
-
+            {/* Right Column: Clean Looping support banner with explicit links */}
+            <div class="w-full md:w-[250px] rounded-xl border border-border-color bg-black/[0.01] dark:bg-white/[0.01] p-5 flex flex-col items-center justify-center text-center overflow-hidden min-h-[220px] md:min-h-full relative">
+              
               <Show when={supportMessageIdx() === 0}>
-                <div class="animate-slide-fade flex flex-col items-center gap-4">
-                  {/* Floating Golden Star */}
-                  <div class="animate-float w-14 h-14 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center shadow-lg shadow-yellow-500/5 text-2xl">
+                <div class="animate-slide-fade flex flex-col items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-xl">
                     ⭐
                   </div>
                   
-                  <div class="space-y-2">
-                    <h4 class="h-6">
-                      <WavyText text="Give a Star" class="text-sm font-extrabold uppercase tracking-wider text-yellow-500" />
+                  <div class="space-y-1">
+                    <h4 class="text-sm font-extrabold uppercase tracking-wider text-yellow-600 dark:text-yellow-500">
+                      Give a Star
                     </h4>
                     <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">
-                      Love <span class="text-text-main font-bold">CanvasLabs</span>? Show your support by giving us a star on GitHub!
+                      Support us on GitHub!
                     </p>
                   </div>
 
                   <a 
-                    href="https://github.com" 
+                    href="https://github.com/simplearyan/canvas.labs" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    class="mt-2 flex items-center gap-1.5 px-4 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                    class="mt-2 text-xs font-semibold text-brand-500 hover:text-brand-600 hover:underline flex items-center gap-1.5"
                   >
-                    Star on GitHub ⭐
+                    🔗 github.com/simplearyan/canvas.labs
                   </a>
                 </div>
               </Show>
 
               <Show when={supportMessageIdx() === 1}>
-                <div class="animate-slide-fade flex flex-col items-center gap-4">
-                  {/* Floating Coffee Cup */}
-                  <div class="animate-float w-14 h-14 rounded-full bg-brand-500/10 border border-brand-500/30 flex items-center justify-center shadow-lg shadow-brand-500/5 text-2xl" style={{ "animation-delay": "-1s" }}>
+                <div class="animate-slide-fade flex flex-col items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-xl">
                     ☕
                   </div>
                   
-                  <div class="space-y-2">
-                    <h4 class="h-6">
-                      <WavyText text="Buy me a coffee" class="text-sm font-extrabold uppercase tracking-wider text-brand-500" />
+                  <div class="space-y-1">
+                    <h4 class="text-sm font-extrabold uppercase tracking-wider text-brand-500">
+                      Show Support
                     </h4>
                     <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">
-                      Fuel our long rendering sessions and new features with a warm cup of coffee!
+                      We build open-source tools!
                     </p>
                   </div>
 
                   <a 
-                    href="https://ko-fi.com" 
+                    href="https://github.com/simplearyan/canvas.labs" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    class="mt-2 flex items-center gap-1.5 px-4 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 border border-brand-500/30 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                    class="mt-2 text-xs font-semibold text-brand-500 hover:text-brand-600 hover:underline flex items-center gap-1.5"
                   >
-                    Support canvas labs ☕
+                    🔗 github.com/simplearyan/canvas.labs
                   </a>
                 </div>
               </Show>
 
               {/* Loop Page Indicators */}
               <div class="absolute bottom-4 flex gap-1.5">
-                <span class={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${supportMessageIdx() === 0 ? 'bg-yellow-500 w-3' : 'bg-text-muted/30'}`}></span>
-                <span class={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${supportMessageIdx() === 1 ? 'bg-brand-500 w-3' : 'bg-text-muted/30'}`}></span>
+                <span class={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${supportMessageIdx() === 0 ? 'bg-yellow-500' : 'bg-text-muted/30'}`}></span>
+                <span class={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${supportMessageIdx() === 1 ? 'bg-brand-500' : 'bg-text-muted/30'}`}></span>
               </div>
             </div>
 
