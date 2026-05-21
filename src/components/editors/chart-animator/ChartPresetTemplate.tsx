@@ -189,7 +189,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
     findTarget();
 
     supportIntervalId = setInterval(() => {
-      setSupportMessageIdx((prev) => (prev === 0 ? 1 : 0));
+      setSupportMessageIdx((prev) => (prev + 1) % 3);
     }, 4500);
   });
 
@@ -766,6 +766,32 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                     </h4>
                     <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">
                       We build open-source tools!
+                    </p>
+                  </div>
+
+                  <a 
+                    href="https://github.com/simplearyan/canvas.labs" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    class="mt-2 text-xs font-semibold text-brand-500 hover:text-brand-600 hover:underline flex items-center gap-1.5"
+                  >
+                    🔗 github.com/simplearyan/canvas.labs
+                  </a>
+                </div>
+              </Show>
+
+              <Show when={supportMessageIdx() === 2}>
+                <div class="animate-slide-fade flex flex-col items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-xl">
+                    📢
+                  </div>
+                  
+                  <div class="space-y-1">
+                    <h4 class="text-sm font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-500">
+                      Sponsored Ad
+                    </h4>
+                    <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">
+                      Advertise here! Reach thousands of creative users.
                     </p>
                   </div>
 
