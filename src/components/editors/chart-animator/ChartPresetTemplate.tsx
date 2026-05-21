@@ -204,6 +204,18 @@ export default function ChartPresetTemplate(props: { slug: string }) {
     }
   });
 
+  // Push AdSense ad reactively when export starts (Kenichi pattern)
+  createEffect(() => {
+    if (exportActive()) {
+      setTimeout(() => {
+        try {
+          (window as any).adsbygoogle = (window as any).adsbygoogle || [];
+          (window as any).adsbygoogle.push({});
+        } catch (_) {}
+      }, 400);
+    }
+  });
+
   onCleanup(() => {
     window.removeEventListener('resize', handleResize);
     if (engine) engine.pause();
@@ -626,7 +638,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
       </div>      {/* EXPORT MODAL */}
       {isExporting() && (
         <div class="fixed inset-0 z-50 bg-slate-950/60 dark:bg-black/70 flex items-center justify-center p-4 transition-all duration-300 backdrop-blur-sm">
-          <div class="bg-card-bg border border-border-color shadow-lg p-6 md:p-8 max-w-md md:max-w-2xl w-full relative flex flex-col md:flex-row gap-6 text-text-main rounded-2xl overflow-hidden">
+          <div class={`bg-card-bg border border-border-color shadow-lg p-6 md:p-8 w-full relative flex flex-col md:flex-row gap-6 text-text-main rounded-2xl overflow-hidden transition-all duration-500 ${exportActive() ? 'max-w-4xl' : 'max-w-md md:max-w-2xl'}`}>
             
             <style>{`
               @keyframes slideFadeIn {
@@ -736,98 +748,73 @@ export default function ChartPresetTemplate(props: { slug: string }) {
               )}
             </div>
 
-            {/* Right Column: Fixed height — never influenced by ad loading */}
-            <div class="w-full md:w-[280px] md:self-center rounded-xl border border-border-color bg-black/[0.01] dark:bg-white/[0.01] p-5 flex flex-col items-center justify-center text-center overflow-hidden relative" style={{ "min-height": "260px" }}>
-              
-              <Show when={supportMessageIdx() === 0}>
-                <div class="animate-slide-fade flex flex-col items-center gap-3">
-                  <div class="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-xl">
-                    ⭐
-                  </div>
-                  
-                  <div class="space-y-1">
-                    <h4 class="text-sm font-extrabold uppercase tracking-wider text-yellow-600 dark:text-yellow-500">
-                      Give a Star
-                    </h4>
-                    <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">
-                      Support us on GitHub!
-                    </p>
-                  </div>
+            {/* Right Column: looping slides before export, live ad during export */}
 
-                  <a 
-                    href="https://github.com/simplearyan/canvas.labs" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    class="mt-2 text-xs font-semibold text-brand-500 hover:text-brand-600 hover:underline flex items-center gap-1.5"
-                  >
-                    🔗 github.com/simplearyan/canvas.labs
-                  </a>
+            {/* BEFORE EXPORT: looping support slides */}
+            <Show when={!exportActive()}>
+              <div class="w-full md:w-[280px] md:self-center rounded-xl border border-border-color bg-black/[0.01] dark:bg-white/[0.01] p-5 flex flex-col items-center justify-center text-center overflow-hidden relative" style={{ "min-height": "260px" }}>
+
+                {/* Slide 0 — Give a Star */}
+                <Show when={supportMessageIdx() === 0}>
+                  <div class="animate-slide-fade w-full h-full flex flex-col items-center justify-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-xl">⭐</div>
+                    <div class="space-y-1">
+                      <h4 class="text-sm font-extrabold uppercase tracking-wider text-yellow-600 dark:text-yellow-500">Give a Star</h4>
+                      <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">Support us on GitHub!</p>
+                    </div>
+                    <a href="https://github.com/simplearyan/canvas.labs" target="_blank" rel="noopener noreferrer"
+                      class="mt-2 text-xs font-semibold text-brand-500 hover:text-brand-600 hover:underline flex items-center gap-1.5">
+                      🔗 github.com/simplearyan/canvas.labs
+                    </a>
+                  </div>
+                </Show>
+
+                {/* Slide 1 — Ko-fi */}
+                <Show when={supportMessageIdx() === 1}>
+                  <div class="animate-slide-fade w-full h-full flex flex-col items-center justify-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-xl">☕</div>
+                    <div class="space-y-1">
+                      <h4 class="text-sm font-extrabold uppercase tracking-wider text-orange-500">Buy Me a Coffee</h4>
+                      <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">We build open-source tools!</p>
+                    </div>
+                    <a href="https://ko-fi.com/simplearyan" target="_blank" rel="noopener noreferrer"
+                      class="mt-2 text-xs font-semibold text-orange-500 hover:text-orange-400 hover:underline flex items-center gap-1.5">
+                      ☕ ko-fi.com/simplearyan
+                    </a>
+                  </div>
+                </Show>
+
+                {/* Slide 2 — Ad placeholder (no real ad injected here) */}
+                <Show when={supportMessageIdx() === 2}>
+                  <div class="animate-slide-fade w-full h-full flex flex-col items-center justify-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-xl">📢</div>
+                    <div class="space-y-1">
+                      <h4 class="text-sm font-extrabold uppercase tracking-wider text-brand-500">Ad-Free Export?</h4>
+                      <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">Start rendering — a short ad helps keep Canvas Labs free.</p>
+                    </div>
+                  </div>
+                </Show>
+
+              </div>
+            </Show>
+
+            {/* DURING EXPORT: live Google AdSense ad only */}
+            <Show when={exportActive()}>
+              <div class="flex-1 flex flex-col bg-black/[0.02] dark:bg-white/[0.01] rounded-xl border border-border-color overflow-hidden items-center justify-center p-6 gap-3 animate-slide-fade md:self-stretch">
+                <p class="text-[9px] text-text-muted uppercase tracking-[0.4em] font-black opacity-40">Featured Advertisement</p>
+                <div class="w-full flex items-center justify-center bg-black/[0.03] dark:bg-black/40 rounded-2xl p-4 border border-border-color/30">
+                  <ins
+                    class="adsbygoogle"
+                    style={{ display: 'block', width: '100%', 'min-width': '250px', 'max-width': '728px', height: 'auto', 'min-height': '250px' }}
+                    data-ad-client="ca-pub-7993314093599705"
+                    data-ad-slot="9342323532"
+                    data-ad-format="auto"
+                    data-full-width-responsive="true"
+                  ></ins>
                 </div>
-              </Show>
-
-              <Show when={supportMessageIdx() === 1}>
-                <div class="animate-slide-fade flex flex-col items-center gap-3">
-                  <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-xl">
-                    ☕
-                  </div>
-                  
-                  <div class="space-y-1">
-                    <h4 class="text-sm font-extrabold uppercase tracking-wider text-brand-500">
-                      Show Support
-                    </h4>
-                    <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">
-                      We build open-source tools!
-                    </p>
-                  </div>
-
-                  <a 
-                    href="https://github.com/simplearyan/canvas.labs" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    class="mt-2 text-xs font-semibold text-brand-500 hover:text-brand-600 hover:underline flex items-center gap-1.5"
-                  >
-                    🔗 github.com/simplearyan/canvas.labs
-                  </a>
-                </div>
-              </Show>
-
-              <Show when={supportMessageIdx() === 2}>
-                <div class="animate-slide-fade w-full flex flex-col items-center gap-2">
-                  <span class="text-[9px] font-extrabold uppercase tracking-widest text-text-muted opacity-50">
-                    Featured Advertisement
-                  </span>
-
-                  {/* Fixed-size ad container — 250×250 prevents any layout shift */}
-                  <div style={{ width: '250px', height: '250px', overflow: 'hidden', flex: 'none' }}>
-                    <ins
-                      class="adsbygoogle"
-                      style={{
-                        display: 'block',
-                        width: '250px',
-                        height: '250px',
-                      }}
-                      data-ad-client="ca-pub-7993314093599705"
-                      data-ad-slot="9342323532"
-                      data-ad-format="fixed"
-                      ref={(el) => {
-                        // Push the ad unit once the element is in the DOM
-                        setTimeout(() => {
-                          try {
-                            ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
-                          } catch (_) {}
-                        }, 300);
-                      }}
-                    ></ins>
-                  </div>
-
-                  <span class="text-[9px] font-semibold text-text-muted italic tracking-wide">
-                    Supporting Canvas Labs
-                  </span>
-                </div>
-              </Show>
-
-              {/* Loop Page Indicators removed */}
-            </div>
+                <p class="text-[9px] text-text-muted italic tracking-wide font-medium">Supporting Canvas Labs</p>
+              </div>
+            </Show>
 
           </div>
         </div>
