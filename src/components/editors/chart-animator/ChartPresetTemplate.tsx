@@ -60,7 +60,10 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   let playTimeoutId: any = null;
 
   // Active tab state for mobile Quick Adjustments
-  const [activeTab, setActiveTab] = createSignal<'general' | 'visibility'>('general');
+  const [activeTab, setActiveTab] = createSignal<'general' | 'visibility' | 'ratio'>('general');
+
+  // Canvas aspect ratio state
+  const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5'>('16:9');
 
   const handlePlayPause = () => {
     if (!engine) return;
@@ -180,15 +183,37 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
   const handleResize = () => {
     if (!canvasRef || !engine) return;
-    const parent = canvasRef.parentElement;
-    if (parent) {
-      const width = parent.clientWidth - 32;
-      const height = (width * 9) / 16;
-      engine.setDimensions(1920, 1080, window.devicePixelRatio || 1);
-      canvasRef.style.width = `${width}px`;
-      canvasRef.style.height = `${height}px`;
+    const rect = canvasRef.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+
+    let renderW = 1920;
+    let renderH = 1080;
+
+    const ratio = aspectRatio();
+    if (ratio === '9:16') {
+      renderW = 1080;
+      renderH = 1920;
+    } else if (ratio === '1:1') {
+      renderW = 1080;
+      renderH = 1080;
+    } else if (ratio === '4:5') {
+      renderW = 1080;
+      renderH = 1350;
     }
+
+    engine.setDimensions(renderW, renderH, window.devicePixelRatio || 1);
   };
+
+  createEffect(() => {
+    aspectRatio(); // register dependency
+    if (isLoaded() && engine) {
+      // Let the DOM recalculate the layout first, then resize and re-render
+      requestAnimationFrame(() => {
+        handleResize();
+      });
+    }
+  });
 
   createEffect(() => {
     if (isLoaded() && engine) {
@@ -265,7 +290,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
       {/* Breadcrumb Back Button */}
       <a 
         href="/canvas.labs"
-        class="hidden md:flex items-center gap-2 text-sm font-semibold text-text-muted hover:text-text-main transition-colors w-fit group cursor-pointer"
+        class="hidden lg:flex items-center gap-2 text-sm font-semibold text-text-muted hover:text-text-main transition-colors w-fit group cursor-pointer"
       >
         <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
@@ -278,7 +303,12 @@ export default function ChartPresetTemplate(props: { slug: string }) {
         {/* Left panel: Preview Canvas Frame */}
         <div class="lg:col-span-2 flex flex-col gap-4">
           <div 
-            class="w-full aspect-video rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative"
+            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative transition-all duration-300 ${
+              aspectRatio() === '9:16' ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
+              aspectRatio() === '1:1' ? 'aspect-square h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
+              aspectRatio() === '4:5' ? 'aspect-[4/5] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
+              'aspect-video w-full'
+            }`}
             style={{ "background-color": chartStore.options.bgColor }}
           >
             <canvas 
@@ -363,11 +393,11 @@ export default function ChartPresetTemplate(props: { slug: string }) {
               Quick Adjustments
             </h3>
 
-            {/* Tab Switcher - only visible on small screens (< lg) */}
-            <div class="flex border-b border-border-color/30 lg:hidden mb-4">
+            {/* Tab Switcher - only visible on small screens (< lg) with horizontal scrolling */}
+            <div class="flex border-b border-border-color/30 lg:hidden mb-4 overflow-x-auto whitespace-nowrap gap-4 scrollbar-none pb-1">
               <button 
                 onClick={() => setActiveTab('general')}
-                class={`flex-1 pb-2.5 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer ${
+                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${
                   activeTab() === 'general' 
                     ? 'border-brand-500 text-brand-500' 
                     : 'border-transparent text-text-muted hover:text-text-main'
@@ -377,13 +407,23 @@ export default function ChartPresetTemplate(props: { slug: string }) {
               </button>
               <button 
                 onClick={() => setActiveTab('visibility')}
-                class={`flex-1 pb-2.5 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer ${
+                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${
                   activeTab() === 'visibility' 
                     ? 'border-brand-500 text-brand-500' 
                     : 'border-transparent text-text-muted hover:text-text-main'
                 }`}
               >
                 Visibility
+              </button>
+              <button 
+                onClick={() => setActiveTab('ratio')}
+                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${
+                  activeTab() === 'ratio' 
+                    ? 'border-brand-500 text-brand-500' 
+                    : 'border-transparent text-text-muted hover:text-text-main'
+                }`}
+              >
+                Canvas Ratio
               </button>
             </div>
 
@@ -471,6 +511,78 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                   checked={chartStore.options.showValues} 
                   onChange={(val) => updateChartOptions({ showValues: val })}
                 />
+              </div>
+            </div>
+
+            {/* Aspect Ratio Selector Section */}
+            <div class={`lg:border-t border-border-color/50 lg:pt-4 space-y-3 lg:block ${activeTab() === 'ratio' ? 'block' : 'hidden'}`}>
+              <label class="hidden lg:block text-[10px] font-extrabold text-text-muted uppercase tracking-wider">Canvas Ratio</label>
+              <div class="grid grid-cols-2 gap-3">
+                
+                {/* 16:9 */}
+                <button 
+                  onClick={() => setAspectRatio('16:9')}
+                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${
+                    aspectRatio() === '16:9' 
+                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500' 
+                      : 'border-border-color bg-black/5 hover:border-brand-500/30 text-text-muted hover:text-text-main'
+                  }`}
+                >
+                  <div class="w-12 h-7 rounded border border-current mb-2 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                    <span class="text-[8px] font-bold">16:9</span>
+                  </div>
+                  <span class="text-xs font-extrabold tracking-wide">Landscape</span>
+                  <span class="text-[9px] text-text-muted mt-0.5 font-semibold">YouTube / Web</span>
+                </button>
+
+                {/* 9:16 */}
+                <button 
+                  onClick={() => setAspectRatio('9:16')}
+                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${
+                    aspectRatio() === '9:16' 
+                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500' 
+                      : 'border-border-color bg-black/5 hover:border-brand-500/30 text-text-muted hover:text-text-main'
+                  }`}
+                >
+                  <div class="w-7 h-12 rounded border border-current mb-2 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                    <span class="text-[8px] font-bold">9:16</span>
+                  </div>
+                  <span class="text-xs font-extrabold tracking-wide">Portrait</span>
+                  <span class="text-[9px] text-text-muted mt-0.5 font-semibold">Shorts / Reels</span>
+                </button>
+
+                {/* 1:1 */}
+                <button 
+                  onClick={() => setAspectRatio('1:1')}
+                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${
+                    aspectRatio() === '1:1' 
+                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500' 
+                      : 'border-border-color bg-black/5 hover:border-brand-500/30 text-text-muted hover:text-text-main'
+                  }`}
+                >
+                  <div class="w-9 h-9 rounded border border-current mb-2 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                    <span class="text-[8px] font-bold">1:1</span>
+                  </div>
+                  <span class="text-xs font-extrabold tracking-wide">Square</span>
+                  <span class="text-[9px] text-text-muted mt-0.5 font-semibold">Feed Grid</span>
+                </button>
+
+                {/* 4:5 */}
+                <button 
+                  onClick={() => setAspectRatio('4:5')}
+                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${
+                    aspectRatio() === '4:5' 
+                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500' 
+                      : 'border-border-color bg-black/5 hover:border-brand-500/30 text-text-muted hover:text-text-main'
+                  }`}
+                >
+                  <div class="w-8 h-10 rounded border border-current mb-2 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                    <span class="text-[8px] font-bold">4:5</span>
+                  </div>
+                  <span class="text-xs font-extrabold tracking-wide">Vertical</span>
+                  <span class="text-[9px] text-text-muted mt-0.5 font-semibold">Social Post</span>
+                </button>
+
               </div>
             </div>
           </div>
