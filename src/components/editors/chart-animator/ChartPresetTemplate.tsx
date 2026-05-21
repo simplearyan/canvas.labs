@@ -191,6 +191,17 @@ export default function ChartPresetTemplate(props: { slug: string }) {
     supportIntervalId = setInterval(() => {
       setSupportMessageIdx((prev) => (prev + 1) % 3);
     }, 4500);
+
+    // 3. Inject Google AdSense script once
+    const ADSENSE_ID = 'google-adsense-script';
+    if (!document.getElementById(ADSENSE_ID)) {
+      const script = document.createElement('script');
+      script.id = ADSENSE_ID;
+      script.async = true;
+      script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7993314093599705';
+      script.crossOrigin = 'anonymous';
+      document.head.appendChild(script);
+    }
   });
 
   onCleanup(() => {
@@ -699,7 +710,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                     </div>
                   </div>
                   
-                  <button onClick={startExport} class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-black font-extrabold uppercase tracking-wider transition rounded-xl mt-2 cursor-pointer shadow-sm">
+                  <button onClick={startExport} class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-extrabold uppercase tracking-wider transition rounded-xl mt-2 cursor-pointer shadow-sm">
                     Start Render
                   </button>
                 </div>
@@ -725,8 +736,8 @@ export default function ChartPresetTemplate(props: { slug: string }) {
               )}
             </div>
 
-            {/* Right Column: Clean Looping support banner with explicit links */}
-            <div class="w-full md:w-[250px] rounded-xl border border-border-color bg-black/[0.01] dark:bg-white/[0.01] p-5 flex flex-col items-center justify-center text-center overflow-hidden min-h-[220px] md:min-h-full relative">
+            {/* Right Column: Fixed height — never influenced by ad loading */}
+            <div class="w-full md:w-[280px] md:self-center rounded-xl border border-border-color bg-black/[0.01] dark:bg-white/[0.01] p-5 flex flex-col items-center justify-center text-center overflow-hidden relative" style={{ "min-height": "260px" }}>
               
               <Show when={supportMessageIdx() === 0}>
                 <div class="animate-slide-fade flex flex-col items-center gap-3">
@@ -781,28 +792,37 @@ export default function ChartPresetTemplate(props: { slug: string }) {
               </Show>
 
               <Show when={supportMessageIdx() === 2}>
-                <div class="animate-slide-fade flex flex-col items-center gap-3">
-                  <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-xl">
-                    📢
-                  </div>
-                  
-                  <div class="space-y-1">
-                    <h4 class="text-sm font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-500">
-                      Sponsored Ad
-                    </h4>
-                    <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">
-                      Advertise here! Reach thousands of creative users.
-                    </p>
+                <div class="animate-slide-fade w-full flex flex-col items-center gap-2">
+                  <span class="text-[9px] font-extrabold uppercase tracking-widest text-text-muted opacity-50">
+                    Featured Advertisement
+                  </span>
+
+                  {/* Fixed-size ad container — 250×250 prevents any layout shift */}
+                  <div style={{ width: '250px', height: '250px', overflow: 'hidden', flex: 'none' }}>
+                    <ins
+                      class="adsbygoogle"
+                      style={{
+                        display: 'block',
+                        width: '250px',
+                        height: '250px',
+                      }}
+                      data-ad-client="ca-pub-7993314093599705"
+                      data-ad-slot="9342323532"
+                      data-ad-format="fixed"
+                      ref={(el) => {
+                        // Push the ad unit once the element is in the DOM
+                        setTimeout(() => {
+                          try {
+                            ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+                          } catch (_) {}
+                        }, 300);
+                      }}
+                    ></ins>
                   </div>
 
-                  <a 
-                    href="https://github.com/simplearyan/canvas.labs" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    class="mt-2 text-xs font-semibold text-brand-500 hover:text-brand-600 hover:underline flex items-center gap-1.5"
-                  >
-                    🔗 github.com/simplearyan/canvas.labs
-                  </a>
+                  <span class="text-[9px] font-semibold text-text-muted italic tracking-wide">
+                    Supporting Canvas Labs
+                  </span>
                 </div>
               </Show>
 
