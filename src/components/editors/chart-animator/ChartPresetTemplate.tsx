@@ -44,6 +44,18 @@ const ToggleSwitch = (props: {
   );
 };
 
+const WavyText = (props: { text: string; class?: string }) => {
+  return (
+    <span class={`letter-wave ${props.class || ''}`}>
+      {props.text.split('').map((char, index) => (
+        <span style={{ "animation-delay": `${index * 0.05}s` }}>
+          {char === ' ' ? '\u00A0' : char}
+        </span>
+      ))}
+    </span>
+  );
+};
+
 export default function ChartPresetTemplate(props: { slug: string }) {
   let canvasRef!: HTMLCanvasElement;
   let engine: ChartEngine;
@@ -64,6 +76,10 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
   // Canvas aspect ratio state
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5'>('16:9');
+
+  // Support banner switching state
+  const [supportMessageIdx, setSupportMessageIdx] = createSignal(0);
+  let supportIntervalId: any = null;
 
   const handlePlayPause = () => {
     if (!engine) return;
@@ -171,6 +187,10 @@ export default function ChartPresetTemplate(props: { slug: string }) {
       }
     };
     findTarget();
+
+    supportIntervalId = setInterval(() => {
+      setSupportMessageIdx((prev) => (prev === 0 ? 1 : 0));
+    }, 4500);
   });
 
   onCleanup(() => {
@@ -178,6 +198,9 @@ export default function ChartPresetTemplate(props: { slug: string }) {
     if (engine) engine.pause();
     if (playTimeoutId) {
       clearTimeout(playTimeoutId);
+    }
+    if (supportIntervalId) {
+      clearInterval(supportIntervalId);
     }
   });
 
@@ -593,80 +616,188 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
       {/* EXPORT MODAL */}
       {isExporting() && (
-        <div class="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 flex items-center justify-center p-4 transition-opacity">
-          <div class="bg-card-bg border border-border-color shadow-2xl p-8 max-w-md w-full relative flex flex-col gap-6 text-text-main rounded-2xl">
+        <div class="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 flex items-center justify-center p-4 transition-all duration-300 backdrop-blur-sm">
+          <div class="bg-card-bg border border-border-color shadow-2xl p-6 md:p-8 max-w-md md:max-w-2xl w-full relative flex flex-col md:flex-row gap-6 text-text-main rounded-2xl overflow-hidden animate-glow">
+            
+            <style>{`
+              @keyframes float {
+                0%, 100% { transform: translateY(0px) rotate(0deg); }
+                50% { transform: translateY(-8px) rotate(1deg); }
+              }
+              @keyframes pulseGlow {
+                0%, 100% { box-shadow: 0 10px 30px -10px rgba(168, 85, 247, 0.15); }
+                50% { box-shadow: 0 10px 40px 0px rgba(168, 85, 247, 0.3); }
+              }
+              @keyframes waveText {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-5px); }
+              }
+              @keyframes slideFadeIn {
+                0% { opacity: 0; transform: translateY(12px) scale(0.95); }
+                100% { opacity: 1; transform: translateY(0) scale(1); }
+              }
+              .animate-float {
+                animation: float 5s ease-in-out infinite;
+              }
+              .animate-glow {
+                animation: pulseGlow 4s ease-in-out infinite;
+              }
+              .animate-slide-fade {
+                animation: slideFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+              }
+              .letter-wave span {
+                display: inline-block;
+                animation: waveText 1.4s ease-in-out infinite;
+              }
+            `}</style>
+
             {!exportActive() && (
-              <button onClick={() => setIsExporting(false)} class="absolute top-4 right-4 text-text-muted hover:text-red-500 transition cursor-pointer">
+              <button 
+                onClick={() => setIsExporting(false)} 
+                class="absolute top-4 right-4 z-10 text-text-muted hover:text-red-500 transition cursor-pointer p-1.5 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10"
+                aria-label="Close Export Modal"
+              >
                  ✕
               </button>
             )}
             
-            <div class="flex flex-col gap-1">
-              <h3 class="text-xl font-black text-brand-500 uppercase tracking-tighter">
-                {exportActive() ? 'Rendering Animation' : 'Export Animation'}
-              </h3>
-              <p class="text-xs text-text-muted font-medium">
-                {exportActive() ? exportStatus() : 'Select your preferred rendering format.'}
-              </p>
-            </div>
-            
-            {!exportActive() ? (
-              <div class="flex flex-col gap-4">
-                <div class="flex flex-col gap-1.5">
-                  <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Resolution</label>
-                  <select value={exportRes()} onInput={(e) => setExportRes(e.currentTarget.value as any)} class="w-full px-3 py-2 bg-black/5 border border-border-color text-text-main text-sm font-medium outline-none focus:border-brand-500 cursor-pointer rounded-xl">
-                    <option class="bg-card-bg" value="720">720p (HD)</option>
-                    <option class="bg-card-bg" value="1080">1080p (FHD)</option>
-                    <option class="bg-card-bg" value="1440">1440p (2K)</option>
-                    <option class="bg-card-bg" value="2160">2160p (4K)</option>
-                  </select>
-                </div>
+            {/* Left Column: Export Controls & Progress */}
+            <div class="flex-1 flex flex-col gap-5 justify-between">
+              <div class="flex flex-col gap-1">
+                <h3 class="text-xl font-black text-brand-500 uppercase tracking-tighter">
+                  {exportActive() ? 'Rendering Animation' : 'Export Animation'}
+                </h3>
+                <p class="text-xs text-text-muted font-medium">
+                  {exportActive() ? exportStatus() : 'Select your preferred rendering format.'}
+                </p>
+              </div>
+              
+              {!exportActive() ? (
+                <div class="flex flex-col gap-4">
+                  <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Resolution</label>
+                    <select value={exportRes()} onInput={(e) => setExportRes(e.currentTarget.value as any)} class="w-full px-3 py-2 bg-black/5 border border-border-color text-text-main text-sm font-medium outline-none focus:border-brand-500 cursor-pointer rounded-xl">
+                      <option class="bg-card-bg" value="720">720p (HD)</option>
+                      <option class="bg-card-bg" value="1080">1080p (FHD)</option>
+                      <option class="bg-card-bg" value="1440">1440p (2K)</option>
+                      <option class="bg-card-bg" value="2160">2160p (4K)</option>
+                    </select>
+                  </div>
 
-                <div class="flex flex-col gap-1.5">
-                  <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Framerate</label>
+                  <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Framerate</label>
+                    <div class="flex gap-2">
+                      {[24, 30, 60].map(fps => (
+                        <button onClick={() => setExportFps(fps)} class={`flex-1 py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${exportFps() === fps ? 'border-2 border-brand-500 bg-brand-500/10 text-brand-500' : 'border border-border-color bg-black/5 text-text-muted hover:border-brand-500'}`}>
+                          {fps}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Format</label>
+                    <div class="grid grid-cols-2 gap-2">
+                      {['webm', 'mp4', 'mov', 'zip'].map(fmt => (
+                        <button onClick={() => setExportFormat(fmt as any)} class={`py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${exportFormat() === fmt ? 'border-2 border-brand-500 bg-brand-500/10 text-brand-500' : 'border border-border-color bg-black/5 text-text-muted hover:border-brand-500'}`}>
+                          {fmt.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <button onClick={startExport} class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-black font-black uppercase tracking-widest transition rounded-xl mt-2 cursor-pointer shadow-md">
+                    Start Render
+                  </button>
+                </div>
+              ) : (
+                <div class="flex flex-col gap-6">
+                  <div class="w-full bg-black/5 h-4 overflow-hidden border border-border-color relative rounded-full">
+                    <div class="h-full bg-brand-500 transition-all duration-300 ease-out" style={{ width: `${exportProgress()}%` }}></div>
+                  </div>
+                  <div class="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-text-muted">
+                    <span>{exportProgress()}%</span>
+                  </div>
+                  
                   <div class="flex gap-2">
-                    {[24, 30, 60].map(fps => (
-                      <button onClick={() => setExportFps(fps)} class={`flex-1 py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${exportFps() === fps ? 'border-2 border-brand-500 bg-brand-500/10 text-brand-500' : 'border border-border-color bg-black/5 text-text-muted hover:border-brand-500'}`}>
-                        {fps}
-                      </button>
-                    ))}
+                    <button onClick={() => setExportPaused(!exportPaused())} class="flex-1 py-3 bg-black/5 hover:bg-black/10 text-text-main font-bold uppercase tracking-widest transition border border-border-color cursor-pointer rounded-xl">
+                      {exportPaused() ? 'Resume' : 'Pause'}
+                    </button>
+                    <button onClick={() => setExportCancelled(true)} class="flex-1 py-3 border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white font-bold uppercase tracking-widest transition cursor-pointer rounded-xl">
+                      Cancel
+                    </button>
                   </div>
                 </div>
+              )}
+            </div>
 
-                <div class="flex flex-col gap-1.5">
-                  <label class="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Format</label>
-                  <div class="grid grid-cols-2 gap-2">
-                    {['webm', 'mp4', 'mov', 'zip'].map(fmt => (
-                      <button onClick={() => setExportFormat(fmt as any)} class={`py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${exportFormat() === fmt ? 'border-2 border-brand-500 bg-brand-500/10 text-brand-500' : 'border border-border-color bg-black/5 text-text-muted hover:border-brand-500'}`}>
-                        {fmt.toUpperCase()}
-                      </button>
-                    ))}
+            {/* Right Column: Interactive looping support animations */}
+            <div class="w-full md:w-[260px] rounded-xl border border-brand-500/20 bg-gradient-to-br from-brand-500/[0.03] via-purple-500/[0.02] to-pink-500/[0.04] p-5 flex flex-col items-center justify-center text-center overflow-hidden min-h-[240px] md:min-h-full relative group/right">
+              {/* Decorative background glows */}
+              <div class="absolute -top-12 -right-12 w-24 h-24 bg-brand-500/10 rounded-full blur-2xl group-hover/right:bg-brand-500/25 transition-all duration-700"></div>
+              <div class="absolute -bottom-12 -left-12 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover/right:bg-purple-500/25 transition-all duration-700"></div>
+
+              <Show when={supportMessageIdx() === 0}>
+                <div class="animate-slide-fade flex flex-col items-center gap-4">
+                  {/* Floating Golden Star */}
+                  <div class="animate-float w-14 h-14 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center shadow-lg shadow-yellow-500/5 text-2xl">
+                    ⭐
                   </div>
+                  
+                  <div class="space-y-2">
+                    <h4 class="h-6">
+                      <WavyText text="Give a Star" class="text-sm font-extrabold uppercase tracking-wider text-yellow-500" />
+                    </h4>
+                    <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">
+                      Love <span class="text-text-main font-bold">CanvasLabs</span>? Show your support by giving us a star on GitHub!
+                    </p>
+                  </div>
+
+                  <a 
+                    href="https://github.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    class="mt-2 flex items-center gap-1.5 px-4 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                  >
+                    Star on GitHub ⭐
+                  </a>
                 </div>
-                
-                <button onClick={startExport} class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-black font-black uppercase tracking-widest transition rounded-xl mt-2 cursor-pointer shadow-md">
-                  Start Render
-                </button>
+              </Show>
+
+              <Show when={supportMessageIdx() === 1}>
+                <div class="animate-slide-fade flex flex-col items-center gap-4">
+                  {/* Floating Coffee Cup */}
+                  <div class="animate-float w-14 h-14 rounded-full bg-brand-500/10 border border-brand-500/30 flex items-center justify-center shadow-lg shadow-brand-500/5 text-2xl" style={{ "animation-delay": "-1s" }}>
+                    ☕
+                  </div>
+                  
+                  <div class="space-y-2">
+                    <h4 class="h-6">
+                      <WavyText text="Buy me a coffee" class="text-sm font-extrabold uppercase tracking-wider text-brand-500" />
+                    </h4>
+                    <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">
+                      Fuel our long rendering sessions and new features with a warm cup of coffee!
+                    </p>
+                  </div>
+
+                  <a 
+                    href="https://ko-fi.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    class="mt-2 flex items-center gap-1.5 px-4 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 border border-brand-500/30 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                  >
+                    Support canvas labs ☕
+                  </a>
+                </div>
+              </Show>
+
+              {/* Loop Page Indicators */}
+              <div class="absolute bottom-4 flex gap-1.5">
+                <span class={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${supportMessageIdx() === 0 ? 'bg-yellow-500 w-3' : 'bg-text-muted/30'}`}></span>
+                <span class={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${supportMessageIdx() === 1 ? 'bg-brand-500 w-3' : 'bg-text-muted/30'}`}></span>
               </div>
-            ) : (
-              <div class="flex flex-col gap-6">
-                <div class="w-full bg-black/5 h-4 overflow-hidden border border-border-color relative rounded-full">
-                  <div class="h-full bg-brand-500 transition-all duration-300 ease-out" style={{ width: `${exportProgress()}%` }}></div>
-                </div>
-                <div class="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-text-muted">
-                  <span>{exportProgress()}%</span>
-                </div>
-                
-                <div class="flex gap-2">
-                  <button onClick={() => setExportPaused(!exportPaused())} class="flex-1 py-3 bg-black/5 hover:bg-black/10 text-text-main font-bold uppercase tracking-widest transition border border-border-color cursor-pointer rounded-xl">
-                    {exportPaused() ? 'Resume' : 'Pause'}
-                  </button>
-                  <button onClick={() => setExportCancelled(true)} class="flex-1 py-3 border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white font-bold uppercase tracking-widest transition cursor-pointer rounded-xl">
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            </div>
+
           </div>
         </div>
       )}
