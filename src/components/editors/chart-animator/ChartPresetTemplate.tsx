@@ -630,10 +630,13 @@ export default function ChartPresetTemplate(props: { slug: string }) {
             {!exportActive() && (
               <button 
                 onClick={() => setIsExporting(false)} 
-                class="absolute top-4 right-4 z-10 text-text-muted hover:text-red-500 transition cursor-pointer p-1.5 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10"
+                class="absolute top-4 right-4 z-10 text-text-muted hover:text-red-500 transition cursor-pointer p-1.5 rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center"
                 aria-label="Close Export Modal"
               >
-                 ✕
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
               </button>
             )}
             
@@ -777,11 +780,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                 </div>
               </Show>
 
-              {/* Loop Page Indicators */}
-              <div class="absolute bottom-4 flex gap-1.5">
-                <span class={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${supportMessageIdx() === 0 ? 'bg-yellow-500' : 'bg-text-muted/30'}`}></span>
-                <span class={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${supportMessageIdx() === 1 ? 'bg-brand-500' : 'bg-text-muted/30'}`}></span>
-              </div>
+              {/* Loop Page Indicators removed */}
             </div>
 
           </div>
