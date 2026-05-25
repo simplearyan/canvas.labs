@@ -600,7 +600,7 @@ export default function ChartEditor() {
             class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
             title="Export High-Res PNG Snapshot"
           >
-            <Icon name="download" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
+            <Icon name="camera" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
             <span class="hidden sm:inline">Camera Snapshot</span>
           </button>
 
@@ -621,7 +621,7 @@ export default function ChartEditor() {
             title="Export Video Animation"
             style={{ color: isDarkTheme() ? '#09090b' : '#ffffff' }}
           >
-            <Icon name="film" class={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDarkTheme() ? 'text-zinc-950' : 'text-white'}`} />
+            <Icon name="export" class={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDarkTheme() ? 'text-zinc-950' : 'text-white'}`} />
             <span class="hidden sm:inline">Export Video</span>
             <span class="inline sm:hidden">Export</span>
           </button>
