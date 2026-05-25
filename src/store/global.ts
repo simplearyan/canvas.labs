@@ -240,6 +240,11 @@ export const initUrlRouter = () => {
 };
 
 export const handleCategorySelect = (id: string) => {
+  if (isSecondaryPage()) {
+    const base = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL;
+    window.location.href = `${base}/?category=${id}`;
+    return;
+  }
   setCurrentCategory(id);
   setSearchQuery("");
   setIsViewingDetail(false);

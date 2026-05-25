@@ -1,15 +1,15 @@
 import { createEffect, createSignal, onMount, onCleanup, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { chartStore, setChartStore, serializeChartState, updateChartOptions, updateChartMetadata } from '../../../store/chartStore';
-import { isDarkTheme } from '../../../store/global';
-import { ChartEngine } from '../../../engines/chart-animator/ChartEngine';
-import { CHART_PRESETS } from '../../../engines/chart-animator/presets';
-import { exportProject, type ExportConfig } from '../../../engines/chart-animator/ExportEngine';
+import { chartStore, setChartStore, serializeChartState, updateChartOptions, updateChartMetadata } from '@/store/chartStore';
+import { isDarkTheme } from '@/store/global';
+import { ChartEngine } from '@/engines/chart-animator/ChartEngine';
+import { CHART_PRESETS } from '@/engines/chart-animator/presets';
+import ExportModal from '@/components/common/ExportModal';
 
 const getPresetBySlug = (slug: string) => {
   const preset = CHART_PRESETS[slug];
   if (preset) return preset;
-  
+
   // Default fallback if slug not found
   return {
     title: 'Custom Chart Data',
@@ -21,18 +21,18 @@ const getPresetBySlug = (slug: string) => {
   };
 };
 
-const ToggleSwitch = (props: { 
-  label: string; 
-  checked: boolean; 
-  onChange: (checked: boolean) => void; 
+const ToggleSwitch = (props: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
 }) => {
   return (
     <label class="flex items-center justify-between px-3 py-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.03] border border-border-color hover:border-brand-500/20 transition-all duration-300 cursor-pointer select-none">
       <span class="text-[10px] font-extrabold uppercase tracking-wide text-text-muted mr-2">{props.label}</span>
       <div class="relative inline-block w-8 h-5 transition duration-200 ease-in-out flex-shrink-0">
-        <input 
-          type="checkbox" 
-          checked={props.checked} 
+        <input
+          type="checkbox"
+          checked={props.checked}
           onChange={(e) => props.onChange(e.currentTarget.checked)}
           class="opacity-0 w-0 h-0 peer"
         />
@@ -63,9 +63,8 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   const [transitionUrl, setTransitionUrl] = createSignal('/editor/chart-animator');
   const [portalTarget, setPortalTarget] = createSignal<HTMLElement | undefined>(undefined);
 
-  // Export State
+  // Export State Toggle
   const [isExporting, setIsExporting] = createSignal(false);
-  const [exportRes, setExportRes] = createSignal<'720' | '1080' | '1440' | '2160'>('1080');
 
   // Playback Control State
   const [isPlaying, setIsPlaying] = createSignal(false);
@@ -76,10 +75,6 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
   // Canvas aspect ratio state
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5'>('16:9');
-
-  // Support banner switching state
-  const [supportMessageIdx, setSupportMessageIdx] = createSignal(0);
-  let supportIntervalId: any = null;
 
   const handlePlayPause = () => {
     if (!engine) return;
@@ -94,69 +89,12 @@ export default function ChartPresetTemplate(props: { slug: string }) {
       engine.play();
       setIsPlaying(true);
       if (playTimeoutId) clearTimeout(playTimeoutId);
-      
+
       const durationMs = (chartStore.options.duration || 5) * 1000;
       playTimeoutId = setTimeout(() => {
         setIsPlaying(false);
         playTimeoutId = null;
       }, durationMs);
-    }
-  };
-  const [exportFormat, setExportFormat] = createSignal<'webm' | 'mp4' | 'mov' | 'zip'>('webm');
-  const [exportFps, setExportFps] = createSignal<number>(60);
-  const [exportProgress, setExportProgress] = createSignal(0);
-  const [exportStatus, setExportStatus] = createSignal('');
-  const [exportActive, setExportActive] = createSignal(false);
-  const [exportPaused, setExportPaused] = createSignal(false);
-  const [exportCancelled, setExportCancelled] = createSignal(false);
-
-  const startExport = async () => {
-    setExportActive(true);
-    setExportPaused(false);
-    setExportCancelled(false);
-    setExportProgress(0);
-    setExportStatus('Starting...');
-
-    try {
-      const config: ExportConfig = {
-        format: exportFormat(),
-        resolution: exportRes(),
-        fps: exportFps()
-      };
-      
-      const controller = {
-        isPaused: () => exportPaused(),
-        isCancelled: () => exportCancelled()
-      };
-      
-      const snapshot = JSON.parse(JSON.stringify(chartStore));
-
-      const result = await exportProject(
-        config, 
-        snapshot, 
-        (p, s) => { setExportProgress(p); setExportStatus(s); }, 
-        controller
-      );
-
-      // Trigger download
-      let ext = exportFormat() === 'zip' ? 'zip' : exportFormat();
-      let mime = exportFormat() === 'zip' ? 'application/zip' : `video/${ext}`;
-      
-      const blob = new Blob([result], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${chartStore.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_export.${ext}`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      setIsExporting(false);
-    } catch (e: any) {
-      if (e.message !== 'Export Cancelled') {
-        alert("Export Error: " + e.message);
-      }
-    } finally {
-      setExportActive(false);
     }
   };
 
@@ -187,33 +125,6 @@ export default function ChartPresetTemplate(props: { slug: string }) {
       }
     };
     findTarget();
-
-    supportIntervalId = setInterval(() => {
-      setSupportMessageIdx((prev) => (prev + 1) % 3);
-    }, 4500);
-
-    // 3. Inject Google AdSense script once
-    const ADSENSE_ID = 'google-adsense-script';
-    if (!document.getElementById(ADSENSE_ID)) {
-      const script = document.createElement('script');
-      script.id = ADSENSE_ID;
-      script.async = true;
-      script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7993314093599705';
-      script.crossOrigin = 'anonymous';
-      document.head.appendChild(script);
-    }
-  });
-
-  // Push AdSense ad reactively when export starts (Kenichi pattern)
-  createEffect(() => {
-    if (exportActive()) {
-      setTimeout(() => {
-        try {
-          (window as any).adsbygoogle = (window as any).adsbygoogle || [];
-          (window as any).adsbygoogle.push({});
-        } catch (_) {}
-      }, 400);
-    }
   });
 
   onCleanup(() => {
@@ -221,9 +132,6 @@ export default function ChartPresetTemplate(props: { slug: string }) {
     if (engine) engine.pause();
     if (playTimeoutId) {
       clearTimeout(playTimeoutId);
-    }
-    if (supportIntervalId) {
-      clearInterval(supportIntervalId);
     }
   });
 
@@ -266,12 +174,12 @@ export default function ChartPresetTemplate(props: { slug: string }) {
       // Feed engine
       const snapshot = JSON.parse(JSON.stringify(chartStore));
       engine.updateState(snapshot);
-      
+
       // Every time the user changes a setting, immediately update the "Advanced Editor" URL link!
       // This is the core magic of the URL State Persistence.
       const encoded = serializeChartState();
       setTransitionUrl(`/canvas.labs/editor/chart-animator?config=${encoded}`);
-      
+
       // (Optional) sync to the DOM button if rendered outside SolidJS (Astro island bridging)
       const astroBtn = document.getElementById('btn-open-advanced');
       if (astroBtn) {
@@ -284,48 +192,32 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
   return (
     <div class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10 space-y-6 flex flex-col overflow-y-auto custom-scrollbar">
-      
+
       {/* Portal buttons to template-header-controls in Header */}
       <Show when={portalTarget()}>
         <Portal mount={portalTarget()}>
           <div class="flex items-center gap-1.5 sm:gap-2">
-            {/* Play/Pause Button for Small Screens */}
-            <button 
-              onClick={handlePlayPause}
-              class="group flex md:hidden items-center justify-center gap-2 w-9 h-9 text-xs font-semibold text-text-main bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border-color rounded-xl hover:border-brand-500 transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98] shadow-sm flex-shrink-0"
-              title={isPlaying() ? "Pause Preview" : "Play Preview"}
-            >
-              <Show when={isPlaying()} fallback={
-                <svg class="w-4 h-4 text-text-muted group-hover:text-brand-500 transition-colors flex-shrink-0 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-              }>
-                <svg class="w-4 h-4 text-brand-500 transition-colors flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="6" y="4" width="4" height="16" rx="1"/>
-                  <rect x="14" y="4" width="4" height="16" rx="1"/>
-                </svg>
-              </Show>
-            </button>
-
-            <a 
+            <a
               href={transitionUrl()}
               class="group flex items-center justify-center gap-2 w-9 h-9 md:w-auto md:h-9 text-xs md:text-sm font-semibold text-text-main bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 px-0 md:px-3.5 border border-border-color rounded-xl hover:border-brand-500 transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98] shadow-sm"
               title="Open in Full Editor"
             >
-              <svg class="w-4 h-4 text-text-muted group-hover:text-brand-500 group-hover:rotate-6 transition-all duration-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><rect width="14" height="14" x="5" y="5" rx="1" ry="1"/>
-              </svg> 
+              {/* Premium Editor Edit Icon with drawing micro-animation */}
+              <svg class="w-4 h-4 text-text-muted group-hover:text-brand-500 transition-colors duration-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path class="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300 origin-bottom-left" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
               <span class="hidden md:inline">Open in Full Editor</span>
             </a>
-            
-            <button 
+
+            <button
               onClick={() => setIsExporting(true)}
               class="group flex items-center justify-center gap-2 w-9 h-9 md:w-auto md:h-9 text-xs md:text-sm font-semibold bg-brand-500 hover:bg-brand-600 px-0 md:px-3.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] flex-shrink-0"
               style={{ color: isDarkTheme() ? '#09090b' : '#ffffff' }}
               title="Export Video"
             >
               <svg class="w-4 h-4 fill-current group-hover:translate-y-0.5 transition-transform duration-300 flex-shrink-0" viewBox="0 0 24 24">
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
               </svg>
               <span class="hidden md:inline">Export Video</span>
             </button>
@@ -334,31 +226,30 @@ export default function ChartPresetTemplate(props: { slug: string }) {
       </Show>
 
       {/* Breadcrumb Back Button */}
-      <a 
-        href="/canvas.labs"
+      <a
+        href={`${import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL}/?category=charts`}
         class="hidden lg:flex items-center gap-2 text-sm font-semibold text-text-muted hover:text-text-main transition-colors w-fit group cursor-pointer"
       >
         <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+          <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
         </svg>
         Back to Charts
       </a>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        
+
         {/* Left panel: Preview Canvas Frame */}
         <div class="lg:col-span-2 flex flex-col gap-4">
-          <div 
-            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative transition-all duration-300 ${
-              aspectRatio() === '9:16' ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
-              aspectRatio() === '1:1' ? 'aspect-square h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
-              aspectRatio() === '4:5' ? 'aspect-[4/5] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
-              'aspect-video w-full'
-            }`}
+          <div
+            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative transition-all duration-300 ${aspectRatio() === '9:16' ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
+                aspectRatio() === '1:1' ? 'aspect-square h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
+                  aspectRatio() === '4:5' ? 'aspect-[4/5] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
+                    'aspect-video w-full'
+              }`}
             style={{ "background-color": chartStore.options.bgColor }}
           >
-            <canvas 
-              ref={canvasRef} 
+            <canvas
+              ref={canvasRef}
               class="w-full h-full object-contain"
             ></canvas>
           </div>
@@ -366,18 +257,18 @@ export default function ChartPresetTemplate(props: { slug: string }) {
           {/* Playback Controls */}
           <div class="flex items-center justify-between text-sm text-text-muted px-2">
             <div class="flex items-center gap-4">
-              <button 
+              <button
                 onClick={handlePlayPause}
                 class="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-text-main transition-colors cursor-pointer"
               >
                 <Show when={isPlaying()} fallback={
                   <svg class="w-4 h-4 fill-current ml-0.5 text-text-muted hover:text-brand-500 transition-colors" viewBox="0 0 24 24" fill="currentColor">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
+                    <polygon points="5 3 19 12 5 21 5 3" />
                   </svg>
                 }>
                   <svg class="w-4 h-4 fill-current text-brand-500" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="4" width="4" height="16" rx="1"/>
-                    <rect x="14" y="4" width="4" height="16" rx="1"/>
+                    <rect x="6" y="4" width="4" height="16" rx="1" />
+                    <rect x="14" y="4" width="4" height="16" rx="1" />
                   </svg>
                 </Show>
               </button>
@@ -396,7 +287,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
         {/* Right panel: Adjustments Controls */}
         <div class="flex flex-col gap-6 bg-card-bg border border-border-color p-6 rounded-2xl shadow-sm">
-          
+
           <div class="hidden lg:block">
             <span class="text-[10px] font-extrabold uppercase tracking-widest text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20">
               Chart Animator
@@ -410,22 +301,22 @@ export default function ChartPresetTemplate(props: { slug: string }) {
           </div>
 
           <div class="hidden lg:flex flex-col gap-2.5">
-            <a 
+            <a
               href={transitionUrl()}
               class="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-100 font-bold py-3.5 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer text-sm"
             >
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><rect width="14" height="14" x="5" y="5" rx="1" ry="1"/>
-              </svg> 
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><rect width="14" height="14" x="5" y="5" rx="1" ry="1" />
+              </svg>
               Open in Full Editor
             </a>
-            
-            <button 
+
+            <button
               onClick={() => setIsExporting(true)}
               class="w-full border-2 border-brand-500 text-brand-500 hover:bg-brand-500 hover:text-white dark:hover:text-black font-bold py-3 px-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer text-sm"
             >
               <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
               </svg>
               Export Video
             </button>
@@ -434,40 +325,37 @@ export default function ChartPresetTemplate(props: { slug: string }) {
           <div class="lg:border-t border-border-color/50 lg:pt-5 space-y-4">
             <h3 class="hidden lg:flex font-bold text-xs text-text-main uppercase tracking-widest items-center gap-2">
               <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="14" y2="14"/><line x1="4" x2="20" y1="7" y2="7"/>
-              </svg> 
+                <line x1="4" x2="20" y1="21" y2="21" /><line x1="4" x2="20" y1="14" y2="14" /><line x1="4" x2="20" y1="7" y2="7" />
+              </svg>
               Quick Adjustments
             </h3>
 
             {/* Tab Switcher - only visible on small screens (< lg) with horizontal scrolling */}
             <div class="flex border-b border-border-color/30 lg:hidden mb-4 overflow-x-auto whitespace-nowrap gap-4 scrollbar-none pb-1">
-              <button 
+              <button
                 onClick={() => setActiveTab('general')}
-                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${
-                  activeTab() === 'general' 
-                    ? 'border-brand-500 text-brand-500' 
+                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${activeTab() === 'general'
+                    ? 'border-brand-500 text-brand-500'
                     : 'border-transparent text-text-muted hover:text-text-main'
-                }`}
+                  }`}
               >
                 Settings
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('visibility')}
-                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${
-                  activeTab() === 'visibility' 
-                    ? 'border-brand-500 text-brand-500' 
+                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${activeTab() === 'visibility'
+                    ? 'border-brand-500 text-brand-500'
                     : 'border-transparent text-text-muted hover:text-text-main'
-                }`}
+                  }`}
               >
                 Visibility
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('ratio')}
-                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${
-                  activeTab() === 'ratio' 
-                    ? 'border-brand-500 text-brand-500' 
+                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${activeTab() === 'ratio'
+                    ? 'border-brand-500 text-brand-500'
                     : 'border-transparent text-text-muted hover:text-text-main'
-                }`}
+                  }`}
               >
                 Canvas Ratio
               </button>
@@ -476,20 +364,20 @@ export default function ChartPresetTemplate(props: { slug: string }) {
             <div class={`space-y-3.5 lg:block ${activeTab() === 'general' ? 'block' : 'hidden'}`}>
               <div>
                 <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-1.5">Chart Title</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={chartStore.title}
                   onInput={(e) => setChartStore('title', e.currentTarget.value)}
                   class="w-full bg-black/5 dark:bg-white/5 border border-border-color rounded-xl px-3.5 py-2 text-sm font-semibold text-text-main focus:bg-card-bg focus:border-brand-500 focus:outline-none transition-all"
                 />
               </div>
-              
+
               <div class="grid grid-cols-2 gap-3.5">
                 <div>
                   <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-1.5">Background</label>
                   <div class="flex items-center gap-2.5 bg-black/5 dark:bg-white/5 border border-border-color px-2.5 py-1.5 rounded-xl">
-                    <input 
-                      type="color" 
+                    <input
+                      type="color"
                       value={chartStore.options.bgColor}
                       onInput={(e) => updateChartOptions({ bgColor: e.currentTarget.value })}
                       class="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border border-border-color"
@@ -501,8 +389,8 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                 <div>
                   <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-1.5">Duration (s)</label>
                   <div class="flex items-center gap-2.5 bg-black/5 dark:bg-white/5 border border-border-color px-2.5 py-1.5 rounded-xl h-11">
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       min="1" max="15" step="0.5"
                       value={chartStore.options.duration}
                       onInput={(e) => updateChartOptions({ duration: parseFloat(e.currentTarget.value) })}
@@ -517,44 +405,44 @@ export default function ChartPresetTemplate(props: { slug: string }) {
             <div class={`lg:border-t border-border-color/50 lg:pt-4 space-y-2.5 lg:block ${activeTab() === 'visibility' ? 'block' : 'hidden'}`}>
               <label class="hidden lg:block text-[10px] font-extrabold text-text-muted uppercase tracking-wider">Visibility Toggles</label>
               <div class="grid grid-cols-2 gap-2.5">
-                <ToggleSwitch 
-                  label="Title" 
-                  checked={chartStore.options.showTitle} 
+                <ToggleSwitch
+                  label="Title"
+                  checked={chartStore.options.showTitle}
                   onChange={(val) => updateChartOptions({ showTitle: val })}
                 />
-                <ToggleSwitch 
-                  label="Subtitle" 
-                  checked={chartStore.options.showSubtitle} 
+                <ToggleSwitch
+                  label="Subtitle"
+                  checked={chartStore.options.showSubtitle}
                   onChange={(val) => updateChartOptions({ showSubtitle: val })}
                 />
-                <ToggleSwitch 
-                  label="Source" 
-                  checked={chartStore.options.showSource} 
+                <ToggleSwitch
+                  label="Source"
+                  checked={chartStore.options.showSource}
                   onChange={(val) => updateChartOptions({ showSource: val })}
                 />
-                <ToggleSwitch 
-                  label="Legends" 
-                  checked={chartStore.options.showLegend} 
+                <ToggleSwitch
+                  label="Legends"
+                  checked={chartStore.options.showLegend}
                   onChange={(val) => updateChartOptions({ showLegend: val })}
                 />
-                <ToggleSwitch 
-                  label="X-Axis" 
-                  checked={chartStore.options.showXAxis} 
+                <ToggleSwitch
+                  label="X-Axis"
+                  checked={chartStore.options.showXAxis}
                   onChange={(val) => updateChartOptions({ showXAxis: val })}
                 />
-                <ToggleSwitch 
-                  label="Y-Axis" 
-                  checked={chartStore.options.showYAxis} 
+                <ToggleSwitch
+                  label="Y-Axis"
+                  checked={chartStore.options.showYAxis}
                   onChange={(val) => updateChartOptions({ showYAxis: val })}
                 />
-                <ToggleSwitch 
-                  label="Grid Lines" 
-                  checked={chartStore.options.showGrid} 
+                <ToggleSwitch
+                  label="Grid Lines"
+                  checked={chartStore.options.showGrid}
                   onChange={(val) => updateChartOptions({ showGrid: val })}
                 />
-                <ToggleSwitch 
-                  label="Values" 
-                  checked={chartStore.options.showValues} 
+                <ToggleSwitch
+                  label="Values"
+                  checked={chartStore.options.showValues}
                   onChange={(val) => updateChartOptions({ showValues: val })}
                 />
               </div>
@@ -564,15 +452,14 @@ export default function ChartPresetTemplate(props: { slug: string }) {
             <div class={`lg:border-t border-border-color/50 lg:pt-4 space-y-3 lg:block ${activeTab() === 'ratio' ? 'block' : 'hidden'}`}>
               <label class="hidden lg:block text-[10px] font-extrabold text-text-muted uppercase tracking-wider">Canvas Ratio</label>
               <div class="grid grid-cols-2 gap-3">
-                
+
                 {/* 16:9 */}
-                <button 
+                <button
                   onClick={() => setAspectRatio('16:9')}
-                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${
-                    aspectRatio() === '16:9' 
-                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500' 
+                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${aspectRatio() === '16:9'
+                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500'
                       : 'border-border-color bg-black/5 hover:border-brand-500/30 text-text-muted hover:text-text-main'
-                  }`}
+                    }`}
                 >
                   <div class="w-12 h-7 rounded border border-current mb-2 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
                     <span class="text-[8px] font-bold">16:9</span>
@@ -582,13 +469,12 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                 </button>
 
                 {/* 9:16 */}
-                <button 
+                <button
                   onClick={() => setAspectRatio('9:16')}
-                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${
-                    aspectRatio() === '9:16' 
-                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500' 
+                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${aspectRatio() === '9:16'
+                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500'
                       : 'border-border-color bg-black/5 hover:border-brand-500/30 text-text-muted hover:text-text-main'
-                  }`}
+                    }`}
                 >
                   <div class="w-7 h-12 rounded border border-current mb-2 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
                     <span class="text-[8px] font-bold">9:16</span>
@@ -598,13 +484,12 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                 </button>
 
                 {/* 1:1 */}
-                <button 
+                <button
                   onClick={() => setAspectRatio('1:1')}
-                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${
-                    aspectRatio() === '1:1' 
-                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500' 
+                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${aspectRatio() === '1:1'
+                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500'
                       : 'border-border-color bg-black/5 hover:border-brand-500/30 text-text-muted hover:text-text-main'
-                  }`}
+                    }`}
                 >
                   <div class="w-9 h-9 rounded border border-current mb-2 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
                     <span class="text-[8px] font-bold">1:1</span>
@@ -614,13 +499,12 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                 </button>
 
                 {/* 4:5 */}
-                <button 
+                <button
                   onClick={() => setAspectRatio('4:5')}
-                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${
-                    aspectRatio() === '4:5' 
-                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500' 
+                  class={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group ${aspectRatio() === '4:5'
+                      ? 'border-brand-500 bg-brand-500/[0.04] text-brand-500'
                       : 'border-border-color bg-black/5 hover:border-brand-500/30 text-text-muted hover:text-text-main'
-                  }`}
+                    }`}
                 >
                   <div class="w-8 h-10 rounded border border-current mb-2 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
                     <span class="text-[8px] font-bold">4:5</span>
@@ -635,190 +519,15 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
         </div>
 
-      </div>      {/* EXPORT MODAL */}
-      {isExporting() && (
-        <div class="fixed inset-0 z-50 bg-slate-950/60 dark:bg-black/70 flex items-center justify-center p-4 transition-all duration-300 backdrop-blur-sm">
-          <div class={`bg-card-bg border border-border-color shadow-lg p-6 md:p-8 w-full relative flex flex-col md:flex-row gap-6 text-text-main rounded-2xl overflow-hidden transition-all duration-500 ${exportActive() ? 'max-w-4xl' : 'max-w-md md:max-w-2xl'}`}>
-            
-            <style>{`
-              @keyframes slideFadeIn {
-                0% { opacity: 0; transform: translateY(8px) scale(0.98); }
-                100% { opacity: 1; transform: translateY(0) scale(1); }
-              }
-              .animate-slide-fade {
-                animation: slideFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-              }
-            `}</style>
+      </div>
 
-            {!exportActive() && (
-              <button 
-                onClick={() => setIsExporting(false)} 
-                class="absolute top-4 right-4 z-10 text-text-muted hover:text-red-500 transition cursor-pointer p-1.5 rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center"
-                aria-label="Close Export Modal"
-              >
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            )}
-            
-            {/* Left Column: Export Controls & Progress */}
-            <div class="flex-1 flex flex-col gap-5 justify-between">
-              <div class="flex flex-col gap-1">
-                <h3 class="text-lg font-black text-brand-500 uppercase tracking-tight">
-                  {exportActive() ? 'Rendering Animation' : 'Export Animation'}
-                </h3>
-                <p class="text-xs text-text-muted font-medium">
-                  {exportActive() ? exportStatus() : 'Select your rendering options.'}
-                </p>
-              </div>
-              
-              {!exportActive() ? (
-                <div class="flex flex-col gap-4">
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-extrabold text-brand-500 uppercase tracking-wider">Resolution</label>
-                    <select value={exportRes()} onInput={(e) => setExportRes(e.currentTarget.value as any)} class="w-full px-3 py-2 bg-black/5 dark:bg-white/5 border border-border-color text-text-main text-sm font-semibold outline-none focus:border-brand-500 cursor-pointer rounded-xl transition">
-                      <option class="bg-card-bg" value="720">720p (HD)</option>
-                      <option class="bg-card-bg" value="1080">1080p (FHD)</option>
-                      <option class="bg-card-bg" value="1440">1440p (2K)</option>
-                      <option class="bg-card-bg" value="2160">2160p (4K)</option>
-                    </select>
-                  </div>
-
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-extrabold text-brand-500 uppercase tracking-wider">Framerate</label>
-                    <div class="flex gap-2">
-                      {[24, 30, 60].map(fps => (
-                        <button 
-                          onClick={() => setExportFps(fps)} 
-                          class={`flex-1 py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${
-                            exportFps() === fps 
-                              ? 'bg-brand-500/10 border border-brand-500 text-brand-500' 
-                              : 'border border-border-color bg-black/5 dark:bg-white/5 text-text-muted hover:text-text-main hover:border-brand-500/50'
-                          }`}
-                        >
-                          {fps}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-extrabold text-brand-500 uppercase tracking-wider">Format</label>
-                    <div class="grid grid-cols-2 gap-2">
-                      {['webm', 'mp4', 'mov', 'zip'].map(fmt => (
-                        <button 
-                          onClick={() => setExportFormat(fmt as any)} 
-                          class={`py-2 font-bold text-xs uppercase tracking-wider cursor-pointer transition rounded-xl ${
-                            exportFormat() === fmt 
-                              ? 'bg-brand-500/10 border border-brand-500 text-brand-500' 
-                              : 'border border-border-color bg-black/5 dark:bg-white/5 text-text-muted hover:text-text-main hover:border-brand-500/50'
-                          }`}
-                        >
-                          {fmt.toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <button onClick={startExport} class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-extrabold uppercase tracking-wider transition rounded-xl mt-2 cursor-pointer shadow-sm">
-                    Start Render
-                  </button>
-                </div>
-              ) : (
-                <div class="flex flex-col gap-5">
-                  <div class="w-full bg-black/5 dark:bg-white/5 h-3 overflow-hidden border border-border-color relative rounded-full">
-                    <div class="h-full bg-brand-500 transition-all duration-300 ease-out" style={{ width: `${exportProgress()}%` }}></div>
-                  </div>
-                  <div class="flex justify-between items-center text-[10px] font-extrabold uppercase tracking-wider text-text-muted">
-                    <span>Progress</span>
-                    <span>{exportProgress()}%</span>
-                  </div>
-                  
-                  <div class="flex gap-2">
-                    <button onClick={() => setExportPaused(!exportPaused())} class="flex-1 py-2.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-text-main font-bold uppercase tracking-wider transition border border-border-color cursor-pointer rounded-xl">
-                      {exportPaused() ? 'Resume' : 'Pause'}
-                    </button>
-                    <button onClick={() => setExportCancelled(true)} class="flex-1 py-2.5 border border-red-600/30 text-red-500 hover:bg-red-500 hover:text-white font-bold uppercase tracking-wider transition cursor-pointer rounded-xl">
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column: looping slides before export, live ad during export */}
-
-            {/* BEFORE EXPORT: looping support slides */}
-            <Show when={!exportActive()}>
-              <div class="w-full md:w-[280px] md:self-center rounded-xl border border-border-color bg-black/[0.01] dark:bg-white/[0.01] p-5 flex flex-col items-center justify-center text-center overflow-hidden relative" style={{ "min-height": "260px" }}>
-
-                {/* Slide 0 — Give a Star */}
-                <Show when={supportMessageIdx() === 0}>
-                  <div class="animate-slide-fade w-full h-full flex flex-col items-center justify-center gap-3">
-                    <div class="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-xl">⭐</div>
-                    <div class="space-y-1">
-                      <h4 class="text-sm font-extrabold uppercase tracking-wider text-yellow-600 dark:text-yellow-500">Give a Star</h4>
-                      <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">Support us on GitHub!</p>
-                    </div>
-                    <a href="https://github.com/simplearyan/canvas.labs" target="_blank" rel="noopener noreferrer"
-                      class="mt-2 text-xs font-semibold text-brand-500 hover:text-brand-600 hover:underline flex items-center gap-1.5">
-                      🔗 github.com/simplearyan/canvas.labs
-                    </a>
-                  </div>
-                </Show>
-
-                {/* Slide 1 — Ko-fi */}
-                <Show when={supportMessageIdx() === 1}>
-                  <div class="animate-slide-fade w-full h-full flex flex-col items-center justify-center gap-3">
-                    <div class="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-xl">☕</div>
-                    <div class="space-y-1">
-                      <h4 class="text-sm font-extrabold uppercase tracking-wider text-orange-500">Buy Me a Coffee</h4>
-                      <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">We build open-source tools!</p>
-                    </div>
-                    <a href="https://ko-fi.com/simplearyan" target="_blank" rel="noopener noreferrer"
-                      class="mt-2 text-xs font-semibold text-orange-500 hover:text-orange-400 hover:underline flex items-center gap-1.5">
-                      ☕ ko-fi.com/simplearyan
-                    </a>
-                  </div>
-                </Show>
-
-                {/* Slide 2 — Ad placeholder (no real ad injected here) */}
-                <Show when={supportMessageIdx() === 2}>
-                  <div class="animate-slide-fade w-full h-full flex flex-col items-center justify-center gap-3">
-                    <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-xl">📢</div>
-                    <div class="space-y-1">
-                      <h4 class="text-sm font-extrabold uppercase tracking-wider text-brand-500">Ad-Free Export?</h4>
-                      <p class="text-xs text-text-muted leading-relaxed font-semibold max-w-[200px]">Start rendering — a short ad helps keep Canvas Labs free.</p>
-                    </div>
-                  </div>
-                </Show>
-
-              </div>
-            </Show>
-
-            {/* DURING EXPORT: live Google AdSense ad only */}
-            <Show when={exportActive()}>
-              <div class="flex-1 flex flex-col bg-black/[0.02] dark:bg-white/[0.01] rounded-xl border border-border-color overflow-hidden items-center justify-center p-6 gap-3 animate-slide-fade md:self-stretch">
-                <p class="text-[9px] text-text-muted uppercase tracking-[0.4em] font-black opacity-40">Featured Advertisement</p>
-                <div class="w-full flex items-center justify-center bg-black/[0.03] dark:bg-black/40 rounded-2xl p-4 border border-border-color/30">
-                  <ins
-                    class="adsbygoogle"
-                    style={{ display: 'block', width: '100%', 'min-width': '250px', 'max-width': '728px', height: 'auto', 'min-height': '250px' }}
-                    data-ad-client="ca-pub-7993314093599705"
-                    data-ad-slot="9342323532"
-                    data-ad-format="auto"
-                    data-full-width-responsive="true"
-                  ></ins>
-                </div>
-                <p class="text-[9px] text-text-muted italic tracking-wide font-medium">Supporting Canvas Labs</p>
-              </div>
-            </Show>
-
-          </div>
-        </div>
-      )}
+      {/* Unified Reusable Export Modal */}
+      <ExportModal
+        isOpen={isExporting()}
+        onClose={() => setIsExporting(false)}
+        chartStore={chartStore}
+        aspectRatio={aspectRatio()}
+      />
     </div>
   );
 }
