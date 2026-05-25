@@ -279,23 +279,40 @@ export default function ChartPresetTemplate(props: { slug: string }) {
               }`}
             style={{ "background-color": chartStore.options.bgColor }}
           >
-            {/* Fullscreen Toggle Button */}
-            <button
-              onClick={toggleFullscreen}
-              class="absolute top-3 right-3 z-30 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 hover:border-white/20 text-white rounded-xl shadow-lg transition-all duration-300 active:scale-[0.98] cursor-pointer group"
-              title={isFullscreen() ? "Exit Fullscreen" : "Fullscreen Mode"}
-              type="button"
-            >
-              <Show when={isFullscreen()} fallback={
-                <svg class="w-4.5 h-4.5 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
-                </svg>
-              }>
-                <svg class="w-4.5 h-4.5 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            {/* Fullscreen Close Button (Only visible in Fullscreen Mode, bottom-right) */}
+            <Show when={isFullscreen()}>
+              <button
+                onClick={toggleFullscreen}
+                class="absolute bottom-6 right-6 z-30 p-3 bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 hover:border-white/20 text-white rounded-full shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer group animate-fade-in"
+                title="Exit Fullscreen"
+                type="button"
+              >
+                <svg class="w-5 h-5 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
                 </svg>
-              </Show>
-            </button>
+              </button>
+            </Show>
+
+            {/* Fullscreen Play/Pause Button (Only visible in Fullscreen Mode, bottom-left) */}
+            <Show when={isFullscreen()}>
+              <button
+                onClick={handlePlayPause}
+                class="absolute bottom-6 left-6 z-30 p-3 bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 hover:border-white/20 text-white rounded-full shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer group animate-fade-in"
+                title={isPlaying() ? "Pause Animation" : "Play Animation"}
+                type="button"
+              >
+                <Show when={isPlaying()} fallback={
+                  <svg class="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                }>
+                  <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <rect x="6" y="4" width="4" height="16" rx="1" />
+                    <rect x="14" y="4" width="4" height="16" rx="1" />
+                  </svg>
+                </Show>
+              </button>
+            </Show>
 
             <canvas
               ref={canvasRef}
@@ -308,7 +325,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
             <div class="flex items-center gap-4">
               <button
                 onClick={handlePlayPause}
-                class="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-text-main transition-colors cursor-pointer"
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-text-main transition-colors cursor-pointer flex-shrink-0"
               >
                 <Show when={isPlaying()} fallback={
                   <svg class="w-4 h-4 fill-current ml-0.5 text-text-muted hover:text-brand-500 transition-colors" viewBox="0 0 24 24" fill="currentColor">
@@ -321,7 +338,20 @@ export default function ChartPresetTemplate(props: { slug: string }) {
                   </svg>
                 </Show>
               </button>
-              <div class="h-1.5 w-32 md:w-64 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+              
+              {/* Fullscreen Mode Button */}
+              <button
+                onClick={toggleFullscreen}
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-text-main transition-colors cursor-pointer group flex-shrink-0"
+                title="Fullscreen Mode"
+                type="button"
+              >
+                <svg class="w-4 h-4 text-text-muted hover:text-brand-500 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+                </svg>
+              </button>
+
+              <div class="h-1.5 w-32 md:w-64 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden flex-shrink-0">
                 <div class="h-full bg-brand-500" style={{ width: "0%" }}></div>
               </div>
               <span class="font-mono text-xs text-brand-500">Preview Mode</span>
