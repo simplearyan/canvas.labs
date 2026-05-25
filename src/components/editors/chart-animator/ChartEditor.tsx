@@ -41,6 +41,12 @@ export default function ChartEditor() {
   const [snapshotTransparent, setSnapshotTransparent] = createSignal(false);
   const [isExportingSnapshot, setIsExportingSnapshot] = createSignal(false);
 
+  // Fullscreen & Playback State
+  const [isFullscreen, setIsFullscreen] = createSignal(false);
+  const [isPlaying, setIsPlaying] = createSignal(false);
+  let canvasContainerRef!: HTMLDivElement;
+  let playTimeoutId: any = null;
+
   const exportSnapshotFrame = async () => {
     try {
       const targetH = parseInt(snapshotRes());
@@ -108,11 +114,16 @@ export default function ChartEditor() {
     handleResize();
     setTimeout(handleResize, 100);
     window.addEventListener('resize', handleResize);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
   });
 
   onCleanup(() => {
     window.removeEventListener('resize', handleResize);
+    document.removeEventListener('fullscreenchange', handleFullscreenChange);
     if (engine) engine.pause();
+    if (playTimeoutId) {
+      clearTimeout(playTimeoutId);
+    }
   });
 
   const handleResize = () => {
@@ -121,8 +132,9 @@ export default function ChartEditor() {
     if (wrapper) {
       const container = wrapper.parentElement;
       if (container) {
-        const maxW = container.clientWidth - 64;
-        const maxH = container.clientHeight - 64;
+        const isFS = document.fullscreenElement === wrapper;
+        const maxW = isFS ? window.innerWidth - 96 : container.clientWidth - 64;
+        const maxH = isFS ? window.innerHeight - 160 : container.clientHeight - 64;
 
         let w = maxW;
         let h = maxH;
@@ -220,7 +232,51 @@ export default function ChartEditor() {
     localStorage.setItem('chart_custom_presets', JSON.stringify(newPresets));
   };
 
-  const handlePlay = () => engine.play();
+  const handlePlayPause = () => {
+    if (!engine) return;
+    if (isPlaying()) {
+      engine.pause();
+      setIsPlaying(false);
+      if (playTimeoutId) {
+        clearTimeout(playTimeoutId);
+        playTimeoutId = null;
+      }
+    } else {
+      engine.play();
+      setIsPlaying(true);
+      if (playTimeoutId) clearTimeout(playTimeoutId);
+
+      const durationMs = (chartStore.options.duration || 5) * 1000;
+      playTimeoutId = setTimeout(() => {
+        setIsPlaying(false);
+        playTimeoutId = null;
+      }, durationMs);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!canvasContainerRef) return;
+    if (!document.fullscreenElement) {
+      canvasContainerRef.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch(err => {
+        console.error("Failed to enter fullscreen:", err);
+      });
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  const handleFullscreenChange = () => {
+    const active = document.fullscreenElement === canvasContainerRef;
+    setIsFullscreen(active);
+    setTimeout(() => {
+      handleResize();
+    }, 100);
+  };
+
+  const handlePlay = () => handlePlayPause();
   return (
     <div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative text-slate-800 dark:text-text-main blueprint-grid-bg font-editor">
 
@@ -579,7 +635,47 @@ export default function ChartEditor() {
 
       {/* CANVAS AREA (Right / Top on Mobile) */}
       <section class="flex-1 h-[55vh] md:h-full order-first md:order-last relative overflow-hidden flex items-center justify-center p-4 sm:p-12">
-        <div class="relative p-2 bg-white dark:bg-zinc-900 border-2 border-blueprint-900 dark:border-zinc-800 blueprint-shadow">
+        <div
+          ref={canvasContainerRef}
+          class={`relative p-2 bg-white dark:bg-zinc-900 border-2 border-blueprint-900 dark:border-zinc-800 blueprint-shadow transition-all duration-300 ${
+            isFullscreen() ? 'fullscreen:w-screen fullscreen:h-screen fullscreen:flex fullscreen:items-center fullscreen:justify-center fullscreen:bg-zinc-950 fullscreen:border-none fullscreen:p-0' : ''
+          }`}
+        >
+          {/* Fullscreen Close Button (Only visible in Fullscreen Mode, bottom-right) */}
+          <Show when={isFullscreen()}>
+            <button
+              onClick={toggleFullscreen}
+              class="absolute bottom-6 right-6 z-30 p-3 bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 hover:border-white/20 text-white rounded-full shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer group animate-fade-in"
+              title="Exit Fullscreen"
+              type="button"
+            >
+              <svg class="w-5 h-5 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
+              </svg>
+            </button>
+          </Show>
+
+          {/* Fullscreen Play/Pause Button (Only visible in Fullscreen Mode, bottom-left) */}
+          <Show when={isFullscreen()}>
+            <button
+              onClick={handlePlayPause}
+              class="absolute bottom-6 left-6 z-30 p-3 bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 hover:border-white/20 text-white rounded-full shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer group animate-fade-in"
+              title={isPlaying() ? "Pause Animation" : "Play Animation"}
+              type="button"
+            >
+              <Show when={isPlaying()} fallback={
+                <svg class="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+              }>
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <rect x="6" y="4" width="4" height="16" rx="1" />
+                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+              </Show>
+            </button>
+          </Show>
+
           <canvas ref={canvasRef} class="block bg-white dark:bg-black object-contain"></canvas>
         </div>
       </section>
@@ -685,12 +781,37 @@ export default function ChartEditor() {
 
           {/* Preview/Play Button */}
           <button
-            onClick={handlePlay}
+            onClick={handlePlayPause}
             class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
-            title="Play Animation Preview"
+            title={isPlaying() ? "Pause Animation Preview" : "Play Animation Preview"}
           >
-            <Icon name="play" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
-            <span class="hidden sm:inline">Preview</span>
+            <Show when={isPlaying()} fallback={
+              <Icon name="play" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
+            }>
+              <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-500 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16" rx="1" />
+                <rect x="14" y="4" width="4" height="16" rx="1" />
+              </svg>
+            </Show>
+            <span class="hidden sm:inline">{isPlaying() ? 'Pause' : 'Preview'}</span>
+          </button>
+
+          {/* Fullscreen Trigger Button */}
+          <button
+            onClick={toggleFullscreen}
+            class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm shrink-0"
+            title="Toggle Fullscreen"
+            type="button"
+          >
+            <Show when={isFullscreen()} fallback={
+              <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            }>
+              <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
+              </svg>
+            </Show>
           </button>
 
           {/* Export Video Button */}
