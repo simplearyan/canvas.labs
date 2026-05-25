@@ -15,7 +15,7 @@ export default function ChartEditor() {
   const [isLoaded, setIsLoaded] = createSignal(false);
   const [activeTab, setActiveTab] = createSignal<'grid' | 'csv'>('csv');
   const [isExporting, setIsExporting] = createSignal(false);
-  const [customPresets, setCustomPresets] = createSignal<Array<{name: string, data: any}>>([]);
+  const [customPresets, setCustomPresets] = createSignal<Array<{ name: string, data: any }>>([]);
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1'>('16:9');
   const [editorTab, setEditorTab] = createSignal<'presets' | 'metadata' | 'data' | 'style'>('presets');
 
@@ -47,7 +47,7 @@ export default function ChartEditor() {
       const snapEngine = new ChartEngine(offscreen);
       snapEngine.isTransparent = snapshotTransparent();
       snapEngine.setDimensions(targetW, targetH, 1);
-      
+
       const snapshot = JSON.parse(JSON.stringify(chartStore));
       snapEngine.updateState(snapshot);
       snapEngine.seek(1.0);
@@ -106,15 +106,15 @@ export default function ChartEditor() {
       if (container) {
         const maxW = container.clientWidth - 64;
         const maxH = container.clientHeight - 64;
-        
+
         let w = maxW;
         let h = maxH;
-        
+
         const aspect = aspectRatio();
         let targetRatio = 16 / 9;
         let nativeW = 1920;
         let nativeH = 1080;
-        
+
         if (aspect === '9:16') {
           targetRatio = 9 / 16;
           nativeW = 1080;
@@ -140,7 +140,7 @@ export default function ChartEditor() {
           nativeW = 2160;
           nativeH = 1080;
         }
-        
+
         if (maxW / maxH > targetRatio) {
           h = maxH;
           w = h * targetRatio;
@@ -148,7 +148,7 @@ export default function ChartEditor() {
           w = maxW;
           h = w / targetRatio;
         }
-        
+
         engine.setDimensions(nativeW, nativeH, window.devicePixelRatio || 1);
         canvasRef.style.width = `${w}px`;
         canvasRef.style.height = `${h}px`;
@@ -185,7 +185,7 @@ export default function ChartEditor() {
   const handleSaveCustomPreset = () => {
     const name = prompt("Enter a name for your custom preset:", `My Preset ${customPresets().length + 1}`);
     if (!name) return;
-    
+
     const currentConfig = JSON.parse(JSON.stringify(chartStore));
     const newPresets = [...customPresets(), { name, data: currentConfig }];
     setCustomPresets(newPresets);
@@ -206,33 +206,33 @@ export default function ChartEditor() {
   const handlePlay = () => engine.play();
   return (
     <div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative text-slate-800 dark:text-text-main blueprint-grid-bg font-editor">
-      
+
       {/* TOOLBAR / SIDEBAR (Left Panel) */}
       <aside class="w-full md:w-[420px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 p-4 md:p-5 flex flex-col gap-4 md:gap-6 overflow-y-auto z-10 shrink-0 custom-scrollbar shadow-xl">
-        
+
         <div class="text-[10px] font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-widest bg-blueprint-100 dark:bg-brand-500/10 px-2 py-1 inline-block w-max mb-[-12px]">Tool Properties</div>
 
         {/* Mobile View Category Tabs */}
         <div class="flex md:hidden items-center bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 p-1 shrink-0 gap-1 rounded-lg">
-          <button 
+          <button
             onClick={() => setEditorTab('presets')}
             class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'presets' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
           >
             Presets
           </button>
-          <button 
+          <button
             onClick={() => setEditorTab('metadata')}
             class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'metadata' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
           >
             Metadata
           </button>
-          <button 
+          <button
             onClick={() => setEditorTab('data')}
             class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'data' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
           >
             Data
           </button>
-          <button 
+          <button
             onClick={() => setEditorTab('style')}
             class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'style' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
           >
@@ -247,7 +247,7 @@ export default function ChartEditor() {
             <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Preset Templates</h2>
             <div class="grid grid-cols-2 gap-2">
               {Object.entries(CHART_PRESETS).map(([key, preset]) => (
-                <button 
+                <button
                   onClick={() => handleLoadPreset(preset)}
                   class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-200 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer"
                 >
@@ -262,7 +262,7 @@ export default function ChartEditor() {
           <div class="flex flex-col gap-3 shrink-0">
             <div class="flex items-center justify-between">
               <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Custom Presets</h2>
-              <button 
+              <button
                 onClick={handleSaveCustomPreset}
                 class="px-2 py-1 bg-blueprint-900 dark:bg-brand-500 text-white font-bold text-[9px] uppercase tracking-widest shadow-sm hover:scale-105 transition cursor-pointer"
               >
@@ -276,13 +276,13 @@ export default function ChartEditor() {
             ) : (
               <div class="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto custom-scrollbar">
                 {customPresets().map((preset, idx) => (
-                  <div 
+                  <div
                     onClick={() => handleLoadCustomPreset(preset.data)}
                     class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-200 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer justify-between"
                   >
                     <span class="truncate pr-4">{preset.name}</span>
                     <span class="text-[8px] uppercase tracking-wider text-slate-400 dark:text-text-muted font-normal">{preset.data.type}</span>
-                    <button 
+                    <button
                       onClick={(e) => handleDeleteCustomPreset(e, idx)}
                       class="absolute top-1 right-1 text-slate-400 hover:text-brand-red opacity-0 group-hover:opacity-100 transition p-0.5"
                       title="Delete Preset"
@@ -301,7 +301,7 @@ export default function ChartEditor() {
         {/* Content Editor */}
         <div class={editorTab() === 'metadata' ? 'flex flex-col gap-3 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-3 md:shrink-0'}>
           <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Chart Metadata</h2>
-          
+
           <div class="flex items-center gap-3">
             <input type="checkbox" checked={chartStore.options.showTitle} onInput={(e) => updateChartOptions({ showTitle: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 cursor-pointer" title="Toggle Title" />
             <input type="text" value={chartStore.title} onInput={(e) => updateChartMetadata({ title: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-sm text-slate-900 dark:text-text-main font-semibold outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all placeholder:font-normal" placeholder="Chart Title" />
@@ -331,10 +331,10 @@ export default function ChartEditor() {
           {activeTab() === 'csv' && (
             <div class="flex flex-col gap-2 flex-1">
               <p class="text-[10px] text-slate-500 dark:text-text-muted font-medium">Format: Label, Series1, Series2..., #Color (optional).</p>
-              <textarea 
+              <textarea
                 value={chartStore.rawData}
                 onInput={(e) => updateChartMetadata({ rawData: e.currentTarget.value })}
-                class="w-full h-48 flex-1 p-3 border-2 border-blueprint-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 text-[12px] text-slate-800 dark:text-text-main font-mono outline-none focus:border-blueprint-900 dark:focus:border-brand-500 resize-none whitespace-pre transition-colors leading-relaxed" 
+                class="w-full h-48 flex-1 p-3 border-2 border-blueprint-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 text-[12px] text-slate-800 dark:text-text-main font-mono outline-none focus:border-blueprint-900 dark:focus:border-brand-500 resize-none whitespace-pre transition-colors leading-relaxed"
                 spellcheck="false"
               ></textarea>
             </div>
@@ -352,7 +352,7 @@ export default function ChartEditor() {
         {/* Appearance Settings */}
         <div class={editorTab() === 'style' ? 'flex flex-col gap-5 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-5 md:shrink-0'}>
           <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Layout & Style</h2>
-          
+
           {/* Toggles */}
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-2 mt-1 mb-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-100 dark:border-zinc-800 p-3">
             <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={chartStore.options.showGrid} onInput={(e) => updateChartOptions({ showGrid: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 border-blueprint-300 dark:border-zinc-850" /><span class="text-[11px] font-bold text-slate-700 dark:text-text-main uppercase tracking-wider">Grid</span></label>
@@ -494,23 +494,23 @@ export default function ChartEditor() {
               </div>
             </div>
           </div>
-          
+
         </div>
       </aside>
 
       {/* CANVAS AREA (Right / Top on Mobile) */}
       <section class="flex-1 h-[55vh] md:h-full order-first md:order-last relative overflow-hidden flex items-center justify-center p-4 sm:p-12">
         <div class="relative p-2 bg-white dark:bg-zinc-900 border-2 border-blueprint-900 dark:border-zinc-800 blueprint-shadow">
-           <canvas ref={canvasRef} class="block bg-white dark:bg-black object-contain"></canvas>
+          <canvas ref={canvasRef} class="block bg-white dark:bg-black object-contain"></canvas>
         </div>
       </section>
-      
+
       {/* Unified Reusable Export Modal */}
-      <ExportModal 
-        isOpen={isExporting()} 
-        onClose={() => setIsExporting(false)} 
-        chartStore={chartStore} 
-        aspectRatio={aspectRatio()} 
+      <ExportModal
+        isOpen={isExporting()}
+        onClose={() => setIsExporting(false)}
+        chartStore={chartStore}
+        aspectRatio={aspectRatio()}
       />
 
       {/* SNAPSHOT EXPORT MODAL */}
@@ -518,9 +518,9 @@ export default function ChartEditor() {
         <div class="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 flex items-center justify-center p-4 transition-opacity">
           <div class="bg-white dark:bg-zinc-950 border-2 border-blueprint-900 dark:border-zinc-800 shadow-2xl p-8 max-w-md w-full relative flex flex-col gap-6 text-slate-800 dark:text-text-main">
             <button onClick={() => setIsExportingSnapshot(false)} class="absolute top-4 right-4 text-slate-400 dark:text-text-muted hover:text-red-500 dark:hover:text-red-400 transition cursor-pointer">
-               ✕
+              ✕
             </button>
-            
+
             <div class="flex flex-col gap-1">
               <h3 class="text-xl font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-tighter">
                 Export Frame Snapshot
@@ -529,7 +529,7 @@ export default function ChartEditor() {
                 Save the current frame as a high-resolution PNG image.
               </p>
             </div>
-            
+
             <div class="flex flex-col gap-4">
               <div class="flex flex-col gap-1.5">
                 <label class="text-[10px] font-bold text-blueprint-900 dark:text-brand-500 uppercase tracking-widest">Resolution</label>
@@ -545,14 +545,14 @@ export default function ChartEditor() {
                   <span class="text-xs font-bold text-slate-800 dark:text-text-main uppercase tracking-wider">Transparent Background</span>
                   <span class="text-[9px] text-slate-400 dark:text-text-muted font-medium">PNG alpha layer with no background color fill.</span>
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={snapshotTransparent()} 
+                <input
+                  type="checkbox"
+                  checked={snapshotTransparent()}
                   onChange={(e) => setSnapshotTransparent(e.currentTarget.checked)}
                   class="w-5 h-5 accent-blueprint-900 dark:accent-brand-500 cursor-pointer"
                 />
               </div>
-              
+
               <button onClick={exportSnapshotFrame} class="w-full py-3.5 bg-red-650 hover:bg-red-750 bg-blueprint-900 dark:bg-brand-500 text-white font-black uppercase tracking-widest transition shadow-[4px_4px_0px_rgba(0,51,102,0.1)] mt-2 cursor-pointer">
                 Download PNG Frame
               </button>
@@ -567,9 +567,9 @@ export default function ChartEditor() {
           {/* Aspect Ratio Selector Dropdown */}
           <div class="relative flex items-center bg-slate-100 dark:bg-zinc-900/50 rounded-lg border border-slate-200 dark:border-zinc-800 px-2 sm:px-3 py-1.5 gap-1 sm:gap-1.5 shadow-sm">
             <span class="hidden md:inline text-[9px] font-black text-slate-400 dark:text-text-muted uppercase tracking-wider select-none">Aspect:</span>
-            <select 
-              value={aspectRatio()} 
-              onInput={(e) => setAspectRatio(e.currentTarget.value as any)} 
+            <select
+              value={aspectRatio()}
+              onInput={(e) => setAspectRatio(e.currentTarget.value as any)}
               class="bg-transparent border-none text-[10px] sm:text-[11px] font-extrabold text-slate-700 dark:text-text-main outline-none cursor-pointer appearance-none pr-4 sm:pr-5 relative"
             >
               <option value="16:9" class="bg-white dark:bg-zinc-950">16:9 (Landscape)</option>
@@ -584,8 +584,8 @@ export default function ChartEditor() {
           </div>
 
           {/* Theme Switcher Button */}
-          <button 
-            onClick={toggleTheme} 
+          <button
+            onClick={toggleTheme}
             class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-slate-500 dark:text-text-muted hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer border border-transparent dark:border-zinc-800/20 shrink-0"
             title="Toggle Light/Dark Theme"
           >
@@ -595,35 +595,35 @@ export default function ChartEditor() {
           </button>
 
           {/* Camera Snapshot Button */}
-          <button 
-            onClick={() => setIsExportingSnapshot(true)} 
+          <button
+            onClick={() => setIsExportingSnapshot(true)}
             class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
             title="Export High-Res PNG Snapshot"
           >
-             <Icon name="download" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
-             <span class="hidden sm:inline">Camera Snapshot</span>
+            <Icon name="download" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
+            <span class="hidden sm:inline">Camera Snapshot</span>
           </button>
 
           {/* Preview/Play Button */}
-          <button 
-            onClick={handlePlay} 
+          <button
+            onClick={handlePlay}
             class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
             title="Play Animation Preview"
           >
-             <Icon name="play" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
-             <span class="hidden sm:inline">Preview</span>
+            <Icon name="play" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
+            <span class="hidden sm:inline">Preview</span>
           </button>
 
           {/* Export Video Button */}
-          <button 
-            onClick={() => setIsExporting(true)} 
+          <button
+            onClick={() => setIsExporting(true)}
             class="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-md bg-blueprint-900 hover:bg-blueprint-800 dark:bg-brand-500 dark:hover:bg-brand-600 font-bold text-[10px] sm:text-xs uppercase tracking-widest transition cursor-pointer shadow-md shrink-0"
             title="Export Video Animation"
             style={{ color: isDarkTheme() ? '#09090b' : '#ffffff' }}
           >
-             <Icon name="film" class={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDarkTheme() ? 'text-zinc-950' : 'text-white'}`} />
-             <span class="hidden sm:inline">Export Video</span>
-             <span class="inline sm:hidden">Export</span>
+            <Icon name="film" class={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDarkTheme() ? 'text-zinc-950' : 'text-white'}`} />
+            <span class="hidden sm:inline">Export Video</span>
+            <span class="inline sm:hidden">Export</span>
           </button>
         </div>
       </Portal>
