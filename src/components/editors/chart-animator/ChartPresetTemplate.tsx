@@ -36,7 +36,7 @@ const ToggleSwitch = (props: {
           onChange={(e) => props.onChange(e.currentTarget.checked)}
           class="opacity-0 w-0 h-0 peer"
         />
-        <span class={`absolute cursor-pointer inset-0 rounded-full transition-all duration-300 ${props.checked ? 'bg-brand-500' : 'bg-black/10 dark:bg-white/10'}`}>
+        <span class={`absolute cursor-pointer inset-0 rounded-full transition-all duration-300 ${props.checked ? 'bg-brand-500' : 'bg-slate-300 dark:bg-zinc-700'}`}>
           <span class={`absolute left-0.5 bottom-0.5 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${props.checked ? 'translate-x-3' : 'translate-x-0'}`}></span>
         </span>
       </div>
@@ -241,7 +241,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
         {/* Left panel: Preview Canvas Frame */}
         <div class="lg:col-span-2 flex flex-col gap-4">
           <div
-            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative transition-all duration-300 ${aspectRatio() === '9:16' ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
+            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative ${aspectRatio() === '9:16' ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
                 aspectRatio() === '1:1' ? 'aspect-square h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
                   aspectRatio() === '4:5' ? 'aspect-[4/5] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
                     'aspect-video w-full'
