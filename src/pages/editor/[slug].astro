@@ -31,15 +31,15 @@ const baseUrl = import.meta.env.BASE_URL;
     <header
       class="h-14 border-b border-border-color bg-header-bg flex items-center justify-between px-4 shrink-0 z-50"
     >
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3">
         <a
           href={baseUrl}
-          class="flex items-center justify-center w-8 h-8 rounded bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black text-sm hover:scale-105 transition-transform"
+          class="hidden sm:flex items-center justify-center w-8 h-8 rounded bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black text-sm hover:scale-105 transition-transform shrink-0"
         >
           {SITE_CONFIG.branding.acronym}
         </a>
         <span
-          class="font-bold tracking-tight uppercase text-sm text-text-muted"
+          class="font-extrabold tracking-tight uppercase text-xs sm:text-sm text-text-muted truncate max-w-[100px] xs:max-w-none"
         >
           {slug?.replace("-", " ")}
         </span>
