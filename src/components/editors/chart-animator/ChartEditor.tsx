@@ -89,22 +89,41 @@ export default function ChartEditor() {
 
   const exportSnapshotFrame = async () => {
     try {
-      const targetH = parseInt(snapshotRes());
+      const res = parseInt(snapshotRes());
       const aspect = aspectRatio();
-      let targetW = Math.round(targetH * (16 / 9));
-      if (aspect === '9:16') {
-        targetW = Math.round(targetH * (9 / 16));
+      
+      let targetW = 1920;
+      let targetH = 1080;
+      
+      if (aspect === '16:9') {
+        targetW = 1920;
+        targetH = 1080;
+      } else if (aspect === '9:16') {
+        targetW = 1080;
+        targetH = 1920;
       } else if (aspect === '1:1') {
-        targetW = targetH;
+        targetW = 1080;
+        targetH = 1080;
       } else if (aspect === '4:5') {
-        targetW = Math.round(targetH * (4 / 5));
+        targetW = 1080;
+        targetH = 1350;
       } else if (aspect === '3:4') {
-        targetW = Math.round(targetH * (3 / 4));
+        targetW = 1080;
+        targetH = 1440;
       } else if (aspect === '4:3') {
-        targetW = Math.round(targetH * (4 / 3));
+        targetW = 1440;
+        targetH = 1080;
       } else if (aspect === '2:1') {
-        targetW = Math.round(targetH * (2 / 1));
+        targetW = 2160;
+        targetH = 1080;
       }
+      
+      const isLandscape = aspect === '16:9' || aspect === '4:3' || aspect === '2:1';
+      const baseSize = isLandscape ? targetH : targetW;
+      const multiplier = res / baseSize;
+      
+      targetW = Math.round(targetW * multiplier);
+      targetH = Math.round(targetH * multiplier);
 
       const offscreen = new OffscreenCanvas(targetW, targetH);
       const snapEngine = new ChartEngine(offscreen);
@@ -349,7 +368,7 @@ export default function ChartEditor() {
           <div class="hidden md:inline-block text-[10px] font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-widest bg-blueprint-100 dark:bg-brand-500/10 px-2 py-1 w-max mb-[-12px]">Tool Properties</div>
 
         {/* Presets Category */}
-        <div class={editorTab() === 'presets' ? 'flex flex-col gap-5 md:gap-6 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-6 md:shrink-0'}>
+        <div class={editorTab() === 'presets' ? 'flex flex-col gap-5 md:gap-6 shrink-0 animate-fade-in' : 'hidden'}>
           {/* Built-in Preset Templates */}
           <div class="flex flex-col gap-3 shrink-0">
             <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Preset Templates</h2>
@@ -418,10 +437,10 @@ export default function ChartEditor() {
           </div>
         </div>
 
-        <div class="hidden md:block w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
+        <div class="hidden"></div>
 
         {/* Content Editor */}
-        <div class={editorTab() === 'metadata' ? 'flex flex-col gap-3 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-3 md:shrink-0'}>
+        <div class={editorTab() === 'metadata' ? 'flex flex-col gap-3 shrink-0 animate-fade-in' : 'hidden'}>
           <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Chart Metadata</h2>
 
           <div class="flex items-center gap-3">
@@ -459,10 +478,10 @@ export default function ChartEditor() {
           </div>
         </div>
 
-        <div class="hidden md:block w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
+        <div class="hidden"></div>
 
         {/* Enhanced Data Editor */}
-        <div class={editorTab() === 'data' ? 'flex flex-col gap-3 flex-1 min-h-[200px] md:min-h-[240px] animate-fade-in' : 'hidden md:flex md:flex-col md:gap-3 md:flex-1 md:min-h-[240px]'}>
+        <div class={editorTab() === 'data' ? 'flex flex-col gap-3 flex-1 min-h-[200px] md:min-h-[240px] animate-fade-in' : 'hidden'}>
           <div class="flex items-center justify-between">
             <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Chart Data</h2>
             <div class="flex bg-slate-100 dark:bg-zinc-900 p-1 border border-blueprint-200 dark:border-zinc-800 rounded-lg">
@@ -490,10 +509,10 @@ export default function ChartEditor() {
           )}
         </div>
 
-        <div class="hidden md:block w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
+        <div class="hidden"></div>
 
         {/* Appearance Settings */}
-        <div class={editorTab() === 'style' ? 'flex flex-col gap-5 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-5 md:shrink-0'}>
+        <div class={editorTab() === 'style' ? 'flex flex-col gap-5 shrink-0 animate-fade-in' : 'hidden'}>
           <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Layout & Style</h2>
 
           {/* LAYOUT SUB-TAB CONTAINER */}
@@ -619,10 +638,10 @@ export default function ChartEditor() {
 
         </div>
 
-        <div class="hidden md:block w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
+        <div class="hidden"></div>
 
         {/* Canvas tab */}
-        <div class={editorTab() === 'canvas' ? 'flex flex-col gap-5 md:gap-6 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-6 md:shrink-0'}>
+        <div class={editorTab() === 'canvas' ? 'flex flex-col gap-5 md:gap-6 shrink-0 animate-fade-in' : 'hidden'}>
           <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Canvas & Aspect Ratio</h2>
 
           {/* Aspect Ratio Cards Grid */}

@@ -513,15 +513,16 @@ export class ChartEngine {
   }
 
   private drawHorizontalChart(ctx: any, area: any, progress: number, textColor: string, gridColor: string, palette: string[], fontBase: string, parsed: any) {
-    const labelSpace = this.state!.options.showYAxis ? 250 : 20;
-    const rightPad = 40;
+    const scale = this.width / 1920;
+    const labelSpace = this.state!.options.showYAxis ? Math.round(250 * scale) : Math.round(20 * scale);
+    const rightPad = Math.round(40 * scale);
     const actualAreaW = area.w - labelSpace - rightPad;
     const valueRange = parsed.maxVal - parsed.minVal;
 
     const steps = 4;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.font = `600 20px "${fontBase}"`;
+    ctx.font = `600 ${Math.max(12, Math.round(20 * scale))}px "${fontBase}"`;
     ctx.fillStyle = textColor;
 
     for (let i = 0; i <= steps; i++) {
@@ -530,17 +531,17 @@ export class ChartEngine {
 
       if (this.state!.options.showGrid) {
         ctx.beginPath();
-        ctx.setLineDash([8, 8]);
+        ctx.setLineDash([Math.round(8 * scale), Math.round(8 * scale)]);
         ctx.moveTo(x, area.y);
-        ctx.lineTo(x, area.y + area.h - (this.state!.options.showXAxis ? 40 : 0));
+        ctx.lineTo(x, area.y + area.h - (this.state!.options.showXAxis ? Math.round(40 * scale) : 0));
         ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = Math.max(1, Math.round(2 * scale));
         ctx.stroke();
         ctx.setLineDash([]);
       }
 
       if (this.state!.options.showXAxis) {
-        ctx.fillText(this.formatValue(val, this.state!.options.valueFormat, parsed.maxVal, parsed.minVal), x, area.y + area.h - 25);
+        ctx.fillText(this.formatValue(val, this.state!.options.valueFormat, parsed.maxVal, parsed.minVal), x, area.y + area.h - Math.round(25 * scale));
       }
     }
 
@@ -549,14 +550,14 @@ export class ChartEngine {
     if (this.state!.options.showXAxis || this.state!.options.showYAxis) {
       ctx.beginPath();
       ctx.moveTo(zeroX, area.y);
-      ctx.lineTo(zeroX, area.y + area.h - (this.state!.options.showXAxis ? 40 : 0));
+      ctx.lineTo(zeroX, area.y + area.h - (this.state!.options.showXAxis ? Math.round(40 * scale) : 0));
       ctx.strokeStyle = gridColor;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = Math.max(1, Math.round(3 * scale));
       ctx.stroke();
     }
 
     const numBars = parsed.data.length;
-    const totalH = area.h - (this.state!.options.showXAxis ? 40 : 0);
+    const totalH = area.h - (this.state!.options.showXAxis ? Math.round(40 * scale) : 0);
     const slotHeight = totalH / numBars;
     const barHeight = slotHeight * 0.75;
     
@@ -572,9 +573,9 @@ export class ChartEngine {
       ctx.globalAlpha = Math.min(1, progress * 2);
       if (this.state!.options.showYAxis) {
         ctx.textAlign = 'right';
-        ctx.font = `800 24px "${fontBase}"`;
+        ctx.font = `800 ${Math.max(12, Math.round(24 * scale))}px "${fontBase}"`;
         ctx.fillStyle = textColor;
-        ctx.fillText(item.label, area.x + labelSpace - 20, y + barHeight/2);
+        ctx.fillText(item.label, area.x + labelSpace - Math.round(20 * scale), y + barHeight/2);
       }
 
       ctx.fillStyle = color;
@@ -583,10 +584,10 @@ export class ChartEngine {
 
       if (this.state!.options.showValues && progress > 0.1) {
         ctx.textAlign = actualValue >= 0 ? 'left' : 'right';
-        ctx.font = `800 28px "JetBrains Mono"`;
+        ctx.font = `800 ${Math.max(14, Math.round(28 * scale))}px "JetBrains Mono"`;
         ctx.fillStyle = textColor;
         
-        const valXOffset = actualValue >= 0 ? 15 : -15;
+        const valXOffset = actualValue >= 0 ? Math.round(15 * scale) : -Math.round(15 * scale);
         ctx.fillText(this.formatValue(actualValue * progress, this.state!.options.valueFormat, parsed.maxVal, parsed.minVal), zeroX + currentPixelWidth + valXOffset, y + barHeight/2);
       }
     });

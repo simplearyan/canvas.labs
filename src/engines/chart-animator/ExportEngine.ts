@@ -16,22 +16,41 @@ export const exportProject = async (
   onProgress: (progress: number, status: string) => void,
   controller?: { isPaused: () => boolean; isCancelled: () => boolean }
 ): Promise<ArrayBuffer | Blob> => {
-  const targetH = parseInt(config.resolution);
+  const res = parseInt(config.resolution);
   let aspect = config.aspectRatio || '16:9';
-  let targetW = Math.round(targetH * (16 / 9));
-  if (aspect === '9:16') {
-    targetW = Math.round(targetH * (9 / 16));
+  
+  let targetW = 1920;
+  let targetH = 1080;
+  
+  if (aspect === '16:9') {
+    targetW = 1920;
+    targetH = 1080;
+  } else if (aspect === '9:16') {
+    targetW = 1080;
+    targetH = 1920;
   } else if (aspect === '1:1') {
-    targetW = targetH;
+    targetW = 1080;
+    targetH = 1080;
   } else if (aspect === '4:5') {
-    targetW = Math.round(targetH * (4 / 5));
+    targetW = 1080;
+    targetH = 1350;
   } else if (aspect === '3:4') {
-    targetW = Math.round(targetH * (3 / 4));
+    targetW = 1080;
+    targetH = 1440;
   } else if (aspect === '4:3') {
-    targetW = Math.round(targetH * (4 / 3));
+    targetW = 1440;
+    targetH = 1080;
   } else if (aspect === '2:1') {
-    targetW = Math.round(targetH * (2 / 1));
+    targetW = 2160;
+    targetH = 1080;
   }
+  
+  const isLandscape = aspect === '16:9' || aspect === '4:3' || aspect === '2:1';
+  const baseSize = isLandscape ? targetH : targetW;
+  const multiplier = res / baseSize;
+  
+  targetW = Math.round(targetW * multiplier);
+  targetH = Math.round(targetH * multiplier);
 
   const worker = config.format === 'zip' ? new ZipWorker() : new MediaWorker();
 
