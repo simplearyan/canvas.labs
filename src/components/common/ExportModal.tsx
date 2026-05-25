@@ -164,7 +164,7 @@ export default function ExportModal(props: ExportModalProps) {
           }
         `}</style>
 
-        <div class="bg-card-bg border border-border-color shadow-2xl p-6 md:p-8 w-full relative flex flex-col md:flex-row gap-6 text-text-main rounded-2xl max-w-md md:max-w-3xl h-[680px] md:h-[475px] overflow-y-auto md:overflow-hidden custom-scrollbar">
+        <div class="bg-card-bg border border-border-color shadow-2xl p-6 md:p-8 w-full relative flex flex-col md:flex-row gap-6 text-text-main rounded-2xl max-w-md md:max-w-3xl h-[680px] md:h-[475px] overflow-y-auto md:overflow-hidden hide-scrollbar">
 
           {/* Close Button */}
           <button
