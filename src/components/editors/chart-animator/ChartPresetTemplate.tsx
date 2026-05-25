@@ -76,6 +76,32 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   // Canvas aspect ratio state
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5'>('16:9');
 
+  // Fullscreen State & Ref
+  const [isFullscreen, setIsFullscreen] = createSignal(false);
+  let canvasContainerRef!: HTMLDivElement;
+
+  const toggleFullscreen = () => {
+    if (!canvasContainerRef) return;
+    if (!document.fullscreenElement) {
+      canvasContainerRef.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch(err => {
+        console.error("Failed to enter fullscreen:", err);
+      });
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  const handleFullscreenChange = () => {
+    const active = document.fullscreenElement === canvasContainerRef;
+    setIsFullscreen(active);
+    setTimeout(() => {
+      handleResize();
+    }, 100);
+  };
+
   const handlePlayPause = () => {
     if (!engine) return;
     if (isPlaying()) {
@@ -115,6 +141,9 @@ export default function ChartPresetTemplate(props: { slug: string }) {
     handleResize();
     window.addEventListener('resize', handleResize);
 
+    // Listen to fullscreen changes
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
     // Wait until #template-header-controls is available in the DOM
     const findTarget = () => {
       const el = document.getElementById('template-header-controls');
@@ -129,6 +158,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
   onCleanup(() => {
     window.removeEventListener('resize', handleResize);
+    document.removeEventListener('fullscreenchange', handleFullscreenChange);
     if (engine) engine.pause();
     if (playTimeoutId) {
       clearTimeout(playTimeoutId);
@@ -241,13 +271,32 @@ export default function ChartPresetTemplate(props: { slug: string }) {
         {/* Left panel: Preview Canvas Frame */}
         <div class="lg:col-span-2 flex flex-col gap-4">
           <div
-            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative ${aspectRatio() === '9:16' ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
+            ref={canvasContainerRef}
+            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative fullscreen:w-screen fullscreen:h-screen fullscreen:aspect-none fullscreen:rounded-none fullscreen:bg-zinc-950 fullscreen:border-none ${aspectRatio() === '9:16' ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
                 aspectRatio() === '1:1' ? 'aspect-square h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
                   aspectRatio() === '4:5' ? 'aspect-[4/5] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
                     'aspect-video w-full'
               }`}
             style={{ "background-color": chartStore.options.bgColor }}
           >
+            {/* Fullscreen Toggle Button */}
+            <button
+              onClick={toggleFullscreen}
+              class="absolute top-3 right-3 z-30 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 hover:border-white/20 text-white rounded-xl shadow-lg transition-all duration-300 active:scale-[0.98] cursor-pointer group"
+              title={isFullscreen() ? "Exit Fullscreen" : "Fullscreen Mode"}
+              type="button"
+            >
+              <Show when={isFullscreen()} fallback={
+                <svg class="w-4.5 h-4.5 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+                </svg>
+              }>
+                <svg class="w-4.5 h-4.5 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
+                </svg>
+              </Show>
+            </button>
+
             <canvas
               ref={canvasRef}
               class="w-full h-full object-contain"

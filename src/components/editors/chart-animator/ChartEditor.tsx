@@ -8,6 +8,22 @@ import ExportModal from '@/components/common/ExportModal';
 import { isDarkTheme, toggleTheme } from '@/store/global';
 import Icon from '@/components/ui/Icon';
 
+// Reusable Premium Toggle Switch Component
+function ToggleSwitch(props: { checked: boolean, onChange: (v: boolean) => void, label: string }) {
+  return (
+    <button
+      onClick={() => props.onChange(!props.checked)}
+      class="flex items-center justify-between w-full px-3 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 hover:bg-blueprint-50/50 dark:hover:bg-zinc-800/50 transition-all duration-150 cursor-pointer rounded-lg group text-left animate-fade-in"
+      type="button"
+    >
+      <span class="text-[10px] font-bold text-slate-700 dark:text-text-main uppercase tracking-wider group-hover:text-blueprint-900 dark:group-hover:text-brand-500 transition-colors">{props.label}</span>
+      <div class={`relative w-8.5 h-5 transition-colors duration-200 rounded-full border shrink-0 ${props.checked ? 'bg-blueprint-900 border-blueprint-950 dark:bg-brand-500 dark:border-brand-600' : 'bg-slate-200 border-slate-300 dark:bg-zinc-800 dark:border-zinc-750'}`}>
+        <div class={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-md transition-transform duration-200 ${props.checked ? 'translate-x-4.5' : 'translate-x-0.5'}`}></div>
+      </div>
+    </button>
+  );
+}
+
 export default function ChartEditor() {
   let canvasRef!: HTMLCanvasElement;
   let engine: ChartEngine;
@@ -209,37 +225,11 @@ export default function ChartEditor() {
     <div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative text-slate-800 dark:text-text-main blueprint-grid-bg font-editor">
 
       {/* TOOLBAR / SIDEBAR (Left Panel) */}
-      <aside class="w-full md:w-[420px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 p-4 md:p-5 flex flex-col gap-4 md:gap-6 overflow-y-auto z-10 shrink-0 custom-scrollbar shadow-xl">
+      <aside class="w-full md:w-[420px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 flex flex-col z-10 shrink-0 shadow-xl overflow-hidden">
 
-        <div class="hidden md:inline-block text-[10px] font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-widest bg-blueprint-100 dark:bg-brand-500/10 px-2 py-1 w-max mb-[-12px]">Tool Properties</div>
-
-        {/* Mobile View Category Tabs */}
-        <div class="flex md:hidden items-center bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 p-1 shrink-0 gap-1 rounded-lg">
-          <button
-            onClick={() => setEditorTab('presets')}
-            class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'presets' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
-          >
-            Presets
-          </button>
-          <button
-            onClick={() => setEditorTab('metadata')}
-            class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'metadata' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
-          >
-            Metadata
-          </button>
-          <button
-            onClick={() => setEditorTab('data')}
-            class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'data' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
-          >
-            Data
-          </button>
-          <button
-            onClick={() => setEditorTab('style')}
-            class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'style' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
-          >
-            Style
-          </button>
-        </div>
+        {/* Scrollable form body */}
+        <div class="flex-1 overflow-y-auto p-4 md:p-5 custom-scrollbar flex flex-col gap-4 md:gap-6">
+          <div class="hidden md:inline-block text-[10px] font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-widest bg-blueprint-100 dark:bg-brand-500/10 px-2 py-1 w-max mb-[-12px]">Tool Properties</div>
 
         {/* Presets Category */}
         <div class={editorTab() === 'presets' ? 'flex flex-col gap-5 md:gap-6 shrink-0' : 'hidden md:flex md:flex-col md:gap-6 md:shrink-0'}>
@@ -304,15 +294,36 @@ export default function ChartEditor() {
           <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Chart Metadata</h2>
 
           <div class="flex items-center gap-3">
-            <input type="checkbox" checked={chartStore.options.showTitle} onInput={(e) => updateChartOptions({ showTitle: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 cursor-pointer" title="Toggle Title" />
+            <button
+              onClick={() => updateChartOptions({ showTitle: !chartStore.options.showTitle })}
+              class={`relative w-8.5 h-5 transition-colors duration-200 rounded-full border shrink-0 cursor-pointer ${chartStore.options.showTitle ? 'bg-blueprint-900 border-blueprint-950 dark:bg-brand-500 dark:border-brand-600' : 'bg-slate-200 border-slate-300 dark:bg-zinc-800 dark:border-zinc-750'}`}
+              type="button"
+              title="Toggle Title"
+            >
+              <div class={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-md transition-transform duration-200 ${chartStore.options.showTitle ? 'translate-x-4.5' : 'translate-x-0.5'}`}></div>
+            </button>
             <input type="text" value={chartStore.title} onInput={(e) => updateChartMetadata({ title: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-sm text-slate-900 dark:text-text-main font-semibold outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all placeholder:font-normal" placeholder="Chart Title" />
           </div>
           <div class="flex items-center gap-3">
-            <input type="checkbox" checked={chartStore.options.showSubtitle} onInput={(e) => updateChartOptions({ showSubtitle: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 cursor-pointer" title="Toggle Subtitle" />
+            <button
+              onClick={() => updateChartOptions({ showSubtitle: !chartStore.options.showSubtitle })}
+              class={`relative w-8.5 h-5 transition-colors duration-200 rounded-full border shrink-0 cursor-pointer ${chartStore.options.showSubtitle ? 'bg-blueprint-900 border-blueprint-950 dark:bg-brand-500 dark:border-brand-600' : 'bg-slate-200 border-slate-300 dark:bg-zinc-800 dark:border-zinc-750'}`}
+              type="button"
+              title="Toggle Subtitle"
+            >
+              <div class={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-md transition-transform duration-200 ${chartStore.options.showSubtitle ? 'translate-x-4.5' : 'translate-x-0.5'}`}></div>
+            </button>
             <input type="text" value={chartStore.subtitle} onInput={(e) => updateChartMetadata({ subtitle: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-sm text-slate-700 dark:text-text-main outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all" placeholder="Chart Subtitle" />
           </div>
           <div class="flex items-center gap-3">
-            <input type="checkbox" checked={chartStore.options.showSource} onInput={(e) => updateChartOptions({ showSource: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 cursor-pointer" title="Toggle Source" />
+            <button
+              onClick={() => updateChartOptions({ showSource: !chartStore.options.showSource })}
+              class={`relative w-8.5 h-5 transition-colors duration-200 rounded-full border shrink-0 cursor-pointer ${chartStore.options.showSource ? 'bg-blueprint-900 border-blueprint-950 dark:bg-brand-500 dark:border-brand-600' : 'bg-slate-200 border-slate-300 dark:bg-zinc-800 dark:border-zinc-750'}`}
+              type="button"
+              title="Toggle Source"
+            >
+              <div class={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-md transition-transform duration-200 ${chartStore.options.showSource ? 'translate-x-4.5' : 'translate-x-0.5'}`}></div>
+            </button>
             <input type="text" value={chartStore.source} onInput={(e) => updateChartMetadata({ source: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-500 dark:text-text-muted uppercase font-medium outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all" placeholder="Source Attribution" />
           </div>
         </div>
@@ -354,37 +365,15 @@ export default function ChartEditor() {
         <div class={editorTab() === 'style' ? 'flex flex-col gap-5 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-5 md:shrink-0'}>
           <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Layout & Style</h2>
 
-          {/* Mobile Style Sub-tabs Navigation */}
-          <div class="flex md:hidden items-center bg-slate-50 dark:bg-zinc-900 border border-blueprint-100 dark:border-zinc-800 p-1 shrink-0 gap-1 rounded-lg mb-1">
-            <button
-              onClick={() => setStyleSubTab('layout')}
-              class={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider text-center transition-all rounded-md ${styleSubTab() === 'layout' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
-            >
-              Layout
-            </button>
-            <button
-              onClick={() => setStyleSubTab('colors')}
-              class={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider text-center transition-all rounded-md ${styleSubTab() === 'colors' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
-            >
-              Colors
-            </button>
-            <button
-              onClick={() => setStyleSubTab('motion')}
-              class={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider text-center transition-all rounded-md ${styleSubTab() === 'motion' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
-            >
-              Motion
-            </button>
-          </div>
-
           {/* LAYOUT SUB-TAB CONTAINER */}
           <div class={styleSubTab() === 'layout' ? 'flex flex-col gap-4 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-4'}>
-            {/* Toggles */}
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-2 mt-1 mb-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-100 dark:border-zinc-800 p-3">
-              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={chartStore.options.showGrid} onInput={(e) => updateChartOptions({ showGrid: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 border-blueprint-300 dark:border-zinc-850" /><span class="text-[11px] font-bold text-slate-700 dark:text-text-main uppercase tracking-wider">Grid</span></label>
-              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={chartStore.options.showLegend} onInput={(e) => updateChartOptions({ showLegend: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 border-blueprint-300 dark:border-zinc-850" /><span class="text-[11px] font-bold text-slate-700 dark:text-text-main uppercase tracking-wider">Legend</span></label>
-              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={chartStore.options.showValues} onInput={(e) => updateChartOptions({ showValues: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 border-blueprint-300 dark:border-zinc-850" /><span class="text-[11px] font-bold text-slate-700 dark:text-text-main uppercase tracking-wider">Values</span></label>
-              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={chartStore.options.showXAxis} onInput={(e) => updateChartOptions({ showXAxis: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 border-blueprint-300 dark:border-zinc-850" /><span class="text-[11px] font-bold text-slate-700 dark:text-text-main uppercase tracking-wider">X-Axis</span></label>
-              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={chartStore.options.showYAxis} onInput={(e) => updateChartOptions({ showYAxis: e.currentTarget.checked })} class="w-4 h-4 accent-blueprint-900 dark:accent-brand-500 border-blueprint-300 dark:border-zinc-850" /><span class="text-[11px] font-bold text-slate-700 dark:text-text-main uppercase tracking-wider">Y-Axis</span></label>
+            {/* Toggles Grid */}
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1 mb-2">
+              <ToggleSwitch label="Grid" checked={chartStore.options.showGrid} onChange={(v) => updateChartOptions({ showGrid: v })} />
+              <ToggleSwitch label="Legend" checked={chartStore.options.showLegend} onChange={(v) => updateChartOptions({ showLegend: v })} />
+              <ToggleSwitch label="Values" checked={chartStore.options.showValues} onChange={(v) => updateChartOptions({ showValues: v })} />
+              <ToggleSwitch label="X-Axis" checked={chartStore.options.showXAxis} onChange={(v) => updateChartOptions({ showXAxis: v })} />
+              <ToggleSwitch label="Y-Axis" checked={chartStore.options.showYAxis} onChange={(v) => updateChartOptions({ showYAxis: v })} />
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -528,6 +517,63 @@ export default function ChartEditor() {
             </div>
           </div>
 
+        </div>
+
+        </div>
+
+        {/* Mobile Navigation Deck (Fixed/Sticky at the bottom of the drawer on mobile, hidden on desktop) */}
+        <div class="md:hidden border-t border-blueprint-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-950 flex flex-col gap-2 shrink-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          {/* STYLE Sub-tabs (Only visible when main editorTab is 'style') */}
+          <Show when={editorTab() === 'style'}>
+            <div class="flex items-center bg-slate-100 dark:bg-zinc-900 p-0.5 rounded-lg gap-1 border border-slate-200/50 dark:border-zinc-850 animate-fade-in">
+              <button
+                onClick={() => setStyleSubTab('layout')}
+                class={`flex-1 py-1 text-[9px] font-black uppercase tracking-wider text-center transition-all rounded-md ${styleSubTab() === 'layout' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+              >
+                Layout
+              </button>
+              <button
+                onClick={() => setStyleSubTab('colors')}
+                class={`flex-1 py-1 text-[9px] font-black uppercase tracking-wider text-center transition-all rounded-md ${styleSubTab() === 'colors' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+              >
+                Colors
+              </button>
+              <button
+                onClick={() => setStyleSubTab('motion')}
+                class={`flex-1 py-1 text-[9px] font-black uppercase tracking-wider text-center transition-all rounded-md ${styleSubTab() === 'motion' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+              >
+                Motion
+              </button>
+            </div>
+          </Show>
+
+          {/* Main Category Tabs */}
+          <div class="flex items-center bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 p-1 gap-1 rounded-lg">
+            <button
+              onClick={() => setEditorTab('presets')}
+              class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'presets' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+            >
+              Presets
+            </button>
+            <button
+              onClick={() => setEditorTab('metadata')}
+              class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'metadata' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+            >
+              Metadata
+            </button>
+            <button
+              onClick={() => setEditorTab('data')}
+              class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'data' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+            >
+              Data
+            </button>
+            <button
+              onClick={() => setEditorTab('style')}
+              class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'style' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+            >
+              Style
+            </button>
+          </div>
         </div>
       </aside>
 
