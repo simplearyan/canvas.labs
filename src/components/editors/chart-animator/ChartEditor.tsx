@@ -205,7 +205,7 @@ export default function ChartEditor() {
 
   const handlePlay = () => engine.play();
   return (
-    <div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative text-slate-800 dark:text-text-main blueprint-grid-bg">
+    <div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative text-slate-800 dark:text-text-main blueprint-grid-bg font-editor">
       
       {/* TOOLBAR / SIDEBAR (Left Panel) */}
       <aside class="w-full md:w-[420px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 p-4 md:p-5 flex flex-col gap-4 md:gap-6 overflow-y-auto z-10 shrink-0 custom-scrollbar shadow-xl">

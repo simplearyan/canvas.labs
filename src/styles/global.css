@@ -1,10 +1,15 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
 @import "./themes/kenichi.css";
 @import "./themes/kenichi-v2.css";
 @import "./themes/blueprint.css";
 
 @theme {
   --font-sans: 'Outfit', 'Inter', sans-serif;
+  --font-editor: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
   --color-brand-50: #f5f3ff;
   --color-brand-100: #ede9fe;
