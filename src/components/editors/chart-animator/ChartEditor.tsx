@@ -33,8 +33,9 @@ export default function ChartEditor() {
   const [isExporting, setIsExporting] = createSignal(false);
   const [customPresets, setCustomPresets] = createSignal<Array<{ name: string, data: any }>>([]);
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1'>('16:9');
-  const [editorTab, setEditorTab] = createSignal<'presets' | 'metadata' | 'data' | 'style'>('presets');
+  const [editorTab, setEditorTab] = createSignal<'presets' | 'metadata' | 'data' | 'style' | 'canvas'>('presets');
   const [styleSubTab, setStyleSubTab] = createSignal<'layout' | 'colors' | 'motion'>('layout');
+  const [activePreset, setActivePreset] = createSignal<string | null>('vertical');
 
   // Snapshot State
   const [snapshotRes, setSnapshotRes] = createSignal<'1080' | '1440' | '2160'>('1080');
@@ -46,6 +47,45 @@ export default function ChartEditor() {
   const [isPlaying, setIsPlaying] = createSignal(false);
   let canvasContainerRef!: HTMLDivElement;
   let playTimeoutId: any = null;
+
+  function RailTab(props: { value: 'presets' | 'metadata' | 'data' | 'style' | 'canvas', label: string, icon: string }) {
+    const isActive = () => editorTab() === props.value;
+    return (
+      <button
+        onClick={() => setEditorTab(props.value)}
+        class={`w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer ${
+          isActive()
+            ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 shadow-md scale-[1.02]'
+            : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'
+        }`}
+        type="button"
+      >
+        <Icon name={props.icon} class="w-5 h-5" />
+        <span class="text-[9px] font-black uppercase tracking-wider">{props.label}</span>
+      </button>
+    );
+  }
+
+  function AspectRatioCard(props: { value: '16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1', label: string, shape: string, orientation: string }) {
+    const isActive = () => aspectRatio() === props.value;
+    return (
+      <button
+        onClick={() => setAspectRatio(props.value)}
+        class={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all duration-200 cursor-pointer group shadow-sm ${
+          isActive()
+            ? 'bg-blueprint-50/70 border-blueprint-900 dark:bg-brand-500/10 dark:border-brand-500 text-blueprint-900 dark:text-brand-500 ring-2 ring-blueprint-900/10 dark:ring-brand-500/20'
+            : 'bg-slate-50 hover:bg-blueprint-50/30 dark:bg-zinc-900 dark:hover:bg-zinc-850/50 border-blueprint-200 dark:border-zinc-800 text-slate-700 dark:text-text-main'
+        }`}
+        type="button"
+      >
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="text-[11px] font-bold tracking-tight">{props.label}</span>
+          <div class={`relative rounded ${isActive() ? 'bg-blueprint-900 dark:bg-brand-500' : 'bg-slate-300 dark:bg-zinc-700'} ${props.shape} flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity duration-200`}></div>
+        </div>
+        <span class={`text-[8px] uppercase tracking-wider font-semibold ${isActive() ? 'text-blueprint-700 dark:text-brand-400' : 'text-slate-400 dark:text-text-muted'}`}>{props.orientation}</span>
+      </button>
+    );
+  }
 
   const exportSnapshotFrame = async () => {
     try {
@@ -197,7 +237,18 @@ export default function ChartEditor() {
     }
   });
 
-  const handleLoadPreset = (preset: ChartPreset) => {
+  const handleUpdateMetadata = (data: Parameters<typeof updateChartMetadata>[0]) => {
+    setActivePreset(null);
+    updateChartMetadata(data);
+  };
+
+  const handleUpdateOptions = (data: Parameters<typeof updateChartOptions>[0]) => {
+    setActivePreset(null);
+    updateChartOptions(data);
+  };
+
+  const handleLoadPreset = (key: string, preset: ChartPreset) => {
+    setActivePreset(key);
     setChartStore({
       title: preset.title,
       subtitle: preset.subtitle,
@@ -221,7 +272,8 @@ export default function ChartEditor() {
     localStorage.setItem('chart_custom_presets', JSON.stringify(newPresets));
   };
 
-  const handleLoadCustomPreset = (data: any) => {
+  const handleLoadCustomPreset = (name: string, data: any) => {
+    setActivePreset(name);
     setChartStore(data);
   };
 
@@ -281,27 +333,43 @@ export default function ChartEditor() {
     <div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative text-slate-800 dark:text-text-main blueprint-grid-bg font-editor">
 
       {/* TOOLBAR / SIDEBAR (Left Panel) */}
-      <aside class="w-full md:w-[420px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 flex flex-col z-10 shrink-0 shadow-xl overflow-hidden">
+      <aside class="w-full md:w-[480px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 flex flex-col md:flex-row z-10 shrink-0 shadow-xl overflow-hidden">
+        
+        {/* DESKTOP SIDE NAVIGATION RAIL */}
+        <div class="hidden md:flex flex-col w-[80px] bg-slate-50 dark:bg-zinc-900 border-r border-blueprint-100 dark:border-zinc-850 py-6 items-center gap-5 shrink-0 select-none">
+          <RailTab value="presets" label="Presets" icon="sparkles" />
+          <RailTab value="metadata" label="Header" icon="type" />
+          <RailTab value="data" label="Data" icon="grid" />
+          <RailTab value="style" label="Style" icon="sliders" />
+          <RailTab value="canvas" label="Canvas" icon="layout" />
+        </div>
 
         {/* Scrollable form body */}
         <div class="flex-1 overflow-y-auto p-4 md:p-5 custom-scrollbar flex flex-col gap-4 md:gap-6">
           <div class="hidden md:inline-block text-[10px] font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-widest bg-blueprint-100 dark:bg-brand-500/10 px-2 py-1 w-max mb-[-12px]">Tool Properties</div>
 
         {/* Presets Category */}
-        <div class={editorTab() === 'presets' ? 'flex flex-col gap-5 md:gap-6 shrink-0' : 'hidden md:flex md:flex-col md:gap-6 md:shrink-0'}>
+        <div class={editorTab() === 'presets' ? 'flex flex-col gap-5 md:gap-6 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-6 md:shrink-0'}>
           {/* Built-in Preset Templates */}
           <div class="flex flex-col gap-3 shrink-0">
             <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Preset Templates</h2>
             <div class="grid grid-cols-2 gap-2">
-              {Object.entries(CHART_PRESETS).map(([key, preset]) => (
-                <button
-                  onClick={() => handleLoadPreset(preset)}
-                  class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-200 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer"
-                >
-                  <span class="truncate pr-2">{preset.title}</span>
-                  <span class="text-[8px] uppercase tracking-wider text-slate-400 dark:text-text-muted font-normal">{preset.type}</span>
-                </button>
-              ))}
+              {Object.entries(CHART_PRESETS).map(([key, preset]) => {
+                const isActive = () => activePreset() === key;
+                return (
+                  <button
+                    onClick={() => handleLoadPreset(key, preset)}
+                    class={`px-3 py-2.5 text-left text-xs font-bold transition-all duration-200 flex flex-col gap-0.5 relative group shadow-sm cursor-pointer rounded-xl border ${
+                      isActive()
+                        ? 'bg-blueprint-50/70 border-blueprint-900 dark:bg-brand-500/10 dark:border-brand-500 text-blueprint-900 dark:text-brand-500 ring-2 ring-blueprint-900/10 dark:ring-brand-500/20'
+                        : 'bg-slate-50 hover:bg-blueprint-50/50 dark:bg-zinc-900 dark:hover:bg-zinc-850/50 border-blueprint-200 dark:border-zinc-800 text-slate-700 dark:text-text-main'
+                    }`}
+                  >
+                    <span class="truncate pr-2">{preset.title}</span>
+                    <span class={`text-[8px] uppercase tracking-wider font-normal ${isActive() ? 'text-blueprint-700 dark:text-brand-400' : 'text-slate-400 dark:text-text-muted'}`}>{preset.type}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -311,33 +379,40 @@ export default function ChartEditor() {
               <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Custom Presets</h2>
               <button
                 onClick={handleSaveCustomPreset}
-                class="px-2 py-1 bg-blueprint-900 dark:bg-brand-500 text-white font-bold text-[9px] uppercase tracking-widest shadow-sm hover:scale-105 transition cursor-pointer"
+                class="px-2.5 py-1 bg-blueprint-900 dark:bg-brand-500 text-white font-bold text-[9px] uppercase tracking-widest shadow-sm hover:scale-105 transition cursor-pointer rounded-lg"
               >
                 + Save Current
               </button>
             </div>
             {customPresets().length === 0 ? (
-              <div class="p-3 border border-dashed border-blueprint-200 dark:border-zinc-800 text-center text-[10px] text-slate-400 dark:text-text-muted font-medium bg-slate-50/50 dark:bg-zinc-900/50 animate-pulse">
+              <div class="p-4 border border-dashed border-blueprint-200 dark:border-zinc-850 text-center text-[10px] text-slate-400 dark:text-text-muted font-medium bg-slate-50/50 dark:bg-zinc-900/30 rounded-xl">
                 No custom presets saved.
               </div>
             ) : (
               <div class="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto custom-scrollbar">
-                {customPresets().map((preset, idx) => (
-                  <div
-                    onClick={() => handleLoadCustomPreset(preset.data)}
-                    class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-200 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer justify-between"
-                  >
-                    <span class="truncate pr-4">{preset.name}</span>
-                    <span class="text-[8px] uppercase tracking-wider text-slate-400 dark:text-text-muted font-normal">{preset.data.type}</span>
-                    <button
-                      onClick={(e) => handleDeleteCustomPreset(e, idx)}
-                      class="absolute top-1 right-1 text-slate-400 hover:text-brand-red opacity-0 group-hover:opacity-100 transition p-0.5"
-                      title="Delete Preset"
+                {customPresets().map((preset, idx) => {
+                  const isActive = () => activePreset() === preset.name;
+                  return (
+                    <div
+                      onClick={() => handleLoadCustomPreset(preset.name, preset.data)}
+                      class={`px-3 py-2.5 text-left text-xs font-bold transition-all duration-200 flex flex-col gap-0.5 relative group shadow-sm cursor-pointer rounded-xl border justify-between ${
+                        isActive()
+                          ? 'bg-blueprint-50/70 border-blueprint-900 dark:bg-brand-500/10 dark:border-brand-500 text-blueprint-900 dark:text-brand-500 ring-2 ring-blueprint-900/10 dark:ring-brand-500/20'
+                          : 'bg-slate-50 hover:bg-blueprint-50/50 dark:bg-zinc-900 dark:hover:bg-zinc-850/50 border-blueprint-200 dark:border-zinc-800 text-slate-700 dark:text-text-main'
+                      }`}
                     >
-                      ✕
-                    </button>
-                  </div>
-                ))}
+                      <span class="truncate pr-4">{preset.name}</span>
+                      <span class={`text-[8px] uppercase tracking-wider font-normal ${isActive() ? 'text-blueprint-700 dark:text-brand-400' : 'text-slate-400 dark:text-text-muted'}`}>{preset.data.type}</span>
+                      <button
+                        onClick={(e) => handleDeleteCustomPreset(e, idx)}
+                        class="absolute top-1.5 right-1.5 text-slate-400 hover:text-brand-red opacity-0 group-hover:opacity-100 transition p-0.5"
+                        title="Delete Preset"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -351,36 +426,36 @@ export default function ChartEditor() {
 
           <div class="flex items-center gap-3">
             <button
-              onClick={() => updateChartOptions({ showTitle: !chartStore.options.showTitle })}
+              onClick={() => handleUpdateOptions({ showTitle: !chartStore.options.showTitle })}
               class={`relative w-8.5 h-5 transition-colors duration-200 rounded-full border shrink-0 cursor-pointer ${chartStore.options.showTitle ? 'bg-blueprint-900 border-blueprint-950 dark:bg-brand-500 dark:border-brand-600' : 'bg-slate-200 border-slate-300 dark:bg-zinc-800 dark:border-zinc-750'}`}
               type="button"
               title="Toggle Title"
             >
               <div class={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-md transition-transform duration-200 ${chartStore.options.showTitle ? 'translate-x-4.5' : 'translate-x-0.5'}`}></div>
             </button>
-            <input type="text" value={chartStore.title} onInput={(e) => updateChartMetadata({ title: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-sm text-slate-900 dark:text-text-main font-semibold outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all placeholder:font-normal" placeholder="Chart Title" />
+            <input type="text" value={chartStore.title} onInput={(e) => handleUpdateMetadata({ title: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-sm text-slate-900 dark:text-text-main font-semibold outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all placeholder:font-normal rounded-lg" placeholder="Chart Title" />
           </div>
           <div class="flex items-center gap-3">
             <button
-              onClick={() => updateChartOptions({ showSubtitle: !chartStore.options.showSubtitle })}
+              onClick={() => handleUpdateOptions({ showSubtitle: !chartStore.options.showSubtitle })}
               class={`relative w-8.5 h-5 transition-colors duration-200 rounded-full border shrink-0 cursor-pointer ${chartStore.options.showSubtitle ? 'bg-blueprint-900 border-blueprint-950 dark:bg-brand-500 dark:border-brand-600' : 'bg-slate-200 border-slate-300 dark:bg-zinc-800 dark:border-zinc-750'}`}
               type="button"
               title="Toggle Subtitle"
             >
               <div class={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-md transition-transform duration-200 ${chartStore.options.showSubtitle ? 'translate-x-4.5' : 'translate-x-0.5'}`}></div>
             </button>
-            <input type="text" value={chartStore.subtitle} onInput={(e) => updateChartMetadata({ subtitle: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-sm text-slate-700 dark:text-text-main outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all" placeholder="Chart Subtitle" />
+            <input type="text" value={chartStore.subtitle} onInput={(e) => handleUpdateMetadata({ subtitle: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-sm text-slate-700 dark:text-text-main outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all rounded-lg" placeholder="Chart Subtitle" />
           </div>
           <div class="flex items-center gap-3">
             <button
-              onClick={() => updateChartOptions({ showSource: !chartStore.options.showSource })}
+              onClick={() => handleUpdateOptions({ showSource: !chartStore.options.showSource })}
               class={`relative w-8.5 h-5 transition-colors duration-200 rounded-full border shrink-0 cursor-pointer ${chartStore.options.showSource ? 'bg-blueprint-900 border-blueprint-950 dark:bg-brand-500 dark:border-brand-600' : 'bg-slate-200 border-slate-300 dark:bg-zinc-800 dark:border-zinc-750'}`}
               type="button"
               title="Toggle Source"
             >
               <div class={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-md transition-transform duration-200 ${chartStore.options.showSource ? 'translate-x-4.5' : 'translate-x-0.5'}`}></div>
             </button>
-            <input type="text" value={chartStore.source} onInput={(e) => updateChartMetadata({ source: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-500 dark:text-text-muted uppercase font-medium outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all" placeholder="Source Attribution" />
+            <input type="text" value={chartStore.source} onInput={(e) => handleUpdateMetadata({ source: e.currentTarget.value })} class="flex-1 px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-500 dark:text-text-muted uppercase font-medium outline-none focus:ring-1 focus:ring-blueprint-900 dark:focus:ring-brand-500 focus:border-blueprint-900 dark:focus:border-brand-500 transition-all rounded-lg" placeholder="Source Attribution" />
           </div>
         </div>
 
@@ -390,9 +465,9 @@ export default function ChartEditor() {
         <div class={editorTab() === 'data' ? 'flex flex-col gap-3 flex-1 min-h-[200px] md:min-h-[240px] animate-fade-in' : 'hidden md:flex md:flex-col md:gap-3 md:flex-1 md:min-h-[240px]'}>
           <div class="flex items-center justify-between">
             <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Chart Data</h2>
-            <div class="flex bg-slate-100 dark:bg-zinc-900 p-1 border border-blueprint-200 dark:border-zinc-800">
-              <button onClick={() => setActiveTab('grid')} class={`px-3 py-1 text-[10px] font-bold transition ${activeTab() === 'grid' ? 'text-white bg-blueprint-900 dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main'}`}>Grid View</button>
-              <button onClick={() => setActiveTab('csv')} class={`px-3 py-1 text-[10px] font-bold transition ${activeTab() === 'csv' ? 'text-white bg-blueprint-900 dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main'}`}>Raw CSV</button>
+            <div class="flex bg-slate-100 dark:bg-zinc-900 p-1 border border-blueprint-200 dark:border-zinc-800 rounded-lg">
+              <button onClick={() => setActiveTab('grid')} class={`px-3 py-1 text-[10px] font-bold transition rounded-md ${activeTab() === 'grid' ? 'text-white bg-blueprint-900 dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main'}`}>Grid View</button>
+              <button onClick={() => setActiveTab('csv')} class={`px-3 py-1 text-[10px] font-bold transition rounded-md ${activeTab() === 'csv' ? 'text-white bg-blueprint-900 dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main'}`}>Raw CSV</button>
             </div>
           </div>
 
@@ -401,14 +476,14 @@ export default function ChartEditor() {
               <p class="text-[10px] text-slate-500 dark:text-text-muted font-medium">Format: Label, Series1, Series2..., #Color (optional).</p>
               <textarea
                 value={chartStore.rawData}
-                onInput={(e) => updateChartMetadata({ rawData: e.currentTarget.value })}
-                class="w-full h-48 flex-1 p-3 border-2 border-blueprint-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 text-[12px] text-slate-800 dark:text-text-main font-mono outline-none focus:border-blueprint-900 dark:focus:border-brand-500 resize-none whitespace-pre transition-colors leading-relaxed"
+                onInput={(e) => handleUpdateMetadata({ rawData: e.currentTarget.value })}
+                class="w-full h-48 flex-1 p-3 border border-blueprint-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 text-[12px] text-slate-800 dark:text-text-main font-mono outline-none focus:border-blueprint-900 dark:focus:border-brand-500 resize-none whitespace-pre transition-colors leading-relaxed rounded-xl"
                 spellcheck="false"
               ></textarea>
             </div>
           )}
           {activeTab() === 'grid' && (
-            <div class="flex flex-col items-center justify-center flex-1 border-2 border-dashed border-blueprint-200 dark:border-zinc-800 bg-blueprint-50 dark:bg-zinc-900 p-6 text-center">
+            <div class="flex flex-col items-center justify-center flex-1 border border-dashed border-blueprint-200 dark:border-zinc-800 bg-blueprint-50 dark:bg-zinc-900/35 p-6 text-center rounded-xl">
               <p class="text-sm font-bold text-blueprint-900 dark:text-brand-500">Grid View Coming Soon</p>
               <p class="text-xs text-slate-500 dark:text-text-muted mt-2">Please use the Raw CSV editor for now to manage your dataset.</p>
             </div>
@@ -425,17 +500,17 @@ export default function ChartEditor() {
           <div class={styleSubTab() === 'layout' ? 'flex flex-col gap-4 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-4'}>
             {/* Toggles Grid */}
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1 mb-2">
-              <ToggleSwitch label="Grid" checked={chartStore.options.showGrid} onChange={(v) => updateChartOptions({ showGrid: v })} />
-              <ToggleSwitch label="Legend" checked={chartStore.options.showLegend} onChange={(v) => updateChartOptions({ showLegend: v })} />
-              <ToggleSwitch label="Values" checked={chartStore.options.showValues} onChange={(v) => updateChartOptions({ showValues: v })} />
-              <ToggleSwitch label="X-Axis" checked={chartStore.options.showXAxis} onChange={(v) => updateChartOptions({ showXAxis: v })} />
-              <ToggleSwitch label="Y-Axis" checked={chartStore.options.showYAxis} onChange={(v) => updateChartOptions({ showYAxis: v })} />
+              <ToggleSwitch label="Grid" checked={chartStore.options.showGrid} onChange={(v) => handleUpdateOptions({ showGrid: v })} />
+              <ToggleSwitch label="Legend" checked={chartStore.options.showLegend} onChange={(v) => handleUpdateOptions({ showLegend: v })} />
+              <ToggleSwitch label="Values" checked={chartStore.options.showValues} onChange={(v) => handleUpdateOptions({ showValues: v })} />
+              <ToggleSwitch label="X-Axis" checked={chartStore.options.showXAxis} onChange={(v) => handleUpdateOptions({ showXAxis: v })} />
+              <ToggleSwitch label="Y-Axis" checked={chartStore.options.showYAxis} onChange={(v) => handleUpdateOptions({ showYAxis: v })} />
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Chart Type</label>
-                <select value={chartStore.type} onInput={(e) => updateChartMetadata({ type: e.currentTarget.value as ChartType })} class="w-full px-2 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+                <select value={chartStore.type} onInput={(e) => handleUpdateMetadata({ type: e.currentTarget.value as ChartType })} class="w-full px-2 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer rounded-lg">
                   <option value="vertical">Vertical Bar</option>
                   <option value="horizontal">Horizontal Bar</option>
                   <option value="multiline">Multi-Line</option>
@@ -445,7 +520,7 @@ export default function ChartEditor() {
               </div>
               <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Legend Pos</label>
-                <select value={chartStore.options.legendPosition || 'bottom'} onInput={(e) => updateChartOptions({ legendPosition: e.currentTarget.value as any })} class="w-full px-2 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+                <select value={chartStore.options.legendPosition || 'bottom'} onInput={(e) => handleUpdateOptions({ legendPosition: e.currentTarget.value as any })} class="w-full px-2 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer rounded-lg">
                   <option value="bottom">Bottom Horiz</option>
                   <option value="top-right">Top Right Vert</option>
                 </select>
@@ -455,7 +530,7 @@ export default function ChartEditor() {
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Font Family</label>
-                <select value={chartStore.options.fontFamily} onInput={(e) => updateChartOptions({ fontFamily: e.currentTarget.value })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+                <select value={chartStore.options.fontFamily} onInput={(e) => handleUpdateOptions({ fontFamily: e.currentTarget.value })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer rounded-lg">
                   <option value="Inter">Inter (Modern)</option>
                   <option value="Carrois Gothic">Carrois Gothic (Editorial)</option>
                   <option value="Roboto">Roboto (Clean)</option>
@@ -466,7 +541,7 @@ export default function ChartEditor() {
               </div>
               <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Value Format</label>
-                <select value={chartStore.options.valueFormat} onInput={(e) => updateChartOptions({ valueFormat: e.currentTarget.value as any })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+                <select value={chartStore.options.valueFormat} onInput={(e) => handleUpdateOptions({ valueFormat: e.currentTarget.value as any })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer rounded-lg">
                   <option value="number">Plain Number</option>
                   <option value="currency">$ Currency</option>
                   <option value="percent">% Percentage</option>
@@ -479,7 +554,7 @@ export default function ChartEditor() {
           <div class={styleSubTab() === 'colors' ? 'flex flex-col gap-4 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-4'}>
             <div>
               <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Color Palette</label>
-              <select value={chartStore.options.colorPalette} onInput={(e) => updateChartOptions({ colorPalette: e.currentTarget.value as ColorPalette })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+              <select value={chartStore.options.colorPalette} onInput={(e) => handleUpdateOptions({ colorPalette: e.currentTarget.value as ColorPalette })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer rounded-lg">
                 <option value="vibrant">Vibrant</option>
                 <option value="pastel">Pastel Colors</option>
                 <option value="neon">Cyberpunk Neon</option>
@@ -492,15 +567,15 @@ export default function ChartEditor() {
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Canvas BG</label>
-                <div class="relative w-full h-8 border border-blueprint-200 dark:border-zinc-800 overflow-hidden"><input type="color" value={chartStore.options.bgColor} onInput={(e) => updateChartOptions({ bgColor: e.currentTarget.value })} class="absolute inset-[-10px] w-[200%] h-[200%] cursor-pointer" /></div>
+                <div class="relative w-full h-8 border border-blueprint-200 dark:border-zinc-800 overflow-hidden rounded-lg"><input type="color" value={chartStore.options.bgColor} onInput={(e) => handleUpdateOptions({ bgColor: e.currentTarget.value })} class="absolute inset-[-10px] w-[200%] h-[200%] cursor-pointer" /></div>
               </div>
               <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Title Color</label>
-                <div class="relative w-full h-8 border border-blueprint-200 dark:border-zinc-800 overflow-hidden"><input type="color" value={chartStore.options.titleColor} onInput={(e) => updateChartOptions({ titleColor: e.currentTarget.value })} class="absolute inset-[-10px] w-[200%] h-[200%] cursor-pointer" /></div>
+                <div class="relative w-full h-8 border border-blueprint-200 dark:border-zinc-800 overflow-hidden rounded-lg"><input type="color" value={chartStore.options.titleColor} onInput={(e) => handleUpdateOptions({ titleColor: e.currentTarget.value })} class="absolute inset-[-10px] w-[200%] h-[200%] cursor-pointer" /></div>
               </div>
               <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Text Color</label>
-                <div class="relative w-full h-8 border border-blueprint-200 dark:border-zinc-800 overflow-hidden"><input type="color" value={chartStore.options.textColor} onInput={(e) => updateChartOptions({ textColor: e.currentTarget.value })} class="absolute inset-[-10px] w-[200%] h-[200%] cursor-pointer" /></div>
+                <div class="relative w-full h-8 border border-blueprint-200 dark:border-zinc-800 overflow-hidden rounded-lg"><input type="color" value={chartStore.options.textColor} onInput={(e) => handleUpdateOptions({ textColor: e.currentTarget.value })} class="absolute inset-[-10px] w-[200%] h-[200%] cursor-pointer" /></div>
               </div>
             </div>
           </div>
@@ -510,7 +585,7 @@ export default function ChartEditor() {
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500 mb-1.5">Source Position</label>
-                <select value={chartStore.options.sourcePosition || 'left'} onInput={(e) => updateChartOptions({ sourcePosition: e.currentTarget.value as any })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer">
+                <select value={chartStore.options.sourcePosition || 'left'} onInput={(e) => handleUpdateOptions({ sourcePosition: e.currentTarget.value as any })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-text-main font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 appearance-none cursor-pointer rounded-lg">
                   <option value="left">Bottom Left</option>
                   <option value="right">Bottom Right</option>
                 </select>
@@ -520,59 +595,84 @@ export default function ChartEditor() {
                   <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500">Source Top Gap</label>
                   <span class="text-[10px] font-bold text-slate-500 dark:text-text-muted">{chartStore.options.sourcePadding ?? 40}px</span>
                 </div>
-                <input type="range" min="10" max="150" step="5" value={chartStore.options.sourcePadding ?? 40} onInput={(e) => updateChartOptions({ sourcePadding: parseInt(e.currentTarget.value) })} class="w-full h-8 accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
+                <input type="range" min="10" max="150" step="5" value={chartStore.options.sourcePadding ?? 40} onInput={(e) => handleUpdateOptions({ sourcePadding: parseInt(e.currentTarget.value) })} class="w-full h-8 accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
               </div>
             </div>
 
-            <div class="flex flex-col p-3 bg-slate-50 dark:bg-zinc-900 border border-blueprint-100 dark:border-zinc-800">
+            <div class="flex flex-col p-3 bg-slate-50 dark:bg-zinc-900 border border-blueprint-100 dark:border-zinc-800 rounded-xl">
               <div class="flex justify-between items-center mb-2">
                 <label class="block text-[10px] font-bold uppercase tracking-widest text-blueprint-900 dark:text-brand-500">Chart Bottom Gap</label>
                 <span class="text-[10px] font-bold text-slate-500 dark:text-text-muted">{chartStore.options.chartBottomGap ?? 40}px</span>
               </div>
-              <input type="range" min="10" max="150" step="5" value={chartStore.options.chartBottomGap ?? 40} onInput={(e) => updateChartOptions({ chartBottomGap: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
+              <input type="range" min="10" max="150" step="5" value={chartStore.options.chartBottomGap ?? 40} onInput={(e) => handleUpdateOptions({ chartBottomGap: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
             </div>
 
             {/* Animation Duration */}
-            <div class="flex flex-col p-3 bg-slate-50 dark:bg-zinc-900 border border-blueprint-100 dark:border-zinc-800">
+            <div class="flex flex-col p-3 bg-slate-50 dark:bg-zinc-900 border border-blueprint-100 dark:border-zinc-800 rounded-xl">
               <div class="flex justify-between items-center mb-2">
                 <label class="block text-[10px] font-bold uppercase tracking-widest text-blueprint-900 dark:text-brand-500">Animation Duration</label>
                 <span class="text-[10px] font-bold text-slate-500 dark:text-text-muted">{chartStore.options.duration || 5}s</span>
               </div>
-              <input type="range" min="1" max="15" step="0.5" value={chartStore.options.duration || 5} onInput={(e) => updateChartOptions({ duration: parseFloat(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500" />
+              <input type="range" min="1" max="15" step="0.5" value={chartStore.options.duration || 5} onInput={(e) => handleUpdateOptions({ duration: parseFloat(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
             </div>
+          </div>
 
-            {/* Zoom & Pan */}
-            <div class="flex flex-col p-3 bg-slate-50 dark:bg-zinc-900 border border-blueprint-100 dark:border-zinc-800">
-              <div class="flex justify-between items-center mb-4">
-                <label class="block text-[10px] font-bold uppercase tracking-widest text-blueprint-900 dark:text-brand-500">Zoom & Pan View</label>
-                <button onClick={() => updateChartOptions({ zoom: 1.0, panX: 0, panY: 0 })} class="text-[10px] font-bold text-blueprint-500 dark:text-text-muted hover:text-blueprint-900 dark:hover:text-brand-500 flex items-center gap-1 transition uppercase">Reset</button>
-              </div>
-              <div class="grid grid-cols-3 gap-4">
-                <div>
-                  <div class="flex justify-between items-center mb-2">
-                    <label class="block text-[10px] font-bold text-slate-500 dark:text-text-muted uppercase tracking-wider">Zoom</label>
-                    <span class="text-[10px] text-blueprint-900 dark:text-brand-500 font-bold">{chartStore.options.zoom.toFixed(1)}x</span>
-                  </div>
-                  <input type="range" min="0.5" max="3" step="0.1" value={chartStore.options.zoom} onInput={(e) => updateChartOptions({ zoom: parseFloat(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500" />
+        </div>
+
+        <div class="hidden md:block w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
+
+        {/* Canvas tab */}
+        <div class={editorTab() === 'canvas' ? 'flex flex-col gap-5 md:gap-6 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-6 md:shrink-0'}>
+          <h2 class="hidden md:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Canvas & Aspect Ratio</h2>
+
+          {/* Aspect Ratio Cards Grid */}
+          <div class="flex flex-col gap-3">
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-blueprint-900 dark:text-brand-500">Screen Ratio</label>
+            <div class="grid grid-cols-2 gap-2">
+              <AspectRatioCard value="16:9" label="16:9 Landscape" shape="w-8 h-4.5" orientation="Horizontal Video" />
+              <AspectRatioCard value="9:16" label="9:16 Portrait" shape="w-4.5 h-8" orientation="TikTok & Shorts" />
+              <AspectRatioCard value="1:1" label="1:1 Square" shape="w-6 h-6" orientation="Instagram Feed" />
+              <AspectRatioCard value="4:5" label="4:5 Portrait" shape="w-6.5 h-8" orientation="Social Media" />
+              <AspectRatioCard value="3:4" label="3:4 Standard" shape="w-6 h-8" orientation="Pinterest Pin" />
+              <AspectRatioCard value="4:3" label="4:3 Standard" shape="w-8 h-6" orientation="Classic Desktop" />
+              <AspectRatioCard value="2:1" label="2:1 Panoramic" shape="w-8 h-4" orientation="Panoramic Banner" />
+            </div>
+          </div>
+
+          <div class="w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
+
+          {/* Zoom & Pan (Moved from style tab to keep layout concise) */}
+          <div class="flex flex-col p-4 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 rounded-xl">
+            <div class="flex justify-between items-center mb-4">
+              <label class="block text-[10px] font-bold uppercase tracking-widest text-blueprint-900 dark:text-brand-500">Zoom & Pan View</label>
+              <button onClick={() => handleUpdateOptions({ zoom: 1.0, panX: 0, panY: 0 })} class="text-[10px] font-bold text-blueprint-500 dark:text-text-muted hover:text-blueprint-900 dark:hover:text-brand-500 flex items-center gap-1 transition uppercase cursor-pointer">Reset</button>
+            </div>
+            <div class="flex flex-col gap-4">
+              <div>
+                <div class="flex justify-between items-center mb-1.5">
+                  <label class="block text-[10px] font-bold text-slate-500 dark:text-text-muted uppercase tracking-wider">Zoom Level</label>
+                  <span class="text-[10px] text-blueprint-900 dark:text-brand-500 font-bold">{chartStore.options.zoom.toFixed(1)}x</span>
                 </div>
+                <input type="range" min="0.5" max="3" step="0.1" value={chartStore.options.zoom} onInput={(e) => handleUpdateOptions({ zoom: parseFloat(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <div class="flex justify-between items-center mb-2">
+                  <div class="flex justify-between items-center mb-1.5">
                     <label class="block text-[10px] font-bold text-slate-500 dark:text-text-muted uppercase tracking-wider">Pan X</label>
                     <span class="text-[10px] text-blueprint-900 dark:text-brand-500 font-bold">{chartStore.options.panX}</span>
                   </div>
-                  <input type="range" min="-1000" max="1000" step="10" value={chartStore.options.panX} onInput={(e) => updateChartOptions({ panX: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500" />
+                  <input type="range" min="-1000" max="1000" step="10" value={chartStore.options.panX} onInput={(e) => handleUpdateOptions({ panX: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
                 </div>
                 <div>
-                  <div class="flex justify-between items-center mb-2">
+                  <div class="flex justify-between items-center mb-1.5">
                     <label class="block text-[10px] font-bold text-slate-500 dark:text-text-muted uppercase tracking-wider">Pan Y</label>
                     <span class="text-[10px] text-blueprint-900 dark:text-brand-500 font-bold">{chartStore.options.panY}</span>
                   </div>
-                  <input type="range" min="-1000" max="1000" step="10" value={chartStore.options.panY} onInput={(e) => updateChartOptions({ panY: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500" />
+                  <input type="range" min="-1000" max="1000" step="10" value={chartStore.options.panY} onInput={(e) => handleUpdateOptions({ panY: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-900 dark:accent-brand-500 cursor-pointer" />
                 </div>
               </div>
             </div>
           </div>
-
         </div>
 
         </div>
@@ -628,6 +728,12 @@ export default function ChartEditor() {
               class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'style' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
             >
               Style
+            </button>
+            <button
+              onClick={() => setEditorTab('canvas')}
+              class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'canvas' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+            >
+              Canvas
             </button>
           </div>
         </div>
