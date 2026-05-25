@@ -1,10 +1,12 @@
-import { createEffect, createSignal, onMount, onCleanup } from 'solid-js';
+import { createEffect, createSignal, onMount, onCleanup, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { chartStore, loadStateFromUrl, updateChartOptions, updateChartMetadata, setChartStore } from '@/store/chartStore';
 import { ChartEngine } from '@/engines/chart-animator/ChartEngine';
 import type { ChartType, ColorPalette, ChartState } from '@/engines/chart-animator/types';
 import { CHART_PRESETS, type ChartPreset } from '@/engines/chart-animator/presets';
 import ExportModal from '@/components/common/ExportModal';
+import { isDarkTheme, toggleTheme } from '@/store/global';
+import Icon from '@/components/ui/Icon';
 
 export default function ChartEditor() {
   let canvasRef!: HTMLCanvasElement;
@@ -15,6 +17,7 @@ export default function ChartEditor() {
   const [isExporting, setIsExporting] = createSignal(false);
   const [customPresets, setCustomPresets] = createSignal<Array<{name: string, data: any}>>([]);
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1'>('16:9');
+  const [editorTab, setEditorTab] = createSignal<'presets' | 'metadata' | 'data' | 'style'>('presets');
 
   // Snapshot State
   const [snapshotRes, setSnapshotRes] = createSignal<'1080' | '1440' | '2160'>('1080');
@@ -201,72 +204,102 @@ export default function ChartEditor() {
   };
 
   const handlePlay = () => engine.play();
-
   return (
     <div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative text-slate-800 dark:text-text-main blueprint-grid-bg">
       
       {/* TOOLBAR / SIDEBAR (Left Panel) */}
-      <aside class="w-full md:w-[420px] bg-white dark:bg-zinc-950 border-b md:border-b-0 md:border-r border-blueprint-900 dark:border-zinc-800 p-5 flex flex-col gap-6 overflow-y-auto z-10 shrink-0 custom-scrollbar shadow-xl">
+      <aside class="w-full md:w-[420px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 p-4 md:p-5 flex flex-col gap-4 md:gap-6 overflow-y-auto z-10 shrink-0 custom-scrollbar shadow-xl">
         
         <div class="text-[10px] font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-widest bg-blueprint-100 dark:bg-brand-500/10 px-2 py-1 inline-block w-max mb-[-12px]">Tool Properties</div>
 
-        {/* Built-in Preset Templates */}
-        <div class="flex flex-col gap-3 shrink-0">
-          <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Preset Templates</h2>
-          <div class="grid grid-cols-2 gap-2">
-            {Object.entries(CHART_PRESETS).map(([key, preset]) => (
-              <button 
-                onClick={() => handleLoadPreset(preset)}
-                class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-200 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer"
-              >
-                <span class="truncate pr-2">{preset.title}</span>
-                <span class="text-[8px] uppercase tracking-wider text-slate-400 dark:text-text-muted font-normal">{preset.type}</span>
-              </button>
-            ))}
-          </div>
+        {/* Mobile View Category Tabs */}
+        <div class="flex md:hidden items-center bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 p-1 shrink-0 gap-1 rounded-lg">
+          <button 
+            onClick={() => setEditorTab('presets')}
+            class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'presets' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+          >
+            Presets
+          </button>
+          <button 
+            onClick={() => setEditorTab('metadata')}
+            class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'metadata' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+          >
+            Metadata
+          </button>
+          <button 
+            onClick={() => setEditorTab('data')}
+            class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'data' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+          >
+            Data
+          </button>
+          <button 
+            onClick={() => setEditorTab('style')}
+            class={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider text-center transition-all rounded-md ${editorTab() === 'style' ? 'bg-blueprint-900 text-white dark:bg-brand-500' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
+          >
+            Style
+          </button>
         </div>
 
-        {/* Custom Presets */}
-        <div class="flex flex-col gap-3 shrink-0">
-          <div class="flex items-center justify-between">
-            <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Custom Presets</h2>
-            <button 
-              onClick={handleSaveCustomPreset}
-              class="px-2 py-1 bg-blueprint-900 dark:bg-brand-500 text-white font-bold text-[9px] uppercase tracking-widest shadow-sm hover:scale-105 transition cursor-pointer"
-            >
-              + Save Current
-            </button>
-          </div>
-          {customPresets().length === 0 ? (
-            <div class="p-3 border border-dashed border-blueprint-200 dark:border-zinc-800 text-center text-[10px] text-slate-400 dark:text-text-muted font-medium bg-slate-50/50 dark:bg-zinc-900/50">
-              No custom presets saved.
-            </div>
-          ) : (
-            <div class="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto custom-scrollbar">
-              {customPresets().map((preset, idx) => (
-                <div 
-                  onClick={() => handleLoadCustomPreset(preset.data)}
-                  class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-205 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer justify-between"
+        {/* Presets Category */}
+        <div class={editorTab() === 'presets' ? 'flex flex-col gap-5 md:gap-6 shrink-0' : 'hidden md:flex md:flex-col md:gap-6 md:shrink-0'}>
+          {/* Built-in Preset Templates */}
+          <div class="flex flex-col gap-3 shrink-0">
+            <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Preset Templates</h2>
+            <div class="grid grid-cols-2 gap-2">
+              {Object.entries(CHART_PRESETS).map(([key, preset]) => (
+                <button 
+                  onClick={() => handleLoadPreset(preset)}
+                  class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-200 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer"
                 >
-                  <span class="truncate pr-4">{preset.name}</span>
-                  <span class="text-[8px] uppercase tracking-wider text-slate-400 dark:text-text-muted font-normal">{preset.data.type}</span>
-                  <button 
-                    onClick={(e) => handleDeleteCustomPreset(e, idx)}
-                    class="absolute top-1 right-1 text-slate-400 hover:text-brand-red opacity-0 group-hover:opacity-100 transition p-0.5"
-                    title="Delete Preset"
-                  >
-                    ✕
-                  </button>
-                </div>
+                  <span class="truncate pr-2">{preset.title}</span>
+                  <span class="text-[8px] uppercase tracking-wider text-slate-400 dark:text-text-muted font-normal">{preset.type}</span>
+                </button>
               ))}
             </div>
-          )}
+          </div>
+
+          {/* Custom Presets */}
+          <div class="flex flex-col gap-3 shrink-0">
+            <div class="flex items-center justify-between">
+              <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Custom Presets</h2>
+              <button 
+                onClick={handleSaveCustomPreset}
+                class="px-2 py-1 bg-blueprint-900 dark:bg-brand-500 text-white font-bold text-[9px] uppercase tracking-widest shadow-sm hover:scale-105 transition cursor-pointer"
+              >
+                + Save Current
+              </button>
+            </div>
+            {customPresets().length === 0 ? (
+              <div class="p-3 border border-dashed border-blueprint-200 dark:border-zinc-800 text-center text-[10px] text-slate-400 dark:text-text-muted font-medium bg-slate-50/50 dark:bg-zinc-900/50 animate-pulse">
+                No custom presets saved.
+              </div>
+            ) : (
+              <div class="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto custom-scrollbar">
+                {customPresets().map((preset, idx) => (
+                  <div 
+                    onClick={() => handleLoadCustomPreset(preset.data)}
+                    class="px-2 py-1.5 bg-slate-50 hover:bg-blueprint-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-blueprint-200 dark:border-zinc-800 text-left text-xs text-slate-700 dark:text-text-main hover:text-blueprint-900 dark:hover:text-brand-500 font-bold transition flex flex-col gap-0.5 relative group shadow-sm cursor-pointer justify-between"
+                  >
+                    <span class="truncate pr-4">{preset.name}</span>
+                    <span class="text-[8px] uppercase tracking-wider text-slate-400 dark:text-text-muted font-normal">{preset.data.type}</span>
+                    <button 
+                      onClick={(e) => handleDeleteCustomPreset(e, idx)}
+                      class="absolute top-1 right-1 text-slate-400 hover:text-brand-red opacity-0 group-hover:opacity-100 transition p-0.5"
+                      title="Delete Preset"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div class="w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
+        <div class="hidden md:block w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
 
         {/* Content Editor */}
-        <div class="flex flex-col gap-3 shrink-0">
+        <div class={editorTab() === 'metadata' ? 'flex flex-col gap-3 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-3 md:shrink-0'}>
           <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Chart Metadata</h2>
           
           <div class="flex items-center gap-3">
@@ -283,10 +316,10 @@ export default function ChartEditor() {
           </div>
         </div>
 
-        <div class="w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
+        <div class="hidden md:block w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
 
         {/* Enhanced Data Editor */}
-        <div class="flex flex-col gap-3 flex-1 min-h-[240px]">
+        <div class={editorTab() === 'data' ? 'flex flex-col gap-3 flex-1 min-h-[200px] md:min-h-[240px] animate-fade-in' : 'hidden md:flex md:flex-col md:gap-3 md:flex-1 md:min-h-[240px]'}>
           <div class="flex items-center justify-between">
             <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Chart Data</h2>
             <div class="flex bg-slate-100 dark:bg-zinc-900 p-1 border border-blueprint-200 dark:border-zinc-800">
@@ -314,10 +347,10 @@ export default function ChartEditor() {
           )}
         </div>
 
-        <div class="w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
+        <div class="hidden md:block w-full border-b border-dashed border-blueprint-300 dark:border-zinc-800"></div>
 
         {/* Appearance Settings */}
-        <div class="flex flex-col gap-5 shrink-0">
+        <div class={editorTab() === 'style' ? 'flex flex-col gap-5 shrink-0 animate-fade-in' : 'hidden md:flex md:flex-col md:gap-5 md:shrink-0'}>
           <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-text-muted">Layout & Style</h2>
           
           {/* Toggles */}
@@ -465,8 +498,8 @@ export default function ChartEditor() {
         </div>
       </aside>
 
-      {/* CANVAS AREA (Right) */}
-      <section class="flex-1 relative overflow-hidden flex items-center justify-center p-4 sm:p-12">
+      {/* CANVAS AREA (Right / Top on Mobile) */}
+      <section class="flex-1 h-[55vh] md:h-full order-first md:order-last relative overflow-hidden flex items-center justify-center p-4 sm:p-12">
         <div class="relative p-2 bg-white dark:bg-zinc-900 border-2 border-blueprint-900 dark:border-zinc-800 blueprint-shadow">
            <canvas ref={canvasRef} class="block bg-white dark:bg-black object-contain"></canvas>
         </div>
@@ -530,14 +563,14 @@ export default function ChartEditor() {
 
       {/* Portaling controls to header to keep editor interface premium */}
       <Portal mount={document.getElementById('editor-header-controls') || undefined}>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5 sm:gap-3">
           {/* Aspect Ratio Selector Dropdown */}
-          <div class="relative flex items-center bg-slate-100 dark:bg-zinc-900/50 rounded-lg border border-slate-205 dark:border-zinc-800 px-3 py-1.5 gap-1.5 shadow-sm">
-            <span class="text-[9px] font-black text-slate-400 dark:text-text-muted uppercase tracking-wider select-none">Aspect:</span>
+          <div class="relative flex items-center bg-slate-100 dark:bg-zinc-900/50 rounded-lg border border-slate-200 dark:border-zinc-800 px-2 sm:px-3 py-1.5 gap-1 sm:gap-1.5 shadow-sm">
+            <span class="hidden md:inline text-[9px] font-black text-slate-400 dark:text-text-muted uppercase tracking-wider select-none">Aspect:</span>
             <select 
               value={aspectRatio()} 
               onInput={(e) => setAspectRatio(e.currentTarget.value as any)} 
-              class="bg-transparent border-none text-[11px] font-extrabold text-slate-700 dark:text-text-main outline-none cursor-pointer appearance-none pr-5 relative"
+              class="bg-transparent border-none text-[10px] sm:text-[11px] font-extrabold text-slate-700 dark:text-text-main outline-none cursor-pointer appearance-none pr-4 sm:pr-5 relative"
             >
               <option value="16:9" class="bg-white dark:bg-zinc-950">16:9 (Landscape)</option>
               <option value="9:16" class="bg-white dark:bg-zinc-950">9:16 (Vertical)</option>
@@ -547,28 +580,50 @@ export default function ChartEditor() {
               <option value="4:3" class="bg-white dark:bg-zinc-950">4:3 (Standard Horiz.)</option>
               <option value="2:1" class="bg-white dark:bg-zinc-950">2:1 (Panoramics)</option>
             </select>
-            <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-text-muted text-[8px]">▼</div>
+            <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-text-muted text-[8px]">▼</div>
           </div>
 
+          {/* Theme Switcher Button */}
           <button 
-            onClick={() => setIsExportingSnapshot(true)} 
-            class="flex items-center gap-1.5 px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
-            title="Export High-Res PNG Snapshot"
+            onClick={toggleTheme} 
+            class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-slate-500 dark:text-text-muted hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer border border-transparent dark:border-zinc-800/20 shrink-0"
+            title="Toggle Light/Dark Theme"
           >
-             <span>Camera Snapshot</span>
+            <Show when={isDarkTheme()} fallback={<Icon name="moon" class="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />}>
+              <Icon name="sun" class="w-4 h-4 sm:w-5 sm:h-5 text-brand-500" />
+            </Show>
           </button>
 
+          {/* Camera Snapshot Button */}
+          <button 
+            onClick={() => setIsExportingSnapshot(true)} 
+            class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
+            title="Export High-Res PNG Snapshot"
+          >
+             <Icon name="download" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
+             <span class="hidden sm:inline">Camera Snapshot</span>
+          </button>
+
+          {/* Preview/Play Button */}
           <button 
             onClick={handlePlay} 
-            class="flex items-center gap-2 px-3.5 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
+            class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
+            title="Play Animation Preview"
           >
-             Preview
+             <Icon name="play" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
+             <span class="hidden sm:inline">Preview</span>
           </button>
+
+          {/* Export Video Button */}
           <button 
             onClick={() => setIsExporting(true)} 
-            class="flex items-center gap-2 px-3.5 py-2 rounded-md bg-blueprint-900 hover:bg-blueprint-800 dark:bg-brand-500 dark:hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-widest transition cursor-pointer shadow-md"
+            class="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-md bg-blueprint-900 hover:bg-blueprint-800 dark:bg-brand-500 dark:hover:bg-brand-600 font-bold text-[10px] sm:text-xs uppercase tracking-widest transition cursor-pointer shadow-md shrink-0"
+            title="Export Video Animation"
+            style={{ color: isDarkTheme() ? '#09090b' : '#ffffff' }}
           >
-             Export Video
+             <Icon name="film" class={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDarkTheme() ? 'text-zinc-950' : 'text-white'}`} />
+             <span class="hidden sm:inline">Export Video</span>
+             <span class="inline sm:hidden">Export</span>
           </button>
         </div>
       </Portal>

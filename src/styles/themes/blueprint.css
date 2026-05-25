@@ -12,9 +12,10 @@
 /* Blueprint Custom Shadows */
 @utility blueprint-shadow {
   box-shadow: 6px 6px 0px rgba(0, 51, 102, 0.1);
-}
-.dark @utility blueprint-shadow {
-  box-shadow: 6px 6px 0px rgba(255, 255, 255, 0.05);
+  
+  .dark & {
+    box-shadow: 6px 6px 0px rgba(255, 255, 255, 0.05);
+  }
 }
 
 @utility blueprint-shadow-hover {
@@ -28,11 +29,11 @@
     linear-gradient(rgba(0, 51, 102, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0, 51, 102, 0.08) 1px, transparent 1px);
   background-size: 24px 24px;
-}
-.dark @utility blueprint-grid-bg {
-  background-color: #050505;
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 24px 24px;
+
+  .dark & {
+    background-color: #050505;
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  }
 }
