@@ -101,9 +101,10 @@ export default function TypographyEditor() {
       if (container) {
         const isFS = document.fullscreenElement === wrapper;
         const mainNode = wrapper.closest('main');
+        const isMobile = window.innerWidth < 768;
         // Calculate max dimensions strictly based on stable bounds to prevent infinite growth feedback loop
-        const maxW = isFS ? window.innerWidth : (mainNode ? mainNode.clientWidth - 80 : container.clientWidth - 64);
-        const maxH = isFS ? window.innerHeight : (mainNode ? mainNode.clientHeight - 180 : container.clientHeight - 64);
+        const maxW = isFS ? window.innerWidth : (mainNode ? mainNode.clientWidth - (isMobile ? 0 : 80) : container.clientWidth - (isMobile ? 0 : 64));
+        const maxH = isFS ? window.innerHeight : (mainNode ? mainNode.clientHeight - (isMobile ? 80 : 180) : container.clientHeight - (isMobile ? 80 : 64));
 
         let w = maxW;
         let h = maxH;
@@ -219,24 +220,32 @@ export default function TypographyEditor() {
   };
 
   const TimelineUI = () => (
-    <div class={`flex items-center gap-2 sm:gap-4 border shadow-sm rounded-xl px-4 sm:px-6 py-2.5 w-full max-w-2xl transition-all ${
-      isFullscreen() 
-        ? 'bg-black/40 backdrop-blur-md border-white/10 shadow-2xl py-2 px-4' 
-        : 'bg-white dark:bg-zinc-950 border-border-color'
-    }`}>
-       <button onClick={resetTime} class={`p-1.5 rounded-lg transition-colors ${isFullscreen() ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900'}`} title="Rewind to start">
-         <Icon name="skip-back" class="w-4 h-4 sm:w-5 sm:h-5" />
+    <div class={isFullscreen() 
+      ? "flex items-center gap-3 sm:gap-6 border-none shadow-2xl rounded-2xl py-3 px-6 w-full max-w-2xl bg-neutral-950/75 backdrop-blur-xl border border-neutral-800/40 text-white"
+      : `flex items-center gap-2 sm:gap-4 border shadow-sm rounded-xl px-4 sm:px-6 py-2.5 w-full max-w-2xl transition-all bg-white dark:bg-zinc-950 border-border-color`
+    }>
+       <button 
+         onClick={resetTime} 
+         class={isFullscreen() 
+           ? "p-1 bg-transparent text-white transition-none shrink-0"
+           : `p-1.5 rounded-lg transition-colors text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900`
+         } 
+         title="Rewind to start"
+       >
+         <Icon name="skip-back" class={isFullscreen() ? "w-5.5 h-5.5" : "w-4 h-4 sm:w-5 sm:h-5"} />
        </button>
        
-       <button onClick={handlePlayPause} class={`rounded-full flex items-center justify-center shadow-md active:scale-95 transition-all shrink-0 ${
-         isFullscreen() 
-           ? 'w-9 h-9 bg-brand-500 text-zinc-950 hover:bg-brand-400' 
-           : 'w-10 h-10 sm:w-12 sm:h-12 bg-blueprint-900 dark:bg-brand-500 text-white dark:text-zinc-950 hover:scale-105'
-       }`}>
+       <button 
+         onClick={handlePlayPause} 
+         class={isFullscreen()
+           ? "bg-transparent text-white w-auto h-auto shadow-none scale-100 hover:scale-100 active:scale-95 transition-none shrink-0 p-1 flex items-center justify-center"
+           : `rounded-full flex items-center justify-center shadow-md active:scale-95 transition-all shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-blueprint-900 dark:bg-brand-500 text-white dark:text-zinc-950 hover:scale-105`
+         }
+       >
          <Show when={isPlaying()} fallback={
-           <svg class={`${isFullscreen() ? 'w-3.5 h-3.5' : 'w-4 h-4 sm:w-5 sm:h-5'} fill-current ml-0.5`} viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+           <svg class={`${isFullscreen() ? 'w-6.5 h-6.5' : 'w-4 h-4 sm:w-5 sm:h-5'} fill-current ml-0.5`} viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
          }>
-           <svg class={isFullscreen() ? 'w-3.5 h-3.5' : 'w-4 h-4 sm:w-5 sm:h-5'} viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+           <svg class={isFullscreen() ? 'w-6.5 h-6.5' : 'w-4 h-4 sm:w-5 sm:h-5'} viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
          </Show>
        </button>
 
@@ -259,11 +268,11 @@ export default function TypographyEditor() {
            </div>
          </div>
        }>
-         {/* Minimal Fullscreen Timeline Inline layout */}
+         {/* Minimal Fullscreen Timeline Inline layout - macOS style */}
          <div class="flex-1 flex items-center gap-3 px-1">
-           <span class="text-[10px] sm:text-xs font-mono font-bold text-zinc-300 shrink-0">{(typographyStore.time).toFixed(1)}s</span>
-           <div class="flex-1 relative h-1.5 rounded-full flex items-center bg-zinc-800">
-             <div class="absolute left-0 h-full bg-brand-500 rounded-full pointer-events-none" style={{ width: `${((typographyStore.time) / (typographyStore.duration || 5)) * 100}%` }}></div>
+           <span class="text-xs sm:text-sm font-mono font-black text-white shrink-0">{(typographyStore.time).toFixed(1)}s</span>
+           <div class="flex-1 relative h-1.5 rounded-full flex items-center bg-neutral-800">
+             <div class="absolute left-0 h-full bg-white rounded-full pointer-events-none" style={{ width: `${((typographyStore.time) / (typographyStore.duration || 5)) * 100}%` }}></div>
              <input 
                type="range" 
                min="0" max="1" step="0.001" 
@@ -271,14 +280,21 @@ export default function TypographyEditor() {
                onInput={(e) => scrubTime(parseFloat(e.currentTarget.value))}
                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
              />
-             <div class="absolute w-2.5 h-2.5 bg-white rounded-full shadow-sm pointer-events-none" style={{ left: `calc(${((typographyStore.time) / (typographyStore.duration || 5)) * 100}% - 5px)` }}></div>
+             <div class="absolute w-3 h-3 bg-white rounded-full shadow-md pointer-events-none" style={{ left: `calc(${((typographyStore.time) / (typographyStore.duration || 5)) * 100}% - 6px)` }}></div>
            </div>
-           <span class="text-[10px] sm:text-xs font-mono font-bold text-zinc-500 shrink-0">{(typographyStore.duration || 5).toFixed(1)}s</span>
+           <span class="text-xs sm:text-sm font-mono font-bold text-neutral-500 shrink-0">{(typographyStore.duration || 5).toFixed(1)}s</span>
          </div>
        </Show>
 
-       <button onClick={toggleFullscreen} class={`p-1.5 rounded-lg transition-colors sm:ml-2 ${isFullscreen() ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900'}`} title="Toggle Fullscreen">
-         <Icon name={isFullscreen() ? "minimize" : "maximize"} class="w-4 h-4 sm:w-5 sm:h-5" />
+       <button 
+         onClick={toggleFullscreen} 
+         class={isFullscreen() 
+           ? "p-1 bg-transparent text-white transition-none shrink-0"
+           : `p-1.5 rounded-lg transition-colors sm:ml-2 text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900`
+         } 
+         title="Toggle Fullscreen"
+       >
+         <Icon name={isFullscreen() ? "minimize" : "maximize"} class={isFullscreen() ? "w-5.5 h-5.5" : "w-4 h-4 sm:w-5 sm:h-5"} />
        </button>
     </div>
   );
@@ -877,13 +893,13 @@ export default function TypographyEditor() {
       </aside>
 
       {/* CANVAS WORKSPACE (Right Panel) */}
-      <main class="h-[50vh] shrink-0 md:h-auto md:flex-1 flex flex-col relative md:min-h-full min-w-0 bg-slate-100/50 dark:bg-black/20 p-6 sm:p-10 custom-scrollbar">
+      <main class="h-[50vh] shrink-0 md:h-auto md:flex-1 flex flex-col relative md:min-h-full min-w-0 bg-slate-100/50 dark:bg-black/20 p-0 md:p-6 lg:p-10 custom-scrollbar">
         
         <div class="flex-1 flex flex-col justify-center max-w-[1200px] mx-auto w-full">
           <div 
             ref={canvasContainerRef}
-            class={`relative flex items-center justify-center border border-border-color shadow-md transition-all duration-300 bg-white dark:bg-zinc-950 ${
-              isFullscreen() ? '!fixed inset-0 z-50 bg-black border-none !rounded-none p-0' : 'rounded-2xl overflow-hidden'
+            class={`relative flex items-center justify-center border-t border-b md:border border-border-color md:shadow-md transition-all duration-300 bg-white dark:bg-zinc-950 ${
+              isFullscreen() ? '!fixed inset-0 z-50 bg-black border-none !rounded-none p-0' : 'rounded-none md:rounded-2xl overflow-hidden'
             }`}
           >
             <canvas ref={canvasRef} class="object-contain cursor-crosshair active:cursor-grabbing" style={{ "background-color": typographyStore.bgColor, "touch-action": "none", "pointer-events": "auto" }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}></canvas>
