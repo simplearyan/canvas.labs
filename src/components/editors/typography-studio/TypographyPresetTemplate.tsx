@@ -658,64 +658,53 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
             <div class="space-y-4 pt-2">
               {/* Context-Based Format Section - Tab 4 (only visible when selected, slides in stacked on desktop) */}
               <Show when={typographyStore.selectedId}>
-                <div class={`space-y-3.5 p-4 rounded-xl border border-brand-500/20 bg-brand-500/5 dark:bg-brand-500/10 shadow-sm animate-fade-in ${
+                <div class={`space-y-5 animate-fade-in ${
                   activeTab() === 'format' ? 'block' : 'hidden lg:block'
                 }`}>
-                  <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-black text-brand-500 uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
-                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="m10 15 5-3-5-3v6Z" />
-                      </svg>
-                      Format Selection
-                    </span>
-                    <button
-                      onClick={() => updateTypographyGlobal({ selectedId: null })}
-                      class="text-[9px] font-extrabold px-2 py-0.5 rounded-md border border-border-color bg-black/5 dark:bg-white/5 text-text-muted hover:text-red-500 transition-all cursor-pointer"
-                      type="button"
-                    >
-                      Clear Selection
-                    </button>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-2.5">
-                    {/* Align Horizontal */}
-                    <button
-                      onClick={() => updateTypographyElement(typographyStore.selectedId!, { x: typographyStore.width / 2 })}
-                      class="flex items-center justify-center gap-1.5 py-2.5 bg-white dark:bg-zinc-900 border border-border-color hover:border-brand-500/50 hover:bg-black/5 rounded-xl text-xs font-bold text-text-main transition-colors cursor-pointer"
-                      type="button"
-                    >
-                      <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="2" x2="12" y2="22" />
-                        <rect x="5" y="8" width="14" height="8" rx="1.5" />
-                      </svg>
-                      Center Horizontally
-                    </button>
-                    {/* Align Vertical */}
-                    <button
-                      onClick={() => updateTypographyElement(typographyStore.selectedId!, { y: typographyStore.height / 2 })}
-                      class="flex items-center justify-center gap-1.5 py-2.5 bg-white dark:bg-zinc-900 border border-border-color hover:border-brand-500/50 hover:bg-black/5 rounded-xl text-xs font-bold text-text-main transition-colors cursor-pointer"
-                      type="button"
-                    >
-                      <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="2" y1="12" x2="22" y2="12" />
-                        <rect x="8" y="5" width="8" height="14" rx="1.5" />
-                      </svg>
-                      Center Vertically
-                    </button>
+                  
+                  {/* Alignment Section */}
+                  <div class="space-y-2">
+                    <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider">Alignment</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                      {/* Align Horizontal */}
+                      <button
+                        onClick={() => updateTypographyElement(typographyStore.selectedId!, { x: typographyStore.width / 2 })}
+                        class="flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-zinc-900/50 border border-border-color hover:border-brand-500 dark:hover:border-brand-500/50 hover:bg-brand-500/5 dark:hover:bg-brand-500/10 rounded-xl text-xs font-bold text-text-main transition-all cursor-pointer active:scale-95"
+                        type="button"
+                      >
+                        <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="12" y1="2" x2="12" y2="22" />
+                          <rect x="5" y="8" width="14" height="8" rx="1.5" />
+                        </svg>
+                        Center Horiz.
+                      </button>
+                      {/* Align Vertical */}
+                      <button
+                        onClick={() => updateTypographyElement(typographyStore.selectedId!, { y: typographyStore.height / 2 })}
+                        class="flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-zinc-900/50 border border-border-color hover:border-brand-500 dark:hover:border-brand-500/50 hover:bg-brand-500/5 dark:hover:bg-brand-500/10 rounded-xl text-xs font-bold text-text-main transition-all cursor-pointer active:scale-95"
+                        type="button"
+                      >
+                        <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="2" y1="12" x2="22" y2="12" />
+                          <rect x="8" y="5" width="8" height="14" rx="1.5" />
+                        </svg>
+                        Center Vert.
+                      </button>
+                    </div>
                   </div>
 
                   {/* Rotation Adjustments */}
-                  <div class="space-y-1.5">
-                    <label class="block text-[9px] font-bold text-text-muted uppercase tracking-wider">Rotation Angle</label>
-                    <div class="flex items-center gap-2">
+                  <div class="space-y-2">
+                    <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider">Rotation Angle</label>
+                    <div class="flex items-center gap-2.5">
                       <button
                         onClick={() => {
                           const currentRot = typographyStore.elements.find(e => e.id === typographyStore.selectedId)?.rotation || 0;
                           updateTypographyElement(typographyStore.selectedId!, { rotation: (currentRot - 45) % 360 });
                         }}
-                        class="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors border border-border-color text-text-muted hover:text-brand-500 cursor-pointer flex-shrink-0"
+                        class="w-10 h-10 flex items-center justify-center bg-slate-50 dark:bg-zinc-900/50 border border-border-color hover:border-brand-500 text-text-muted hover:text-brand-500 rounded-xl transition-all cursor-pointer shrink-0 active:scale-90"
                         type="button"
+                        title="Rotate -45°"
                       >
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
@@ -723,7 +712,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                         </svg>
                       </button>
 
-                      <div class="flex-1 flex items-center justify-center gap-2 px-3.5 bg-white dark:bg-zinc-900 border border-border-color rounded-xl h-10">
+                      <div class="flex-1 flex items-center justify-between gap-3 px-3.5 bg-slate-50 dark:bg-zinc-900/50 border border-border-color rounded-xl h-10">
                         <input
                           type="range"
                           min="-180" max="180"
@@ -741,8 +730,9 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                           const currentRot = typographyStore.elements.find(e => e.id === typographyStore.selectedId)?.rotation || 0;
                           updateTypographyElement(typographyStore.selectedId!, { rotation: (currentRot + 45) % 360 });
                         }}
-                        class="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors border border-border-color text-text-muted hover:text-brand-500 cursor-pointer flex-shrink-0"
+                        class="w-10 h-10 flex items-center justify-center bg-slate-50 dark:bg-zinc-900/50 border border-border-color hover:border-brand-500 text-text-muted hover:text-brand-500 rounded-xl transition-all cursor-pointer shrink-0 active:scale-90"
                         type="button"
+                        title="Rotate +45°"
                       >
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -751,6 +741,23 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                       </button>
                     </div>
                   </div>
+
+                  {/* Actions Section */}
+                  <div class="pt-2">
+                    <button
+                      onClick={() => updateTypographyGlobal({ selectedId: null })}
+                      class="w-full py-2.5 bg-black/5 dark:bg-white/5 border border-border-color hover:border-red-500/50 hover:bg-red-500/5 dark:hover:bg-red-500/10 rounded-xl text-xs font-bold text-text-muted hover:text-red-500 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
+                      type="button"
+                    >
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                      </svg>
+                      Deselect Layer
+                    </button>
+                  </div>
+
                 </div>
               </Show>
 
