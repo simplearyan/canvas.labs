@@ -919,7 +919,7 @@ export default function TypographyEditor() {
         <div class="flex-1 flex flex-col justify-center max-w-[1200px] mx-auto w-full">
           <div 
             ref={canvasContainerRef}
-            class={`relative flex items-center justify-center border-t border-b md:border border-border-color md:shadow-md transition-all duration-300 bg-white dark:bg-zinc-950 ${
+            class={`relative flex items-center justify-center border-t border-b md:border border-border-color md:shadow-md bg-transparent ${
               isFullscreen() ? '!fixed inset-0 z-50 bg-black border-none !rounded-none p-0' : 'rounded-none md:rounded-2xl overflow-hidden'
             }`}
           >
