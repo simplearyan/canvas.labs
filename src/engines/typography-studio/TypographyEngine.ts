@@ -22,6 +22,9 @@ export class TypographyEngine {
     private dpr: number = 1;
 
     public isTransparent: boolean = false;
+    
+    // Performance Caching
+    private charCache = new Map<string, any[]>();
 
     constructor(canvas: HTMLCanvasElement | OffscreenCanvas) {
         this.canvas = canvas;
@@ -68,13 +71,12 @@ export class TypographyEngine {
 
     public seek(progress: number) {
         if (!this.state) return;
-        // Map 0-1 progress to 0-duration seconds
         const timeInSeconds = progress * (this.state.duration || 5);
         this.renderFrame(timeInSeconds);
     }
 
     public render() {
-        this.seek(1.0); // Static preview at end of animation
+        this.seek(1.0);
     }
 
     private loop = (timestamp: number) => {
@@ -94,8 +96,7 @@ export class TypographyEngine {
         }
     };
 
-    private ensureSVGFilter(el: TypographyElement): string | null {
-        // Skip filters when running offscreen or without DOM access
+    private generateStaticSVGFilter(el: TypographyElement, uniqueId: string, seed: number): string | null {
         if (typeof document === 'undefined') return null;
 
         const needsFilter = (el.roughness && el.roughness > 0) || 
@@ -105,10 +106,10 @@ export class TypographyEngine {
                             
         if (!needsFilter) return null;
 
-        let filterSvg = document.getElementById('dynamic-filters');
+        let filterSvg = document.getElementById('dynamic-filters-cache');
         if (!filterSvg) {
             filterSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            filterSvg.id = 'dynamic-filters';
+            filterSvg.id = 'dynamic-filters-cache';
             filterSvg.style.position = 'absolute';
             filterSvg.style.width = '0';
             filterSvg.style.height = '0';
@@ -116,7 +117,7 @@ export class TypographyEngine {
             document.body.appendChild(filterSvg);
         }
 
-        const fId = `filter-${el.id}`;
+        const fId = `filter-cache-${uniqueId}`;
         let filter = document.getElementById(fId);
         
         if (!filter) {
@@ -145,25 +146,125 @@ export class TypographyEngine {
         }
 
         if ((el.roughness || 0) > 0) {
-            const isStopMotion = el.animPreset === 'stop-motion';
-            const time = this.state?.time || 0;
-            const frameSeed = isStopMotion ? (el.id + Math.floor(time * 6)) : el.id;
-
             steps += `
-                <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="3" seed="${frameSeed}" result="noise" />
+                <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="3" seed="${seed}" result="noise" />
                 <feDisplacementMap in="${currentIn}" in2="noise" scale="${el.roughness}" xChannelSelector="R" yChannelSelector="G" result="final" />
             `;
         } else {
             steps += `<feComponentTransfer in="${currentIn}" result="final"><feFuncA type="identity"/></feComponentTransfer>`;
         }
 
-        // Only update if changed to avoid unnecessary DOM mutations
-        if ((el as any)._lastFilterSteps !== steps) {
-            filter.innerHTML = steps;
-            (el as any)._lastFilterSteps = steps;
+        filter.innerHTML = steps;
+        return `url(#${fId})`;
+    }
+
+    private getCachedChar(el: TypographyElement, char: string, charColor: string, charScale: number): any[] {
+        const isStopMotion = el.animPreset === 'stop-motion';
+        const frameCount = (isStopMotion && (el.roughness || 0) > 0) ? 3 : 1;
+
+        const key = JSON.stringify({
+            type: el.type,
+            char,
+            shapeType: el.type === 'shape' ? (el as any).shapeType : '',
+            w: (el as any).w, h: (el as any).h, borderRadius: (el as any).borderRadius,
+            fontFamily: (el as any).fontFamily, fontWeight: (el as any).fontWeight, fontSize: (el as any).fontSize,
+            fill: charColor, stroke: el.stroke, strokeWidth: el.strokeWidth,
+            shadowColor: el.shadowColor, shadowBlur: el.shadowBlur, shadowOffsetX: el.shadowOffsetX, shadowOffsetY: el.shadowOffsetY,
+            innerShadowBlur: el.innerShadowBlur, innerShadowX: el.innerShadowX, innerShadowY: el.innerShadowY, innerShadowOpacity: el.innerShadowOpacity, innerShadowColor: el.innerShadowColor,
+            roughness: el.roughness,
+            frameCount
+        });
+
+        if (this.charCache.has(key)) {
+            return this.charCache.get(key)!;
         }
 
-        return `url(#${fId})`;
+        const frames: any[] = [];
+        const baseSize = el.type === 'text' ? (el as any).fontSize : Math.max((el as any).w, (el as any).h);
+        const pad = baseSize * 0.5 + (el.shadowBlur || 0) + (el.strokeWidth || 0) + (el.roughness || 0) * 2;
+        
+        let w = pad * 2;
+        let h = pad * 2;
+
+        if (el.type === 'text') {
+            const tempCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : new OffscreenCanvas(1, 1);
+            const tempCtx = tempCanvas.getContext('2d')!;
+            tempCtx.font = `${(el as any).fontWeight} ${baseSize}px "${(el as any).fontFamily}"`;
+            w += tempCtx.measureText(char).width;
+            h += baseSize;
+        } else {
+            w += (el as any).w;
+            h += (el as any).h;
+        }
+
+        w = Math.ceil(w);
+        h = Math.ceil(h);
+
+        for (let i = 0; i < frameCount; i++) {
+            const canvas = typeof document !== 'undefined' ? document.createElement('canvas') : new OffscreenCanvas(w, h);
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+
+            // Generate unique filter ID per seed to avoid DOM collisions
+            const uniqueFilterId = btoa(encodeURIComponent(key)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) + i;
+            const filterUrl = this.generateStaticSVGFilter(el, uniqueFilterId, i);
+            
+            ctx.save();
+            ctx.translate(w/2, h/2);
+
+            if((el.shadowBlur || 0) > 0 || Math.abs(el.shadowOffsetX || 0) > 0 || Math.abs(el.shadowOffsetY || 0) > 0) {
+                ctx.shadowColor = el.shadowColor || '#000000';
+                ctx.shadowBlur = el.shadowBlur || 0;
+                ctx.shadowOffsetX = el.shadowOffsetX || 0;
+                ctx.shadowOffsetY = el.shadowOffsetY || 0;
+            }
+
+            if (filterUrl) {
+                ctx.filter = filterUrl;
+            }
+
+            if (el.type === 'text') {
+                ctx.font = `${(el as any).fontWeight} ${baseSize}px "${(el as any).fontFamily}"`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                if ((el.strokeWidth || 0) > 0) {
+                    ctx.strokeStyle = el.stroke || '#000000';
+                    ctx.lineWidth = el.strokeWidth || 0;
+                    ctx.lineJoin = 'round';
+                    ctx.strokeText(char, 0, 0);
+                }
+                if (charColor && charColor !== 'transparent') {
+                    ctx.fillStyle = charColor;
+                    ctx.fillText(char, 0, 0);
+                }
+            } else {
+                ctx.beginPath();
+                if ((el as any).shapeType === 'rect') {
+                    ctx.roundRect(-(el as any).w/2, -(el as any).h/2, (el as any).w, (el as any).h, (el as any).borderRadius || 0);
+                } else if ((el as any).shapeType === 'circle') {
+                    ctx.arc(0, 0, (el as any).w/2, 0, Math.PI*2);
+                }
+                if(charColor && charColor !== 'transparent') {
+                    ctx.fillStyle = charColor;
+                    ctx.fill();
+                }
+                if((el.strokeWidth || 0) > 0) {
+                    ctx.strokeStyle = el.stroke || '#000000';
+                    ctx.lineWidth = el.strokeWidth || 0;
+                    ctx.lineJoin = 'round';
+                    ctx.stroke();
+                }
+            }
+
+            ctx.restore();
+            (canvas as any)._drawOffset = { x: -w/2, y: -h/2 };
+            frames.push(canvas);
+        }
+
+        this.charCache.set(key, frames);
+        return frames;
     }
 
     private getGlobalShake(time: number): number {
@@ -254,9 +355,6 @@ export class TypographyEngine {
     public renderFrame(timeInSeconds: number) {
         if (!this.state) return;
         
-        // Ensure state time is up to date for filters if needed
-        this.state.time = timeInSeconds;
-
         const { ctx, width, height } = this;
         ctx.save();
 
@@ -281,34 +379,18 @@ export class TypographyEngine {
             if (el.visible === false) return;
             ctx.save();
             
-            const baseSVGFilterUrl = this.ensureSVGFilter(el);
-            
             ctx.translate(el.x, el.y);
             if (el.rotation) ctx.rotate(el.rotation * Math.PI / 180);
 
-            if((el.shadowBlur || 0) > 0 || Math.abs(el.shadowOffsetX || 0) > 0 || Math.abs(el.shadowOffsetY || 0) > 0) {
-                ctx.shadowColor = el.shadowColor || '#000000';
-                ctx.shadowBlur = el.shadowBlur || 0;
-                ctx.shadowOffsetX = el.shadowOffsetX || 0;
-                ctx.shadowOffsetY = el.shadowOffsetY || 0;
-            }
-
             if (el.type === 'text') {
-                ctx.font = `${el.fontWeight} ${el.fontSize}px "${el.fontFamily}"`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                if ((el.strokeWidth || 0) > 0) {
-                    ctx.strokeStyle = el.stroke || '#000000';
-                    ctx.lineWidth = el.strokeWidth || 0;
-                    ctx.lineJoin = 'round';
-                }
-
                 const lines = el.text.split('\n');
                 const lineHeight = el.fontSize * 1.1;
                 const startY = -(lines.length - 1) * lineHeight / 2;
                 let globalCharIdx = 0;
                 const totalChars = el.text.replace(/\n/g, '').length;
+
+                // Set font on main ctx to measure text width
+                ctx.font = `${el.fontWeight} ${el.fontSize}px "${el.fontFamily}"`;
 
                 lines.forEach((line, i) => {
                     const yOffset = startY + (i * lineHeight);
@@ -331,23 +413,30 @@ export class TypographyEngine {
                         const charRot = styleOverride.r || 0;
 
                         if(tr.alpha > 0) {
-                            ctx.save();
-                            
-                            let charFilters = [];
-                            if (baseSVGFilterUrl) charFilters.push(baseSVGFilterUrl);
-                            if (tr.mBlur > 0) charFilters.push(`blur(${tr.mBlur}px)`);
-                            ctx.filter = charFilters.length > 0 ? charFilters.join(' ') : 'none';
+                            const frames = this.getCachedChar(el, char, charColor, charScale);
+                            const frameIdx = frames.length > 1 ? Math.floor(timeInSeconds * 6) % frames.length : 0;
+                            const cachedCanvas = frames[frameIdx];
+                            const drawOffset = (cachedCanvas as any)._drawOffset;
 
+                            ctx.save();
                             ctx.translate(cursorX + charW/2 + tr.tX, yOffset + tr.tY);
                             if(tr.r || charRot) ctx.rotate((tr.r + charRot) * Math.PI / 180);
                             if(tr.s * charScale !== 1) ctx.scale(tr.s * charScale, tr.s * charScale);
+                            
                             ctx.globalAlpha = tr.alpha;
 
-                            if ((el.strokeWidth || 0) > 0) ctx.strokeText(char, 0, 0);
-                            if (charColor && charColor !== 'transparent') {
-                                ctx.fillStyle = charColor;
-                                ctx.fillText(char, 0, 0);
+                            // Fake Motion Blur to replace expensive dynamic filters
+                            if (tr.mBlur > 0) {
+                                const steps = 3;
+                                ctx.globalAlpha = tr.alpha / steps;
+                                for(let b=0; b<steps; b++) {
+                                    const yBlurOffset = (b - steps/2) * (tr.mBlur * 2);
+                                    ctx.drawImage(cachedCanvas, drawOffset.x, drawOffset.y + yBlurOffset);
+                                }
+                            } else {
+                                ctx.drawImage(cachedCanvas, drawOffset.x, drawOffset.y);
                             }
+
                             ctx.restore();
                         }
 
@@ -355,44 +444,38 @@ export class TypographyEngine {
                         globalCharIdx++;
                     }
                 });
-            } 
-            else if (el.type === 'shape') {
+            } else if (el.type === 'shape') {
                 const tr = this.getAnimatedCharTransform(el.animPreset, timeInSeconds, 0, 1, el);
                 if(tr.alpha > 0) {
-                    let shapeFilters = [];
-                    if (baseSVGFilterUrl) shapeFilters.push(baseSVGFilterUrl);
-                    if (tr.mBlur > 0) shapeFilters.push(`blur(${tr.mBlur}px)`);
-                    ctx.filter = shapeFilters.length > 0 ? shapeFilters.join(' ') : 'none';
+                    const charColor = (el as any).fill;
+                    const charScale = 1;
+                    const frames = this.getCachedChar(el, '', charColor, charScale);
+                    const frameIdx = frames.length > 1 ? Math.floor(timeInSeconds * 6) % frames.length : 0;
+                    const cachedCanvas = frames[frameIdx];
+                    const drawOffset = (cachedCanvas as any)._drawOffset;
 
+                    ctx.save();
                     ctx.translate(tr.tX, tr.tY);
                     if(tr.r) ctx.rotate(tr.r * Math.PI / 180);
                     if(tr.s !== 1) ctx.scale(tr.s, tr.s);
                     ctx.globalAlpha = tr.alpha;
 
-                    ctx.beginPath();
-                    if (el.shapeType === 'rect') {
-                        ctx.roundRect(-el.w/2, -el.h/2, el.w, el.h, el.borderRadius || 0);
-                    } else if (el.shapeType === 'circle') {
-                        ctx.arc(0, 0, el.w/2, 0, Math.PI*2);
+                    if (tr.mBlur > 0) {
+                        const steps = 3;
+                        ctx.globalAlpha = tr.alpha / steps;
+                        for(let b=0; b<steps; b++) {
+                            const yBlurOffset = (b - steps/2) * (tr.mBlur * 2);
+                            ctx.drawImage(cachedCanvas, drawOffset.x, drawOffset.y + yBlurOffset);
+                        }
+                    } else {
+                        ctx.drawImage(cachedCanvas, drawOffset.x, drawOffset.y);
                     }
-                    
-                    if(el.fill && el.fill !== 'transparent') {
-                        ctx.fillStyle = el.fill;
-                        ctx.fill();
-                    }
-                    if((el.strokeWidth || 0) > 0) {
-                        ctx.strokeStyle = el.stroke || '#000000';
-                        ctx.lineWidth = el.strokeWidth || 0;
-                        ctx.lineJoin = 'round';
-                        ctx.stroke();
-                    }
+                    ctx.restore();
                 }
             }
 
             ctx.restore();
         });
-
-        // Optional: Selection Box (Removed for production renderer, only needed in editor logic externally if wanted)
 
         ctx.restore(); 
     }

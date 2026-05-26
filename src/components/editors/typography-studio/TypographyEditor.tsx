@@ -1,4 +1,5 @@
 import { createEffect, createSignal, onMount, onCleanup, Show, For } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import { 
   typographyStore, 
   updateTypographyGlobal, 
@@ -15,7 +16,7 @@ import { TYPOGRAPHY_PRESETS } from '@/engines/typography-studio/presets';
 import type { TypographyAnimPreset, TypographyElement, TypographyTextElement, TypographyShapeElement } from '@/engines/typography-studio/types';
 import Icon from '@/components/ui/Icon';
 import ExportModal from '@/components/common/ExportModal';
-import { isDarkTheme } from '@/store/global';
+import { isDarkTheme, toggleTheme } from '@/store/global';
 
 function ToggleSwitch(props: { checked: boolean, onChange: (v: boolean) => void, label: string }) {
   return (
@@ -228,91 +229,29 @@ export default function TypographyEditor() {
   const selectedEl = () => typographyStore.elements.find(e => e.id === typographyStore.selectedId);
 
   return (
-    <div class="flex h-[calc(100vh-64px)] w-full overflow-hidden bg-app-bg transition-colors duration-300">
+    <div class="flex-1 flex flex-col md:flex-row h-[calc(100vh-64px)] w-full overflow-hidden relative text-slate-800 dark:text-text-main bg-app-bg font-sans">
       
-      {/* Left Rail */}
-      <div class="w-20 shrink-0 border-r border-border-color bg-surface flex flex-col items-center py-6 gap-4 z-10 shadow-[2px_0_10px_rgba(0,0,0,0.02)]">
-        <RailTab value="presets" label="Presets" icon="grid" />
-        <RailTab value="layers" label="Layers" icon="layers" />
-        <RailTab value="properties" label="Props" icon="sliders" />
-        <RailTab value="canvas" label="Canvas" icon="monitor" />
-      </div>
-
-      {/* Main Workspace */}
-      <div class="flex-1 flex flex-col relative min-w-0">
+      {/* TOOLBAR / SIDEBAR (Left Panel) */}
+      <aside class="w-full md:w-[420px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 flex flex-col md:flex-row z-10 shrink-0 shadow-xl overflow-hidden">
         
-        {/* Header Toolbar */}
-        <header class="h-14 border-b border-border-color bg-surface/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 z-10 relative">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blueprint-500 to-blueprint-700 dark:from-brand-500 dark:to-brand-700 flex items-center justify-center shadow-sm">
-              <Icon name="type" class="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h1 class="text-sm font-bold text-text-main leading-none">Typography Studio</h1>
-              <p class="text-[10px] text-text-muted mt-0.5">Motion Graphics Engine</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-3">
-            <button
-              onClick={() => setIsExporting(true)}
-              class="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold rounded-lg transition-all shadow-sm active:scale-95"
-            >
-              <Icon name="download" class="w-4 h-4" /> Export
-            </button>
-          </div>
-        </header>
+        {/* DESKTOP SIDE NAVIGATION RAIL */}
+        <div class="hidden md:flex flex-col w-[80px] bg-slate-50 dark:bg-zinc-900 border-r border-blueprint-100 dark:border-zinc-800 py-6 items-center gap-5 shrink-0 select-none">
+          <RailTab value="presets" label="Presets" icon="grid" />
+          <RailTab value="layers" label="Layers" icon="layers" />
+          <RailTab value="properties" label="Props" icon="sliders" />
+          <RailTab value="canvas" label="Canvas" icon="layout" />
+        </div>
 
-        {/* Canvas Area */}
-        <div class="flex-1 overflow-hidden relative flex flex-col items-center justify-center bg-slate-100/50 dark:bg-black/20 p-8 custom-scrollbar">
+        {/* Scrollable form body */}
+        <div class="flex-1 overflow-y-auto p-4 md:p-5 custom-scrollbar flex flex-col gap-4 md:gap-6 relative">
           
-          {/* Timeline & Playback floating top */}
-          <div class="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-surface border border-border-color shadow-sm rounded-full px-4 py-2 z-20">
-             <button onClick={resetTime} class="p-1.5 text-text-muted hover:text-text-main transition-colors"><Icon name="skip-back" class="w-4 h-4" /></button>
-             <button onClick={handlePlayPause} class="w-8 h-8 rounded-full bg-blueprint-900 dark:bg-brand-500 text-white flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all">
-               <Show when={isPlaying()} fallback={<svg class="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>}>
-                 <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
-               </Show>
-             </button>
-             <div class="w-48 px-2 flex items-center gap-2">
-               <span class="text-[10px] font-mono text-text-muted w-8 text-right">{(typographyStore.time).toFixed(1)}s</span>
-               <input 
-                 type="range" 
-                 min="0" max="1" step="0.001" 
-                 value={typographyStore.time / (typographyStore.duration || 5)}
-                 onInput={(e) => scrubTime(parseFloat(e.currentTarget.value))}
-                 class="flex-1 h-1.5 bg-slate-200 dark:bg-zinc-700 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-blueprint-600 dark:[&::-webkit-slider-thumb]:bg-brand-500 [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
-               />
-               <span class="text-[10px] font-mono text-text-muted w-8">{(typographyStore.duration || 5).toFixed(1)}s</span>
-             </div>
-             <button onClick={toggleFullscreen} class="p-1.5 text-text-muted hover:text-text-main transition-colors border-l border-border-color pl-3 ml-1"><Icon name="maximize" class="w-4 h-4" /></button>
+          <div class="h-8 border-b border-border-color flex items-center shrink-0 -mx-5 px-5 -mt-5 pt-5 pb-8 mb-[-12px] bg-slate-50/50 dark:bg-zinc-900/50">
+            <h2 class="text-xs font-black tracking-wider uppercase text-text-main mt-4">
+              {editorTab() === 'presets' ? 'Template Gallery' : 
+               editorTab() === 'layers' ? 'Layer Management' : 
+               editorTab() === 'properties' ? 'Layer Properties' : 'Canvas Settings'}
+            </h2>
           </div>
-
-          <div 
-            ref={canvasContainerRef}
-            class={`relative flex items-center justify-center border border-border-color shadow-sm transition-all duration-300 ${
-              isFullscreen() ? '!fixed inset-0 z-50 bg-black border-none !rounded-none p-0' : 'rounded-xl overflow-hidden'
-            }`}
-          >
-            <Show when={isFullscreen()}>
-               <button onClick={toggleFullscreen} class="absolute bottom-6 right-6 z-30 p-3 bg-black/60 text-white rounded-full"><Icon name="minimize" class="w-5 h-5"/></button>
-            </Show>
-            <canvas ref={canvasRef} class="object-contain" style={{ "background-color": typographyStore.bgColor }}></canvas>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Right Properties Panel */}
-      <div class="w-80 shrink-0 border-l border-border-color bg-surface flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] z-10 relative">
-        <div class="h-14 border-b border-border-color flex items-center px-5 shrink-0 bg-slate-50/50 dark:bg-zinc-900/50">
-          <h2 class="text-xs font-black tracking-wider uppercase text-text-main">
-            {editorTab() === 'presets' ? 'Template Gallery' : 
-             editorTab() === 'layers' ? 'Layer Management' : 
-             editorTab() === 'properties' ? 'Layer Properties' : 'Canvas Settings'}
-          </h2>
-        </div>
-        
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-5">
           
           <Show when={editorTab() === 'presets'}>
              <div class="flex flex-col gap-3">
@@ -320,10 +259,10 @@ export default function TypographyEditor() {
                  {([key, p]) => (
                    <button 
                      onClick={() => loadPreset(key)}
-                     class="text-left p-4 rounded-xl border border-border-color hover:border-blueprint-500 dark:hover:border-brand-500 bg-slate-50 dark:bg-zinc-900/50 hover:bg-blueprint-50 dark:hover:bg-brand-500/10 transition-all group"
+                     class="text-left p-4 rounded-xl border border-border-color hover:border-blueprint-500 dark:hover:border-brand-500 bg-slate-50 dark:bg-zinc-900/50 hover:bg-blueprint-50 dark:hover:bg-brand-500/10 transition-all group shadow-sm"
                    >
                      <div class="font-bold text-text-main group-hover:text-blueprint-700 dark:group-hover:text-brand-400">{p.title}</div>
-                     <div class="text-[10px] text-text-muted mt-1 uppercase font-semibold">{p.width}x{p.height} • {p.duration}s</div>
+                     <div class="text-[10px] text-text-muted mt-1 uppercase font-semibold tracking-wider">{p.width}x{p.height} • {p.duration}s</div>
                    </button>
                  )}
                </For>
@@ -335,10 +274,10 @@ export default function TypographyEditor() {
                 <div class="space-y-3">
                   <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Aspect Ratio</label>
                   <div class="grid grid-cols-2 gap-2">
-                    <button onClick={() => setAspectRatio('16:9')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='16:9' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent' : 'border-border-color'}`}>16:9</button>
-                    <button onClick={() => setAspectRatio('9:16')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='9:16' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent' : 'border-border-color'}`}>9:16</button>
-                    <button onClick={() => setAspectRatio('1:1')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='1:1' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent' : 'border-border-color'}`}>1:1</button>
-                    <button onClick={() => setAspectRatio('4:5')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='4:5' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent' : 'border-border-color'}`}>4:5</button>
+                    <button onClick={() => setAspectRatio('16:9')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='16:9' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent shadow-sm' : 'border-border-color text-text-main'}`}>16:9</button>
+                    <button onClick={() => setAspectRatio('9:16')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='9:16' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent shadow-sm' : 'border-border-color text-text-main'}`}>9:16</button>
+                    <button onClick={() => setAspectRatio('1:1')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='1:1' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent shadow-sm' : 'border-border-color text-text-main'}`}>1:1</button>
+                    <button onClick={() => setAspectRatio('4:5')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='4:5' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent shadow-sm' : 'border-border-color text-text-main'}`}>4:5</button>
                   </div>
                 </div>
 
@@ -346,43 +285,43 @@ export default function TypographyEditor() {
                   <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Background Color</label>
                   <div class="flex items-center gap-3">
                     <input type="color" value={typographyStore.bgColor} onInput={(e) => updateTypographyGlobal({ bgColor: e.currentTarget.value })} class="w-8 h-8 rounded cursor-pointer border border-border-color bg-transparent" />
-                    <span class="text-sm font-mono text-text-main">{typographyStore.bgColor}</span>
+                    <span class="text-sm font-mono font-bold text-text-main">{typographyStore.bgColor}</span>
                   </div>
                 </div>
 
                 <div class="space-y-3">
                   <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Duration (Seconds)</label>
-                  <input type="number" step="0.5" value={typographyStore.duration} onInput={(e) => updateTypographyGlobal({ duration: parseFloat(e.currentTarget.value) || 5 })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded-lg text-sm text-text-main" />
+                  <input type="number" step="0.5" value={typographyStore.duration} onInput={(e) => updateTypographyGlobal({ duration: parseFloat(e.currentTarget.value) || 5 })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded-lg text-sm text-text-main focus:border-brand-500 outline-none" />
                 </div>
              </div>
           </Show>
 
           <Show when={editorTab() === 'layers'}>
              <div class="flex flex-col gap-4 animate-fade-in h-full">
-               <div class="flex gap-2">
-                 <button onClick={() => addTypographyElement({ id: 'text-'+Date.now(), type: 'text', text: 'NEW TEXT', fontFamily: 'Inter', fontWeight: '800', fontSize: 100, fill: '#ffffff', strokeWidth: 0, x: typographyStore.width/2, y: typographyStore.height/2, animPreset: 'none', animDuration: 1, visible: true, locked: false })} class="flex-1 py-2 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-700 dark:text-brand-400 font-bold text-xs rounded-lg border border-blueprint-200 dark:border-brand-500/30 hover:bg-blueprint-100 dark:hover:bg-brand-500/20 transition-colors flex items-center justify-center gap-1"><Icon name="type" class="w-3.5 h-3.5"/> Add Text</button>
-                 <button onClick={() => addTypographyElement({ id: 'shape-'+Date.now(), type: 'shape', shapeType: 'circle', w: 200, h: 200, fill: '#ef4444', strokeWidth: 0, x: typographyStore.width/2, y: typographyStore.height/2, animPreset: 'none', animDuration: 1, visible: true, locked: false })} class="flex-1 py-2 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-700 dark:text-brand-400 font-bold text-xs rounded-lg border border-blueprint-200 dark:border-brand-500/30 hover:bg-blueprint-100 dark:hover:bg-brand-500/20 transition-colors flex items-center justify-center gap-1"><Icon name="circle" class="w-3.5 h-3.5"/> Add Shape</button>
+               <div class="flex gap-2 shrink-0">
+                 <button onClick={() => addTypographyElement({ id: 'text-'+Date.now(), type: 'text', text: 'NEW TEXT', fontFamily: 'Inter', fontWeight: '800', fontSize: 100, fill: '#ffffff', strokeWidth: 0, x: typographyStore.width/2, y: typographyStore.height/2, animPreset: 'none', animDuration: 1, visible: true, locked: false })} class="flex-1 py-2.5 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-700 dark:text-brand-400 font-bold text-xs rounded-lg border border-blueprint-200 dark:border-brand-500/30 hover:bg-blueprint-100 dark:hover:bg-brand-500/20 transition-colors flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"><Icon name="type" class="w-4 h-4"/> Add Text</button>
+                 <button onClick={() => addTypographyElement({ id: 'shape-'+Date.now(), type: 'shape', shapeType: 'circle', w: 200, h: 200, fill: '#ef4444', strokeWidth: 0, x: typographyStore.width/2, y: typographyStore.height/2, animPreset: 'none', animDuration: 1, visible: true, locked: false })} class="flex-1 py-2.5 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-700 dark:text-brand-400 font-bold text-xs rounded-lg border border-blueprint-200 dark:border-brand-500/30 hover:bg-blueprint-100 dark:hover:bg-brand-500/20 transition-colors flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"><Icon name="circle" class="w-4 h-4"/> Add Shape</button>
                </div>
                
-               <div class="flex-1 overflow-y-auto space-y-2">
+               <div class="flex-1 overflow-y-auto space-y-2 pb-10">
                  <For each={[...typographyStore.elements].reverse()}>
                    {(el, index) => {
                      const isSelected = () => typographyStore.selectedId === el.id;
                      return (
                        <div 
                          onClick={() => { setTypographyStore('selectedId', el.id); setEditorTab('properties'); }}
-                         class={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${isSelected() ? 'border-blueprint-500 dark:border-brand-500 bg-blueprint-50/50 dark:bg-brand-500/10 shadow-sm' : 'border-border-color hover:border-blueprint-300 dark:hover:border-zinc-700 bg-surface'}`}
+                         class={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${isSelected() ? 'border-blueprint-500 dark:border-brand-500 bg-blueprint-50/50 dark:bg-brand-500/10 shadow-sm' : 'border-border-color hover:border-blueprint-300 dark:hover:border-zinc-700 bg-slate-50 dark:bg-zinc-900/50'}`}
                        >
                          <div class="flex items-center gap-2 overflow-hidden flex-1">
-                           <button onClick={(e) => { e.stopPropagation(); updateTypographyElement(el.id, { visible: !el.visible }); }} class={`p-1 rounded hover:bg-black/5 ${el.visible===false ? 'text-text-muted' : 'text-text-main'}`}><Icon name={el.visible===false ? 'eye-off' : 'eye'} class="w-3.5 h-3.5" /></button>
-                           <button onClick={(e) => { e.stopPropagation(); updateTypographyElement(el.id, { locked: !el.locked }); }} class={`p-1 rounded hover:bg-black/5 ${el.locked ? 'text-brand-red' : 'text-text-muted'}`}><Icon name={el.locked ? 'lock' : 'unlock'} class="w-3.5 h-3.5" /></button>
-                           <Icon name={el.type === 'text' ? 'type' : el.type === 'shape' && (el as any).shapeType==='circle' ? 'circle' : 'square'} class="w-4 h-4 text-blueprint-500 dark:text-brand-500 shrink-0" />
-                           <span class="text-xs font-bold truncate">{el.type === 'text' ? (el as TypographyTextElement).text : 'Shape'}</span>
+                           <button onClick={(e) => { e.stopPropagation(); updateTypographyElement(el.id, { visible: !el.visible }); }} class={`p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 ${el.visible===false ? 'text-text-muted' : 'text-text-main'}`}><Icon name={el.visible===false ? 'eye-off' : 'eye'} class="w-4 h-4" /></button>
+                           <button onClick={(e) => { e.stopPropagation(); updateTypographyElement(el.id, { locked: !el.locked }); }} class={`p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 ${el.locked ? 'text-brand-red' : 'text-text-muted'}`}><Icon name={el.locked ? 'lock' : 'unlock'} class="w-4 h-4" /></button>
+                           <Icon name={el.type === 'text' ? 'type' : el.type === 'shape' && (el as any).shapeType==='circle' ? 'circle' : 'square'} class="w-4 h-4 text-blueprint-500 dark:text-brand-500 shrink-0 ml-1" />
+                           <span class="text-xs font-bold truncate tracking-tight">{el.type === 'text' ? (el as TypographyTextElement).text : 'Shape'}</span>
                          </div>
                          <div class="flex items-center gap-0.5 shrink-0 ml-2">
-                           <button onClick={(e) => { e.stopPropagation(); moveTypographyElement(el.id, 1); }} class="p-1 hover:bg-black/5 text-text-muted rounded"><Icon name="chevron-up" class="w-3.5 h-3.5" /></button>
-                           <button onClick={(e) => { e.stopPropagation(); moveTypographyElement(el.id, -1); }} class="p-1 hover:bg-black/5 text-text-muted rounded"><Icon name="chevron-down" class="w-3.5 h-3.5" /></button>
-                           <button onClick={(e) => { e.stopPropagation(); removeTypographyElement(el.id); }} class="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 text-text-muted hover:text-brand-red rounded"><Icon name="trash-2" class="w-3.5 h-3.5" /></button>
+                           <button onClick={(e) => { e.stopPropagation(); moveTypographyElement(el.id, 1); }} class="p-1 hover:bg-black/5 dark:hover:bg-white/5 text-text-muted rounded"><Icon name="chevron-up" class="w-4 h-4" /></button>
+                           <button onClick={(e) => { e.stopPropagation(); moveTypographyElement(el.id, -1); }} class="p-1 hover:bg-black/5 dark:hover:bg-white/5 text-text-muted rounded"><Icon name="chevron-down" class="w-4 h-4" /></button>
+                           <button onClick={(e) => { e.stopPropagation(); removeTypographyElement(el.id); }} class="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 text-text-muted hover:text-brand-red rounded"><Icon name="trash-2" class="w-4 h-4" /></button>
                          </div>
                        </div>
                      );
@@ -393,9 +332,9 @@ export default function TypographyEditor() {
           </Show>
 
           <Show when={editorTab() === 'properties'}>
-             <Show when={selectedEl()} fallback={<div class="text-center text-text-muted text-xs font-semibold py-10">Select a layer to edit properties.</div>}>
+             <Show when={selectedEl()} fallback={<div class="text-center text-text-muted text-xs font-semibold py-10 bg-slate-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-border-color">Select a layer to edit properties.</div>}>
                 {(el) => (
-                   <div class="space-y-6 animate-fade-in">
+                   <div class="space-y-6 animate-fade-in pb-10">
                      
                      <Show when={el().type === 'text'}>
                        <div class="space-y-3">
@@ -404,27 +343,27 @@ export default function TypographyEditor() {
                            rows="2"
                            value={(el() as TypographyTextElement).text}
                            onInput={(e) => updateTypographyElement(el().id, { text: e.currentTarget.value })}
-                           class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded-lg text-sm font-semibold text-text-main resize-none"
+                           class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded-lg text-sm font-semibold text-text-main resize-none focus:border-brand-500 outline-none"
                          ></textarea>
                        </div>
                        <div class="grid grid-cols-2 gap-3">
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Font Family</label>
-                           <input type="text" value={(el() as TypographyTextElement).fontFamily} onInput={(e) => updateTypographyElement(el().id, { fontFamily: e.currentTarget.value })} class="w-full px-2 py-1.5 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs" />
+                           <input type="text" value={(el() as TypographyTextElement).fontFamily} onInput={(e) => updateTypographyElement(el().id, { fontFamily: e.currentTarget.value })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-semibold focus:border-brand-500 outline-none" />
                          </div>
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Weight</label>
-                           <input type="text" value={(el() as TypographyTextElement).fontWeight} onInput={(e) => updateTypographyElement(el().id, { fontWeight: e.currentTarget.value })} class="w-full px-2 py-1.5 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs" />
+                           <input type="text" value={(el() as TypographyTextElement).fontWeight} onInput={(e) => updateTypographyElement(el().id, { fontWeight: e.currentTarget.value })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-semibold focus:border-brand-500 outline-none" />
                          </div>
                        </div>
                        <div class="grid grid-cols-2 gap-3">
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Size</label>
-                           <input type="number" value={(el() as TypographyTextElement).fontSize} onInput={(e) => updateTypographyElement(el().id, { fontSize: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs" />
+                           <input type="number" value={(el() as TypographyTextElement).fontSize} onInput={(e) => updateTypographyElement(el().id, { fontSize: parseInt(e.currentTarget.value) })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Letter Spacing</label>
-                           <input type="number" value={(el() as TypographyTextElement).letterSpacing || 0} onInput={(e) => updateTypographyElement(el().id, { letterSpacing: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs" />
+                           <input type="number" value={(el() as TypographyTextElement).letterSpacing || 0} onInput={(e) => updateTypographyElement(el().id, { letterSpacing: parseInt(e.currentTarget.value) })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                        </div>
                      </Show>
@@ -435,7 +374,7 @@ export default function TypographyEditor() {
                          <select 
                            value={(el() as TypographyShapeElement).shapeType} 
                            onChange={(e) => updateTypographyElement(el().id, { shapeType: e.currentTarget.value as 'rect'|'circle' })}
-                           class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded-lg text-sm"
+                           class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded-lg text-sm font-semibold focus:border-brand-500 outline-none"
                          >
                            <option value="rect">Rectangle</option>
                            <option value="circle">Circle</option>
@@ -444,11 +383,11 @@ export default function TypographyEditor() {
                        <div class="grid grid-cols-2 gap-3">
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Width</label>
-                           <input type="number" value={(el() as TypographyShapeElement).w} onInput={(e) => updateTypographyElement(el().id, { w: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs" />
+                           <input type="number" value={(el() as TypographyShapeElement).w} onInput={(e) => updateTypographyElement(el().id, { w: parseInt(e.currentTarget.value) })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Height</label>
-                           <input type="number" value={(el() as TypographyShapeElement).h} onInput={(e) => updateTypographyElement(el().id, { h: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs" />
+                           <input type="number" value={(el() as TypographyShapeElement).h} onInput={(e) => updateTypographyElement(el().id, { h: parseInt(e.currentTarget.value) })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                        </div>
                      </Show>
@@ -458,32 +397,32 @@ export default function TypographyEditor() {
                      <div class="space-y-3">
                        <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Position & Rotation</label>
                        <div class="grid grid-cols-3 gap-2">
-                         <div class="space-y-1"><span class="text-[8px] text-text-muted">X</span><input type="number" value={Math.round(el().x)} onInput={(e) => updateTypographyElement(el().id, { x: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1 border border-border-color rounded text-xs" /></div>
-                         <div class="space-y-1"><span class="text-[8px] text-text-muted">Y</span><input type="number" value={Math.round(el().y)} onInput={(e) => updateTypographyElement(el().id, { y: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1 border border-border-color rounded text-xs" /></div>
-                         <div class="space-y-1"><span class="text-[8px] text-text-muted">ROT</span><input type="number" value={el().rotation || 0} onInput={(e) => updateTypographyElement(el().id, { rotation: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1 border border-border-color rounded text-xs" /></div>
+                         <div class="space-y-1"><span class="text-[8px] font-bold text-text-muted ml-1">X</span><input type="number" value={Math.round(el().x)} onInput={(e) => updateTypographyElement(el().id, { x: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 border border-border-color bg-slate-50 dark:bg-zinc-900 rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" /></div>
+                         <div class="space-y-1"><span class="text-[8px] font-bold text-text-muted ml-1">Y</span><input type="number" value={Math.round(el().y)} onInput={(e) => updateTypographyElement(el().id, { y: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 border border-border-color bg-slate-50 dark:bg-zinc-900 rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" /></div>
+                         <div class="space-y-1"><span class="text-[8px] font-bold text-text-muted ml-1">ROT</span><input type="number" value={el().rotation || 0} onInput={(e) => updateTypographyElement(el().id, { rotation: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 border border-border-color bg-slate-50 dark:bg-zinc-900 rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" /></div>
                        </div>
                      </div>
 
                      <div class="space-y-3">
                        <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Fill & Stroke</label>
                        <div class="flex items-center gap-3">
-                         <input type="color" value={(el() as any).fill || '#ffffff'} onInput={(e) => updateTypographyElement(el().id, { fill: e.currentTarget.value })} class="w-8 h-8 rounded border border-border-color bg-transparent cursor-pointer" title="Fill Color" />
-                         <input type="color" value={(el() as any).stroke || '#000000'} onInput={(e) => updateTypographyElement(el().id, { stroke: e.currentTarget.value })} class="w-8 h-8 rounded border border-border-color bg-transparent cursor-pointer" title="Stroke Color" />
-                         <div class="flex-1 flex flex-col gap-1">
-                           <span class="text-[8px] text-text-muted">Stroke Width</span>
-                           <input type="range" min="0" max="100" value={(el() as any).strokeWidth || 0} onInput={(e) => updateTypographyElement(el().id, { strokeWidth: parseInt(e.currentTarget.value) })} class="w-full" />
+                         <input type="color" value={(el() as any).fill || '#ffffff'} onInput={(e) => updateTypographyElement(el().id, { fill: e.currentTarget.value })} class="w-8 h-8 rounded border border-border-color bg-transparent cursor-pointer shadow-sm" title="Fill Color" />
+                         <input type="color" value={(el() as any).stroke || '#000000'} onInput={(e) => updateTypographyElement(el().id, { stroke: e.currentTarget.value })} class="w-8 h-8 rounded border border-border-color bg-transparent cursor-pointer shadow-sm" title="Stroke Color" />
+                         <div class="flex-1 flex flex-col gap-1.5 ml-2">
+                           <span class="text-[8px] font-bold text-text-muted tracking-wider uppercase">Stroke Width: {(el() as any).strokeWidth || 0}px</span>
+                           <input type="range" min="0" max="100" value={(el() as any).strokeWidth || 0} onInput={(e) => updateTypographyElement(el().id, { strokeWidth: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-600 dark:accent-brand-500" />
                          </div>
                        </div>
                      </div>
 
                      <div class="w-full border-t border-border-color"></div>
 
-                     <div class="space-y-3 bg-blueprint-50/50 dark:bg-brand-500/5 border border-blueprint-100 dark:border-brand-500/10 p-3 rounded-xl">
-                       <label class="text-[10px] font-bold uppercase tracking-wider text-blueprint-700 dark:text-brand-400 flex items-center gap-1.5"><Icon name="zap" class="w-3.5 h-3.5" /> Animation</label>
+                     <div class="space-y-4 bg-blueprint-50/50 dark:bg-brand-500/5 border border-blueprint-100 dark:border-brand-500/10 p-4 rounded-xl shadow-sm">
+                       <label class="text-[10px] font-black uppercase tracking-wider text-blueprint-700 dark:text-brand-400 flex items-center gap-1.5"><Icon name="zap" class="w-3.5 h-3.5" /> Animation Mode</label>
                        <select 
                          value={el().animPreset || 'none'} 
                          onChange={(e) => updateTypographyElement(el().id, { animPreset: e.currentTarget.value as TypographyAnimPreset })}
-                         class="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-blueprint-200 dark:border-brand-500/20 rounded-lg text-sm font-semibold"
+                         class="w-full px-3 py-2 bg-white dark:bg-zinc-950 border border-blueprint-200 dark:border-brand-500/20 rounded-lg text-sm font-bold shadow-sm focus:border-brand-500 outline-none"
                        >
                          <option value="none">None (Static)</option>
                          <option value="stop-motion">Organic Stop Motion</option>
@@ -493,24 +432,24 @@ export default function TypographyEditor() {
                          <option value="throw">Throw / Bounce</option>
                          <option value="sam-hogan">Slam & Shake</option>
                        </select>
-                       <div class="grid grid-cols-2 gap-3 mt-2">
+                       <div class="grid grid-cols-2 gap-3 mt-3">
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Duration (s)</label>
-                           <input type="number" step="0.1" value={el().animDuration || 1} onInput={(e) => updateTypographyElement(el().id, { animDuration: parseFloat(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-white dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 rounded text-xs" />
+                           <input type="number" step="0.1" value={el().animDuration || 1} onInput={(e) => updateTypographyElement(el().id, { animDuration: parseFloat(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-white dark:bg-zinc-950 border border-blueprint-200 dark:border-zinc-800 rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Stagger (s)</label>
-                           <input type="number" step="0.05" value={el().animStagger || 0} onInput={(e) => updateTypographyElement(el().id, { animStagger: parseFloat(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-white dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 rounded text-xs" />
+                           <input type="number" step="0.05" value={el().animStagger || 0} onInput={(e) => updateTypographyElement(el().id, { animStagger: parseFloat(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-white dark:bg-zinc-950 border border-blueprint-200 dark:border-zinc-800 rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                        </div>
                        <div class="grid grid-cols-2 gap-3 mt-1">
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Impact Shake</label>
-                           <input type="number" value={el().animShake !== undefined ? el().animShake : 20} onInput={(e) => updateTypographyElement(el().id, { animShake: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-white dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 rounded text-xs" />
+                           <input type="number" value={el().animShake !== undefined ? el().animShake : 20} onInput={(e) => updateTypographyElement(el().id, { animShake: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-white dark:bg-zinc-950 border border-blueprint-200 dark:border-zinc-800 rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Motion Blur</label>
-                           <input type="number" value={el().animMotionBlur || 0} onInput={(e) => updateTypographyElement(el().id, { animMotionBlur: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-white dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 rounded text-xs" />
+                           <input type="number" value={el().animMotionBlur || 0} onInput={(e) => updateTypographyElement(el().id, { animMotionBlur: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 bg-white dark:bg-zinc-950 border border-blueprint-200 dark:border-zinc-800 rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                        </div>
                      </div>
@@ -521,8 +460,101 @@ export default function TypographyEditor() {
           </Show>
 
         </div>
-      </div>
-      
+      </aside>
+
+      {/* CANVAS WORKSPACE (Right Panel) */}
+      <main class="flex-1 flex flex-col relative min-h-[55vh] md:min-h-full min-w-0 bg-slate-100/50 dark:bg-black/20 p-6 sm:p-10 custom-scrollbar">
+        
+        <div class="flex-1 flex flex-col justify-center max-w-[1200px] mx-auto w-full">
+          <div 
+            ref={canvasContainerRef}
+            class={`relative flex items-center justify-center border border-border-color shadow-md transition-all duration-300 bg-white dark:bg-zinc-950 ${
+              isFullscreen() ? '!fixed inset-0 z-50 bg-black border-none !rounded-none p-0' : 'rounded-2xl overflow-hidden'
+            }`}
+          >
+            <Show when={isFullscreen()}>
+               <button onClick={toggleFullscreen} class="absolute bottom-6 right-6 z-30 p-3 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors"><Icon name="minimize" class="w-5 h-5"/></button>
+            </Show>
+            <canvas ref={canvasRef} class="object-contain" style={{ "background-color": typographyStore.bgColor }}></canvas>
+          </div>
+
+          {/* Timeline & Playback at canvas bottom */}
+          <div class="mt-8 flex items-center justify-center w-full animate-fade-in">
+            <div class="flex items-center gap-2 sm:gap-4 bg-white dark:bg-zinc-950 border border-border-color shadow-sm rounded-xl px-4 sm:px-6 py-3 w-full max-w-2xl">
+               <button onClick={resetTime} class="p-2 text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900 rounded-lg transition-colors" title="Rewind to start">
+                 <Icon name="skip-back" class="w-4 h-4 sm:w-5 sm:h-5" />
+               </button>
+               
+               <button onClick={handlePlayPause} class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blueprint-900 dark:bg-brand-500 text-white flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all shrink-0">
+                 <Show when={isPlaying()} fallback={<svg class="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-1" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>}>
+                   <svg class="w-4 h-4 sm:w-5 sm:h-5 fill-current" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+                 </Show>
+               </button>
+
+               <div class="flex-1 flex flex-col gap-1.5 px-2">
+                 <div class="flex justify-between text-[10px] sm:text-xs font-mono font-bold text-text-muted">
+                   <span>{(typographyStore.time).toFixed(1)}s</span>
+                   <span>{(typographyStore.duration || 5).toFixed(1)}s</span>
+                 </div>
+                 <div class="relative w-full h-2 bg-slate-200 dark:bg-zinc-800 rounded-full flex items-center group">
+                   <div class="absolute left-0 h-full bg-blueprint-500 dark:bg-brand-500 rounded-full pointer-events-none" style={{ width: `${((typographyStore.time) / (typographyStore.duration || 5)) * 100}%` }}></div>
+                   <input 
+                     type="range" 
+                     min="0" max="1" step="0.001" 
+                     value={typographyStore.duration ? typographyStore.time / typographyStore.duration : 0}
+                     onInput={(e) => scrubTime(parseFloat(e.currentTarget.value))}
+                     class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                   />
+                   <div class="absolute w-3 h-3 sm:w-4 sm:h-4 bg-white border-2 border-blueprint-600 dark:border-brand-500 rounded-full shadow-sm pointer-events-none transition-transform group-hover:scale-125" style={{ left: `calc(${((typographyStore.time) / (typographyStore.duration || 5)) * 100}% - 6px)` }}></div>
+                 </div>
+               </div>
+
+               <button onClick={toggleFullscreen} class="p-2 text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900 rounded-lg transition-colors sm:ml-2" title="Toggle Fullscreen">
+                 <Icon name="maximize" class="w-4 h-4 sm:w-5 sm:h-5" />
+               </button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Portaling controls to header to keep editor interface premium */}
+      <Portal mount={document.getElementById('editor-header-controls') || undefined}>
+        <div class="flex items-center gap-1.5 sm:gap-3">
+          
+          <div class="hidden md:flex relative items-center bg-slate-100 dark:bg-zinc-900/50 rounded-lg border border-slate-200 dark:border-zinc-800 px-2 sm:px-3 py-1.5 gap-1 sm:gap-1.5 shadow-sm">
+            <span class="hidden md:inline text-[9px] font-black text-slate-400 dark:text-text-muted uppercase tracking-wider select-none">Aspect:</span>
+            <select
+              value={aspectRatio()}
+              onInput={(e) => setAspectRatio(e.currentTarget.value as any)}
+              class="bg-transparent border-none text-[10px] sm:text-[11px] font-extrabold text-slate-700 dark:text-text-main outline-none cursor-pointer appearance-none pr-4 sm:pr-5 relative"
+            >
+              <option value="16:9" class="bg-white dark:bg-zinc-950">16:9 (Landscape)</option>
+              <option value="9:16" class="bg-white dark:bg-zinc-950">9:16 (Vertical)</option>
+              <option value="1:1" class="bg-white dark:bg-zinc-950">1:1 (Square)</option>
+              <option value="4:5" class="bg-white dark:bg-zinc-950">4:5 (Portrait)</option>
+              <option value="3:4" class="bg-white dark:bg-zinc-950">3:4 (Standard Vert.)</option>
+              <option value="4:3" class="bg-white dark:bg-zinc-950">4:3 (Standard Horiz.)</option>
+              <option value="2:1" class="bg-white dark:bg-zinc-950">2:1 (Panoramics)</option>
+            </select>
+            <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-text-muted text-[8px]">▼</div>
+          </div>
+
+          <button onClick={toggleTheme} class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-slate-500 dark:text-text-muted hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer border border-transparent dark:border-zinc-800/20 shrink-0" title="Toggle Light/Dark Theme">
+            <Show when={isDarkTheme()} fallback={<Icon name="moon" class="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />}>
+              <Icon name="sun" class="w-4 h-4 sm:w-5 sm:h-5 text-brand-500" />
+            </Show>
+          </button>
+
+          <div class="hidden md:block w-[1px] h-4 bg-slate-200 dark:bg-zinc-800 mx-0.5"></div>
+
+          <button onClick={() => setIsExporting(true)} class="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-md bg-blueprint-900 hover:bg-blueprint-800 dark:bg-brand-500 dark:hover:bg-brand-600 font-bold text-[10px] sm:text-xs uppercase tracking-widest transition cursor-pointer shadow-md shrink-0" title="Export Video Animation" style={{ color: isDarkTheme() ? '#09090b' : '#ffffff' }}>
+            <Icon name="export" class={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDarkTheme() ? 'text-zinc-950' : 'text-white'}`} />
+            <span class="hidden sm:inline">Export Video</span>
+            <span class="inline sm:hidden">Export</span>
+          </button>
+        </div>
+      </Portal>
+
       {/* Export Modal integration */}
       <Show when={isExporting()}>
         <ExportModal onClose={() => setIsExporting(false)} />
