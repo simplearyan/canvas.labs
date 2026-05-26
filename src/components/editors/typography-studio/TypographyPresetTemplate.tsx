@@ -400,6 +400,33 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
               </button>
             </Show>
 
+            {/* Desktop Horizontal Promo Ad - Shown when playing and hidden when paused/stopped */}
+            <Show when={isPlaying() && !isFullscreen()}>
+              <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[92%] max-w-lg bg-neutral-950/85 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-2.5 shadow-2xl flex items-center justify-between text-white hidden lg:flex animate-fade-in hover:border-brand-500/40 transition-all duration-300 pointer-events-auto">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-500 to-amber-400 flex items-center justify-center shadow-md shrink-0">
+                    <svg class="w-4.5 h-4.5 text-zinc-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2" />
+                      <line x1="12" y1="22" x2="12" y2="15.5" />
+                      <polyline points="22 8.5 12 15.5 2 8.5" />
+                      <polyline points="2 15.5 12 8.5 22 15.5" />
+                      <line x1="12" y1="2" x2="12" y2="8.5" />
+                    </svg>
+                  </div>
+                  <div class="flex flex-col text-left">
+                    <span class="text-[9px] font-black text-brand-500 uppercase tracking-widest leading-none">Canvas Labs Pro</span>
+                    <span class="text-[11px] font-bold text-neutral-200 mt-1 select-none">Unlock 4K exports, priority GPU, and all presets!</span>
+                  </div>
+                </div>
+                <a 
+                  href="/editor/typography-studio" 
+                  class="bg-brand-500 hover:bg-brand-600 text-zinc-950 font-black text-[10px] uppercase tracking-wider px-3.5 py-1.5 rounded-lg shadow-sm hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shrink-0"
+                >
+                  Upgrade
+                </a>
+              </div>
+            </Show>
+
             <canvas
               ref={canvasRef}
               onPointerDown={handleCanvasPointerDown}
