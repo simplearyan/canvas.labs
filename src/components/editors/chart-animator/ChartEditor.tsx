@@ -74,7 +74,7 @@ export default function ChartEditor() {
         class={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all duration-200 cursor-pointer group shadow-sm ${
           isActive()
             ? 'bg-blueprint-50/70 border-blueprint-900 dark:bg-brand-500/10 dark:border-brand-500 text-blueprint-900 dark:text-brand-500 ring-2 ring-blueprint-900/10 dark:ring-brand-500/20'
-            : 'bg-slate-50 hover:bg-blueprint-50/30 dark:bg-zinc-900 dark:hover:bg-zinc-850/50 border-blueprint-200 dark:border-zinc-800 text-slate-700 dark:text-text-main'
+            : 'bg-slate-50 hover:bg-blueprint-50/30 dark:bg-zinc-900 dark:hover:bg-zinc-800/50 border-blueprint-200 dark:border-zinc-800 text-slate-700 dark:text-text-main'
         }`}
         type="button"
       >
@@ -355,7 +355,7 @@ export default function ChartEditor() {
       <aside class="w-full md:w-[480px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 flex flex-col md:flex-row z-10 shrink-0 shadow-xl overflow-hidden">
         
         {/* DESKTOP SIDE NAVIGATION RAIL */}
-        <div class="hidden md:flex flex-col w-[80px] bg-slate-50 dark:bg-zinc-900 border-r border-blueprint-100 dark:border-zinc-850 py-6 items-center gap-5 shrink-0 select-none">
+        <div class="hidden md:flex flex-col w-[80px] bg-slate-50 dark:bg-zinc-900 border-r border-blueprint-100 dark:border-zinc-800 py-6 items-center gap-5 shrink-0 select-none">
           <RailTab value="presets" label="Presets" icon="sparkles" />
           <RailTab value="metadata" label="Header" icon="type" />
           <RailTab value="data" label="Data" icon="grid" />
@@ -381,7 +381,7 @@ export default function ChartEditor() {
                     class={`px-3 py-2.5 text-left text-xs font-bold transition-all duration-200 flex flex-col gap-0.5 relative group shadow-sm cursor-pointer rounded-xl border ${
                       isActive()
                         ? 'bg-blueprint-50/70 border-blueprint-900 dark:bg-brand-500/10 dark:border-brand-500 text-blueprint-900 dark:text-brand-500 ring-2 ring-blueprint-900/10 dark:ring-brand-500/20'
-                        : 'bg-slate-50 hover:bg-blueprint-50/50 dark:bg-zinc-900 dark:hover:bg-zinc-850/50 border-blueprint-200 dark:border-zinc-800 text-slate-700 dark:text-text-main'
+                        : 'bg-slate-50 hover:bg-blueprint-50/50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50 border-blueprint-200 dark:border-zinc-800 text-slate-700 dark:text-text-main'
                     }`}
                   >
                     <span class="truncate pr-2">{preset.title}</span>
@@ -404,7 +404,7 @@ export default function ChartEditor() {
               </button>
             </div>
             {customPresets().length === 0 ? (
-              <div class="p-4 border border-dashed border-blueprint-200 dark:border-zinc-850 text-center text-[10px] text-slate-400 dark:text-text-muted font-medium bg-slate-50/50 dark:bg-zinc-900/30 rounded-xl">
+              <div class="p-4 border border-dashed border-blueprint-200 dark:border-zinc-800 text-center text-[10px] text-slate-400 dark:text-text-muted font-medium bg-slate-50/50 dark:bg-zinc-900/30 rounded-xl">
                 No custom presets saved.
               </div>
             ) : (
@@ -417,7 +417,7 @@ export default function ChartEditor() {
                       class={`px-3 py-2.5 text-left text-xs font-bold transition-all duration-200 flex flex-col gap-0.5 relative group shadow-sm cursor-pointer rounded-xl border justify-between ${
                         isActive()
                           ? 'bg-blueprint-50/70 border-blueprint-900 dark:bg-brand-500/10 dark:border-brand-500 text-blueprint-900 dark:text-brand-500 ring-2 ring-blueprint-900/10 dark:ring-brand-500/20'
-                          : 'bg-slate-50 hover:bg-blueprint-50/50 dark:bg-zinc-900 dark:hover:bg-zinc-850/50 border-blueprint-200 dark:border-zinc-800 text-slate-700 dark:text-text-main'
+                          : 'bg-slate-50 hover:bg-blueprint-50/50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50 border-blueprint-200 dark:border-zinc-800 text-slate-700 dark:text-text-main'
                       }`}
                     >
                       <span class="truncate pr-4">{preset.name}</span>
@@ -700,7 +700,7 @@ export default function ChartEditor() {
         <div class="md:hidden border-t border-blueprint-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-950 flex flex-col gap-2 shrink-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           {/* STYLE Sub-tabs (Only visible when main editorTab is 'style') */}
           <Show when={editorTab() === 'style'}>
-            <div class="flex items-center bg-slate-100 dark:bg-zinc-900 p-0.5 rounded-lg gap-1 border border-slate-200/50 dark:border-zinc-850 animate-fade-in">
+            <div class="flex items-center bg-slate-100 dark:bg-zinc-900 p-0.5 rounded-lg gap-1 border border-slate-200/50 dark:border-zinc-800 animate-fade-in">
               <button
                 onClick={() => setStyleSubTab('layout')}
                 class={`flex-1 py-1 text-[9px] font-black uppercase tracking-wider text-center transition-all rounded-md ${styleSubTab() === 'layout' ? 'bg-blueprint-900 text-white dark:bg-brand-500 shadow-[1px_1px_0px_#000]' : 'text-slate-500 dark:text-text-muted hover:text-slate-800 dark:hover:text-text-main hover:bg-slate-100 dark:hover:bg-zinc-800/50'}`}
@@ -759,13 +759,27 @@ export default function ChartEditor() {
       </aside>
 
       {/* CANVAS AREA (Right / Top on Mobile) */}
-      <section class="flex-1 h-[55vh] md:h-full order-first md:order-last relative overflow-hidden flex items-center justify-center p-4 sm:p-12">
+      <section class="flex-1 h-[55vh] md:h-full order-first md:order-last relative overflow-hidden flex items-center justify-center p-4 sm:p-12 pb-16">
         <div
           ref={canvasContainerRef}
           class={`relative p-2 bg-white dark:bg-zinc-900 border-2 border-blueprint-900 dark:border-zinc-800 blueprint-shadow transition-all duration-300 ${
-            isFullscreen() ? 'fullscreen:w-screen fullscreen:h-screen fullscreen:flex fullscreen:items-center fullscreen:justify-center fullscreen:bg-zinc-950 fullscreen:border-none fullscreen:p-0' : ''
+            isFullscreen() ? '!w-full !h-full !flex !items-center !justify-center !bg-zinc-950 !border-none !p-0' : ''
           }`}
         >
+          {/* Mobile Fullscreen Control (Visible only on mobile, when not in fullscreen, in bottom-right corner of canvas container) */}
+          <Show when={!isFullscreen()}>
+            <button
+              onClick={toggleFullscreen}
+              class="absolute bottom-3 right-3 md:hidden z-20 flex items-center justify-center bg-black/60 dark:bg-zinc-900/80 backdrop-blur-md w-9 h-9 rounded-lg border border-white/10 dark:border-zinc-800/50 shadow-lg active:scale-95 hover:scale-105 transition-all cursor-pointer animate-fade-in select-none"
+              title="Enter Fullscreen"
+              type="button"
+            >
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            </button>
+          </Show>
+
           {/* Fullscreen Close Button (Only visible in Fullscreen Mode, bottom-right) */}
           <Show when={isFullscreen()}>
             <button
@@ -803,6 +817,29 @@ export default function ChartEditor() {
 
           <canvas ref={canvasRef} class="block bg-white dark:bg-black object-contain"></canvas>
         </div>
+
+        {/* Mobile Centered Play/Pause Control (Visible only on mobile, when not in fullscreen, centered below canvas area) */}
+        <Show when={!isFullscreen()}>
+          <div class="absolute bottom-3 left-0 right-0 flex items-center justify-center md:hidden z-20 animate-fade-in select-none">
+            <button
+              onClick={handlePlayPause}
+              class="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main border border-blueprint-200 dark:border-zinc-800 shadow-md active:scale-95 transition-all cursor-pointer"
+              title={isPlaying() ? "Pause Animation" : "Play Animation"}
+              type="button"
+            >
+              <Show when={isPlaying()} fallback={
+                <svg class="w-4 h-4 fill-current ml-0.5 text-slate-700 dark:text-text-main" viewBox="0 0 24 24">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+              }>
+                <svg class="w-4 h-4 fill-current text-brand-500 animate-pulse" viewBox="0 0 24 24">
+                  <rect x="6" y="4" width="4" height="16" rx="1" />
+                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+              </Show>
+            </button>
+          </div>
+        </Show>
       </section>
 
       {/* Unified Reusable Export Modal */}
@@ -864,8 +901,9 @@ export default function ChartEditor() {
       {/* Portaling controls to header to keep editor interface premium */}
       <Portal mount={document.getElementById('editor-header-controls') || undefined}>
         <div class="flex items-center gap-1.5 sm:gap-3">
+          {/* Group 1: Canvas Utilities */}
           {/* Aspect Ratio Selector Dropdown */}
-          <div class="relative flex items-center bg-slate-100 dark:bg-zinc-900/50 rounded-lg border border-slate-200 dark:border-zinc-800 px-2 sm:px-3 py-1.5 gap-1 sm:gap-1.5 shadow-sm">
+          <div class="hidden md:flex relative items-center bg-slate-100 dark:bg-zinc-900/50 rounded-lg border border-slate-200 dark:border-zinc-800 px-2 sm:px-3 py-1.5 gap-1 sm:gap-1.5 shadow-sm">
             <span class="hidden md:inline text-[9px] font-black text-slate-400 dark:text-text-muted uppercase tracking-wider select-none">Aspect:</span>
             <select
               value={aspectRatio()}
@@ -894,20 +932,14 @@ export default function ChartEditor() {
             </Show>
           </button>
 
-          {/* Camera Snapshot Button */}
-          <button
-            onClick={() => setIsExportingSnapshot(true)}
-            class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
-            title="Export High-Res PNG Snapshot"
-          >
-            <Icon name="camera" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
-            <span class="hidden sm:inline">Camera Snapshot</span>
-          </button>
+          {/* Divider */}
+          <div class="hidden md:block w-[1px] h-4 bg-slate-200 dark:bg-zinc-800 mx-0.5"></div>
 
+          {/* Group 2: Interactive Playback */}
           {/* Preview/Play Button */}
           <button
             onClick={handlePlayPause}
-            class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
+            class="hidden md:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
             title={isPlaying() ? "Pause Animation Preview" : "Play Animation Preview"}
           >
             <Show when={isPlaying()} fallback={
@@ -924,7 +956,7 @@ export default function ChartEditor() {
           {/* Fullscreen Trigger Button */}
           <button
             onClick={toggleFullscreen}
-            class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm shrink-0"
+            class="hidden md:flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm shrink-0"
             title="Toggle Fullscreen"
             type="button"
           >
@@ -937,6 +969,20 @@ export default function ChartEditor() {
                 <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
               </svg>
             </Show>
+          </button>
+
+          {/* Divider */}
+          <div class="hidden md:block w-[1px] h-4 bg-slate-200 dark:bg-zinc-800 mx-0.5"></div>
+
+          {/* Group 3: Outputs & Exports */}
+          {/* Camera Snapshot Button */}
+          <button
+            onClick={() => setIsExportingSnapshot(true)}
+            class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm"
+            title="Export High-Res PNG Snapshot"
+          >
+            <Icon name="camera" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
+            <span class="hidden sm:inline">Camera Snapshot</span>
           </button>
 
           {/* Export Video Button */}

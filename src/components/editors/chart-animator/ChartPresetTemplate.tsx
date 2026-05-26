@@ -80,6 +80,15 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   const [isFullscreen, setIsFullscreen] = createSignal(false);
   let canvasContainerRef!: HTMLDivElement;
 
+  // 1. Hydrate the store with the template data synchronously (runs on both server & client render)
+  const presetData = getPresetBySlug(props.slug);
+  setChartStore('title', presetData.title);
+  setChartStore('subtitle', presetData.subtitle);
+  setChartStore('source', presetData.source);
+  setChartStore('rawData', presetData.rawData);
+  setChartStore('type', presetData.type as any);
+  updateChartOptions(presetData.options as any);
+
   const toggleFullscreen = () => {
     if (!canvasContainerRef) return;
     if (!document.fullscreenElement) {
@@ -125,15 +134,6 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   };
 
   onMount(() => {
-    // 1. Hydrate the store with the template data
-    const presetData = getPresetBySlug(props.slug);
-    setChartStore('title', presetData.title);
-    setChartStore('subtitle', presetData.subtitle);
-    setChartStore('source', presetData.source);
-    setChartStore('rawData', presetData.rawData);
-    setChartStore('type', presetData.type as any);
-    updateChartOptions(presetData.options as any);
-
     // 2. Initialize Engine
     engine = new ChartEngine(canvasRef);
     setIsLoaded(true);
@@ -157,8 +157,12 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   });
 
   onCleanup(() => {
-    window.removeEventListener('resize', handleResize);
-    document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', handleResize);
+    }
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }
     if (engine) engine.pause();
     if (playTimeoutId) {
       clearTimeout(playTimeoutId);
@@ -272,11 +276,17 @@ export default function ChartPresetTemplate(props: { slug: string }) {
         <div class="lg:col-span-2 flex flex-col gap-4">
           <div
             ref={canvasContainerRef}
-            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative fullscreen:w-screen fullscreen:h-screen fullscreen:aspect-none fullscreen:rounded-none fullscreen:bg-zinc-950 fullscreen:border-none ${aspectRatio() === '9:16' ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
-                aspectRatio() === '1:1' ? 'aspect-square h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
-                  aspectRatio() === '4:5' ? 'aspect-[4/5] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto' :
-                    'aspect-video w-full'
-              }`}
+            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative transition-all duration-300 ${
+              isFullscreen()
+                ? '!w-full !h-full !aspect-none !rounded-none !bg-zinc-950 !border-none !p-0'
+                : aspectRatio() === '9:16'
+                  ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto'
+                  : aspectRatio() === '1:1'
+                    ? 'aspect-square h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto'
+                    : aspectRatio() === '4:5'
+                      ? 'aspect-[4/5] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto'
+                      : 'aspect-video w-full'
+            }`}
             style={{ "background-color": chartStore.options.bgColor }}
           >
             {/* Fullscreen Close Button (Only visible in Fullscreen Mode, bottom-right) */}

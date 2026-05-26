@@ -38,7 +38,7 @@ const baseUrl = import.meta.env.BASE_URL;
 
     {/* Main Workspace (Push below fixed header) */}
     <main class="flex-1 w-full flex flex-col relative pt-16">
-      <ChartPresetTemplate client:only="solid-js" slug={slug as string} />
+      <ChartPresetTemplate client:load slug={slug as string} />
     </main>
   </div>
 </Layout>
