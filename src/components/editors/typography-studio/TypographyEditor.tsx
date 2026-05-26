@@ -16,6 +16,7 @@ import { TYPOGRAPHY_PRESETS } from '@/engines/typography-studio/presets';
 import type { TypographyAnimPreset, TypographyElement, TypographyTextElement, TypographyShapeElement } from '@/engines/typography-studio/types';
 import Icon from '@/components/ui/Icon';
 import ExportModal from '@/components/common/ExportModal';
+import { typographyExportProject } from '@/engines/typography-studio/ExportEngine';
 import { isDarkTheme, toggleTheme } from '@/store/global';
 
 function ToggleSwitch(props: { checked: boolean, onChange: (v: boolean) => void, label: string }) {
@@ -375,7 +376,7 @@ export default function TypographyEditor() {
     <div class="flex-1 flex flex-col md:flex-row h-[calc(100vh-64px)] w-full overflow-hidden relative text-slate-800 dark:text-text-main bg-app-bg font-sans">
       
       {/* TOOLBAR / SIDEBAR (Left Panel) */}
-      <aside class="w-full md:w-[420px] h-[45vh] md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 flex flex-col md:flex-row z-10 shrink-0 shadow-xl overflow-hidden">
+      <aside class="w-full md:w-[420px] flex-1 md:flex-none md:h-full order-last md:order-first bg-white dark:bg-zinc-950 border-t md:border-t-0 md:border-r border-blueprint-200 dark:border-zinc-800 flex flex-col md:flex-row z-10 shrink-0 shadow-xl overflow-hidden">
         
         {/* DESKTOP SIDE NAVIGATION RAIL */}
         <div class="hidden md:flex flex-col w-[80px] bg-slate-50 dark:bg-zinc-900 border-r border-blueprint-100 dark:border-zinc-800 py-6 items-center gap-5 shrink-0 select-none">
@@ -748,12 +749,19 @@ export default function TypographyEditor() {
                 )}
              </Show>
           </Show>
+        </div>
 
+        {/* MOBILE BOTTOM NAVIGATION RAIL */}
+        <div class="flex md:hidden flex-row w-full bg-slate-50 dark:bg-zinc-900 border-t border-blueprint-100 dark:border-zinc-800 py-2 px-2 sm:px-4 items-center justify-around shrink-0 select-none z-20">
+          <RailTab value="presets" label="Presets" icon="grid" />
+          <RailTab value="layers" label="Layers" icon="layers" />
+          <RailTab value="properties" label="Props" icon="sliders" />
+          <RailTab value="canvas" label="Canvas" icon="layout" />
         </div>
       </aside>
 
       {/* CANVAS WORKSPACE (Right Panel) */}
-      <main class="flex-1 flex flex-col relative min-h-[55vh] md:min-h-full min-w-0 bg-slate-100/50 dark:bg-black/20 p-6 sm:p-10 custom-scrollbar">
+      <main class="h-[50vh] shrink-0 md:h-auto md:flex-1 flex flex-col relative md:min-h-full min-w-0 bg-slate-100/50 dark:bg-black/20 p-6 sm:p-10 custom-scrollbar">
         
         <div class="flex-1 flex flex-col justify-center max-w-[1200px] mx-auto w-full">
           <div 
@@ -821,9 +829,14 @@ export default function TypographyEditor() {
       </Portal>
 
       {/* Export Modal integration */}
-      <Show when={isExporting()}>
-        <ExportModal onClose={() => setIsExporting(false)} />
-      </Show>
+      <ExportModal 
+        isOpen={isExporting()}
+        onClose={() => setIsExporting(false)} 
+        store={typographyStore}
+        aspectRatio={aspectRatio()}
+        projectTitle="Typography_Animation"
+        onExport={typographyExportProject}
+      />
 
     </div>
   );

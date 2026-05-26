@@ -5,6 +5,7 @@ import { isDarkTheme } from '@/store/global';
 import { ChartEngine } from '@/engines/chart-animator/ChartEngine';
 import { CHART_PRESETS } from '@/engines/chart-animator/presets';
 import ExportModal from '@/components/common/ExportModal';
+import { exportProject } from '@/engines/chart-animator/ExportEngine';
 
 const getPresetBySlug = (slug: string) => {
   const preset = CHART_PRESETS[slug];
@@ -683,8 +684,10 @@ export default function ChartPresetTemplate(props: { slug: string }) {
       <ExportModal
         isOpen={isExporting()}
         onClose={() => setIsExporting(false)}
-        chartStore={chartStore}
+        store={chartStore}
         aspectRatio={aspectRatio()}
+        projectTitle={chartStore.title}
+        onExport={exportProject}
       />
     </div>
   );

@@ -1,15 +1,28 @@
 import { createEffect, createSignal, onMount, onCleanup, Show, For } from "solid-js";
 import { isDarkTheme } from "@/store/global";
-import { exportProject, type ExportConfig } from "@/engines/chart-animator/ExportEngine";
 import { EXPORT_TIPS } from "@/config/exportTips";
 import Icon from "../ui/Icon";
 import { SITE_CONFIG } from "@/config/site";
 
+export interface ExportConfig {
+  format: 'mp4' | 'webm' | 'mov' | 'zip';
+  resolution: '720' | '1080' | '1440' | '2160';
+  fps: number;
+  aspectRatio?: '16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1';
+}
+
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  chartStore: any;
+  store: any;
   aspectRatio: string;
+  projectTitle: string;
+  onExport: (
+    config: ExportConfig,
+    snapshot: any,
+    onProgress: (progress: number, status: string) => void,
+    controller: { isPaused: () => boolean; isCancelled: () => boolean }
+  ) => Promise<ArrayBuffer | Blob>;
 }
 
 export default function ExportModal(props: ExportModalProps) {
@@ -94,9 +107,9 @@ export default function ExportModal(props: ExportModalProps) {
       };
 
       // Deep copy to lock down the exact state snapshot for worker thread
-      const snapshot = JSON.parse(JSON.stringify(props.chartStore));
+      const snapshot = JSON.parse(JSON.stringify(props.store));
 
-      const result = await exportProject(
+      const result = await props.onExport(
         config,
         snapshot,
         (progress, status) => {
@@ -114,7 +127,7 @@ export default function ExportModal(props: ExportModalProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${props.chartStore.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_export.${ext}`;
+      a.download = `${props.projectTitle.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_export.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
 

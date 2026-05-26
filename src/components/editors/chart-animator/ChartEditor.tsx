@@ -7,6 +7,7 @@ import { CHART_PRESETS, type ChartPreset } from '@/engines/chart-animator/preset
 import ExportModal from '@/components/common/ExportModal';
 import { isDarkTheme, toggleTheme } from '@/store/global';
 import Icon from '@/components/ui/Icon';
+import { exportProject } from '@/engines/chart-animator/ExportEngine';
 
 // Reusable Premium Toggle Switch Component
 function ToggleSwitch(props: { checked: boolean, onChange: (v: boolean) => void, label: string }) {
@@ -922,8 +923,10 @@ export default function ChartEditor() {
       <ExportModal
         isOpen={isExporting()}
         onClose={() => setIsExporting(false)}
-        chartStore={chartStore}
+        store={chartStore}
         aspectRatio={aspectRatio()}
+        projectTitle={chartStore.title}
+        onExport={exportProject}
       />
 
       {/* SNAPSHOT EXPORT MODAL */}

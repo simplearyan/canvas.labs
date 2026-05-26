@@ -4,6 +4,8 @@ import { typographyStore, setTypographyStore, serializeTypographyState, updateTy
 import { isDarkTheme } from '@/store/global';
 import { TypographyEngine } from '@/engines/typography-studio/TypographyEngine';
 import { TYPOGRAPHY_PRESETS } from '@/engines/typography-studio/presets';
+import ExportModal from '@/components/common/ExportModal';
+import { typographyExportProject } from '@/engines/typography-studio/ExportEngine';
 
 const getPresetBySlug = (slug: string) => {
   const preset = TYPOGRAPHY_PRESETS[slug];
@@ -23,6 +25,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
 
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5'>('16:9');
   const [isFullscreen, setIsFullscreen] = createSignal(false);
+  const [isExporting, setIsExporting] = createSignal(false);
   let canvasContainerRef!: HTMLDivElement;
 
   // Hydrate Store
@@ -171,7 +174,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
             </a>
 
             <button
-              onClick={() => {}}
+              onClick={() => setIsExporting(true)}
               class="group flex items-center justify-center gap-2 w-9 h-9 md:w-auto md:h-9 text-xs md:text-sm font-semibold bg-brand-500 hover:bg-brand-600 px-0 md:px-3.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] flex-shrink-0"
               style={{ color: isDarkTheme() ? '#09090b' : '#ffffff' }}
               title="Export Video"
@@ -319,7 +322,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
             </a>
 
             <button
-              onClick={() => {}}
+              onClick={() => setIsExporting(true)}
               class="w-full border-2 border-brand-500 text-brand-500 hover:bg-brand-500 hover:text-white dark:hover:text-black font-bold py-3 px-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer text-sm"
             >
               <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
@@ -387,6 +390,15 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
           </div>
         </div>
       </div>
+
+      <ExportModal 
+        isOpen={isExporting()}
+        onClose={() => setIsExporting(false)} 
+        store={typographyStore}
+        aspectRatio={aspectRatio()}
+        projectTitle={`Typography_Preset_${props.slug}`}
+        onExport={typographyExportProject}
+      />
     </div>
   );
 }
