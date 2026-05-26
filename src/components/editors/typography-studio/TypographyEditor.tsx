@@ -59,6 +59,14 @@ export default function TypographyEditor() {
 
   onMount(() => {
     engine = new TypographyEngine(canvasRef);
+    
+    engine.onTimeUpdate = (time) => {
+      updateTypographyGlobal({ time });
+      if (time >= (typographyStore.duration || 5)) {
+        setIsPlaying(false);
+      }
+    };
+
     handleResize();
     setTimeout(handleResize, 100);
 
@@ -81,7 +89,6 @@ export default function TypographyEditor() {
     window.removeEventListener('resize', handleResize);
     document.removeEventListener('fullscreenchange', handleFullscreenChange);
     if (engine) engine.pause();
-    if (playTimeoutId) clearTimeout(playTimeoutId);
   });
 
   const handleResize = () => {
@@ -91,8 +98,10 @@ export default function TypographyEditor() {
       const container = wrapper.parentElement;
       if (container) {
         const isFS = document.fullscreenElement === wrapper;
-        const maxW = isFS ? window.innerWidth - 96 : container.clientWidth - 64;
-        const maxH = isFS ? window.innerHeight - 160 : container.clientHeight - 64;
+        const mainNode = wrapper.closest('main');
+        // Calculate max dimensions strictly based on stable bounds to prevent infinite growth feedback loop
+        const maxW = isFS ? window.innerWidth - 96 : (mainNode ? mainNode.clientWidth - 80 : container.clientWidth - 64);
+        const maxH = isFS ? window.innerHeight - 160 : (mainNode ? mainNode.clientHeight - 180 : container.clientHeight - 64);
 
         let w = maxW;
         let h = maxH;
@@ -151,8 +160,25 @@ export default function TypographyEditor() {
 
   createEffect(() => {
     if (isLoaded() && engine) {
-      const snapshot = JSON.parse(JSON.stringify(typographyStore));
-      engine.updateState(snapshot);
+      // Explicitly track only layout and design properties, NOT time or selection state
+      const trackState = {
+        width: typographyStore.width,
+        height: typographyStore.height,
+        bgColor: typographyStore.bgColor,
+        duration: typographyStore.duration,
+        elements: typographyStore.elements
+      };
+      
+      const snapshot = JSON.parse(JSON.stringify(trackState));
+      
+      // Do not re-apply state if we are currently playing to avoid interrupting the loop
+      if (!isPlaying()) {
+          // We must merge it back with the untracked time so the engine has it
+          const fullSnapshot = { ...snapshot, time: typographyStore.time };
+          engine.updateState(fullSnapshot);
+      }
+      
+      // Update URL safely without tracking time changes
       window.history.replaceState(null, '', `?config=${serializeTypographyState()}`);
     }
   });
@@ -162,22 +188,19 @@ export default function TypographyEditor() {
     if (isPlaying()) {
       engine.pause();
       setIsPlaying(false);
-      if (playTimeoutId) clearTimeout(playTimeoutId);
     } else {
+      if (typographyStore.time >= (typographyStore.duration || 5)) {
+        updateTypographyGlobal({ time: 0 });
+        engine.seek(0);
+      }
       engine.play();
       setIsPlaying(true);
-      if (playTimeoutId) clearTimeout(playTimeoutId);
-      playTimeoutId = setTimeout(() => {
-        setIsPlaying(false);
-        playTimeoutId = null;
-      }, (typographyStore.duration || 5) * 1000);
     }
   };
 
   const resetTime = () => {
     engine.pause();
     setIsPlaying(false);
-    if (playTimeoutId) clearTimeout(playTimeoutId);
     updateTypographyGlobal({ time: 0 });
     engine.seek(0);
   };
@@ -186,12 +209,47 @@ export default function TypographyEditor() {
     if (isPlaying()) {
         engine.pause();
         setIsPlaying(false);
-        if (playTimeoutId) clearTimeout(playTimeoutId);
     }
     const t = progress * (typographyStore.duration || 5);
     updateTypographyGlobal({ time: t });
     engine.seek(progress);
   };
+
+  const TimelineUI = () => (
+    <div class={`flex items-center gap-2 sm:gap-4 border shadow-sm rounded-xl px-4 sm:px-6 py-3 w-full max-w-2xl ${isFullscreen() ? 'bg-zinc-950/80 backdrop-blur-md border-zinc-800 shadow-2xl' : 'bg-white dark:bg-zinc-950 border-border-color'}`}>
+       <button onClick={resetTime} class={`p-2 rounded-lg transition-colors ${isFullscreen() ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900'}`} title="Rewind to start">
+         <Icon name="skip-back" class="w-4 h-4 sm:w-5 sm:h-5" />
+       </button>
+       
+       <button onClick={handlePlayPause} class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blueprint-900 dark:bg-brand-500 text-white flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all shrink-0">
+         <Show when={isPlaying()} fallback={<svg class="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-1" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>}>
+           <svg class="w-4 h-4 sm:w-5 sm:h-5 fill-current" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+         </Show>
+       </button>
+
+       <div class="flex-1 flex flex-col gap-1.5 px-2">
+         <div class={`flex justify-between text-[10px] sm:text-xs font-mono font-bold ${isFullscreen() ? 'text-zinc-400' : 'text-text-muted'}`}>
+           <span>{(typographyStore.time).toFixed(1)}s</span>
+           <span>{(typographyStore.duration || 5).toFixed(1)}s</span>
+         </div>
+         <div class={`relative w-full h-2 rounded-full flex items-center group ${isFullscreen() ? 'bg-zinc-800' : 'bg-slate-200 dark:bg-zinc-800'}`}>
+           <div class="absolute left-0 h-full bg-blueprint-500 dark:bg-brand-500 rounded-full pointer-events-none" style={{ width: `${((typographyStore.time) / (typographyStore.duration || 5)) * 100}%` }}></div>
+           <input 
+             type="range" 
+             min="0" max="1" step="0.001" 
+             value={typographyStore.duration ? typographyStore.time / typographyStore.duration : 0}
+             onInput={(e) => scrubTime(parseFloat(e.currentTarget.value))}
+             class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+           />
+           <div class="absolute w-3 h-3 sm:w-4 sm:h-4 bg-white border-2 border-blueprint-600 dark:border-brand-500 rounded-full shadow-sm pointer-events-none transition-transform group-hover:scale-125" style={{ left: `calc(${((typographyStore.time) / (typographyStore.duration || 5)) * 100}% - 6px)` }}></div>
+         </div>
+       </div>
+
+       <button onClick={toggleFullscreen} class={`p-2 rounded-lg transition-colors sm:ml-2 ${isFullscreen() ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900'}`} title="Toggle Fullscreen">
+         <Icon name={isFullscreen() ? "minimize" : "maximize"} class="w-4 h-4 sm:w-5 sm:h-5" />
+       </button>
+    </div>
+  );
 
   function RailTab(props: { value: typeof editorTab extends () => infer R ? R : never, label: string, icon: string }) {
     const isActive = () => editorTab() === props.value;
@@ -213,16 +271,19 @@ export default function TypographyEditor() {
   function loadPreset(key: string) {
     const p = TYPOGRAPHY_PRESETS[key];
     if(!p) return;
-    resetTime();
+    engine.pause();
+    setIsPlaying(false);
+    const duration = p.duration || 5.0;
     setTypographyStore({
       width: p.width,
       height: p.height,
       bgColor: p.bgColor,
-      duration: p.duration || 5.0,
+      duration: duration,
       elements: JSON.parse(JSON.stringify(p.elements)),
-      time: 0,
+      time: duration,
       selectedId: null
     });
+    engine.seek(1.0);
     setEditorTab('layers');
   }
 
@@ -274,10 +335,22 @@ export default function TypographyEditor() {
                 <div class="space-y-3">
                   <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Aspect Ratio</label>
                   <div class="grid grid-cols-2 gap-2">
-                    <button onClick={() => setAspectRatio('16:9')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='16:9' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent shadow-sm' : 'border-border-color text-text-main'}`}>16:9</button>
-                    <button onClick={() => setAspectRatio('9:16')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='9:16' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent shadow-sm' : 'border-border-color text-text-main'}`}>9:16</button>
-                    <button onClick={() => setAspectRatio('1:1')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='1:1' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent shadow-sm' : 'border-border-color text-text-main'}`}>1:1</button>
-                    <button onClick={() => setAspectRatio('4:5')} class={`p-2 rounded border text-xs font-bold ${aspectRatio()==='4:5' ? 'bg-blueprint-900 text-white dark:bg-brand-500 dark:text-zinc-950 border-transparent shadow-sm' : 'border-border-color text-text-main'}`}>4:5</button>
+                    <button onClick={() => setAspectRatio('16:9')} class={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${aspectRatio()==='16:9' ? 'bg-blueprint-50 dark:bg-brand-500/10 border-blueprint-500 dark:border-brand-500 text-blueprint-700 dark:text-brand-400 shadow-sm' : 'bg-slate-50 dark:bg-zinc-900/50 border-border-color hover:border-blueprint-300 dark:hover:border-zinc-700 text-text-muted hover:text-text-main'}`}>
+                      <Icon name="monitor" class="w-5 h-5" />
+                      <span class="text-[10px] font-bold">16:9</span>
+                    </button>
+                    <button onClick={() => setAspectRatio('9:16')} class={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${aspectRatio()==='9:16' ? 'bg-blueprint-50 dark:bg-brand-500/10 border-blueprint-500 dark:border-brand-500 text-blueprint-700 dark:text-brand-400 shadow-sm' : 'bg-slate-50 dark:bg-zinc-900/50 border-border-color hover:border-blueprint-300 dark:hover:border-zinc-700 text-text-muted hover:text-text-main'}`}>
+                      <Icon name="smartphone" class="w-5 h-5" />
+                      <span class="text-[10px] font-bold">9:16</span>
+                    </button>
+                    <button onClick={() => setAspectRatio('1:1')} class={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${aspectRatio()==='1:1' ? 'bg-blueprint-50 dark:bg-brand-500/10 border-blueprint-500 dark:border-brand-500 text-blueprint-700 dark:text-brand-400 shadow-sm' : 'bg-slate-50 dark:bg-zinc-900/50 border-border-color hover:border-blueprint-300 dark:hover:border-zinc-700 text-text-muted hover:text-text-main'}`}>
+                      <Icon name="square" class="w-5 h-5" />
+                      <span class="text-[10px] font-bold">1:1</span>
+                    </button>
+                    <button onClick={() => setAspectRatio('4:5')} class={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${aspectRatio()==='4:5' ? 'bg-blueprint-50 dark:bg-brand-500/10 border-blueprint-500 dark:border-brand-500 text-blueprint-700 dark:text-brand-400 shadow-sm' : 'bg-slate-50 dark:bg-zinc-900/50 border-border-color hover:border-blueprint-300 dark:hover:border-zinc-700 text-text-muted hover:text-text-main'}`}>
+                      <Icon name="layout" class="w-5 h-5" />
+                      <span class="text-[10px] font-bold">4:5</span>
+                    </button>
                   </div>
                 </div>
 
@@ -476,44 +549,19 @@ export default function TypographyEditor() {
                <button onClick={toggleFullscreen} class="absolute bottom-6 right-6 z-30 p-3 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors"><Icon name="minimize" class="w-5 h-5"/></button>
             </Show>
             <canvas ref={canvasRef} class="object-contain" style={{ "background-color": typographyStore.bgColor }}></canvas>
+            
+            <Show when={isFullscreen()}>
+              <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 w-full max-w-2xl px-4 animate-fade-in-up">
+                <TimelineUI />
+              </div>
+            </Show>
           </div>
 
-          {/* Timeline & Playback at canvas bottom */}
-          <div class="mt-8 flex items-center justify-center w-full animate-fade-in">
-            <div class="flex items-center gap-2 sm:gap-4 bg-white dark:bg-zinc-950 border border-border-color shadow-sm rounded-xl px-4 sm:px-6 py-3 w-full max-w-2xl">
-               <button onClick={resetTime} class="p-2 text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900 rounded-lg transition-colors" title="Rewind to start">
-                 <Icon name="skip-back" class="w-4 h-4 sm:w-5 sm:h-5" />
-               </button>
-               
-               <button onClick={handlePlayPause} class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blueprint-900 dark:bg-brand-500 text-white flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all shrink-0">
-                 <Show when={isPlaying()} fallback={<svg class="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-1" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>}>
-                   <svg class="w-4 h-4 sm:w-5 sm:h-5 fill-current" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
-                 </Show>
-               </button>
-
-               <div class="flex-1 flex flex-col gap-1.5 px-2">
-                 <div class="flex justify-between text-[10px] sm:text-xs font-mono font-bold text-text-muted">
-                   <span>{(typographyStore.time).toFixed(1)}s</span>
-                   <span>{(typographyStore.duration || 5).toFixed(1)}s</span>
-                 </div>
-                 <div class="relative w-full h-2 bg-slate-200 dark:bg-zinc-800 rounded-full flex items-center group">
-                   <div class="absolute left-0 h-full bg-blueprint-500 dark:bg-brand-500 rounded-full pointer-events-none" style={{ width: `${((typographyStore.time) / (typographyStore.duration || 5)) * 100}%` }}></div>
-                   <input 
-                     type="range" 
-                     min="0" max="1" step="0.001" 
-                     value={typographyStore.duration ? typographyStore.time / typographyStore.duration : 0}
-                     onInput={(e) => scrubTime(parseFloat(e.currentTarget.value))}
-                     class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                   />
-                   <div class="absolute w-3 h-3 sm:w-4 sm:h-4 bg-white border-2 border-blueprint-600 dark:border-brand-500 rounded-full shadow-sm pointer-events-none transition-transform group-hover:scale-125" style={{ left: `calc(${((typographyStore.time) / (typographyStore.duration || 5)) * 100}% - 6px)` }}></div>
-                 </div>
-               </div>
-
-               <button onClick={toggleFullscreen} class="p-2 text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900 rounded-lg transition-colors sm:ml-2" title="Toggle Fullscreen">
-                 <Icon name="maximize" class="w-4 h-4 sm:w-5 sm:h-5" />
-               </button>
+          <Show when={!isFullscreen()}>
+            <div class="mt-8 flex items-center justify-center w-full animate-fade-in">
+              <TimelineUI />
             </div>
-          </div>
+          </Show>
         </div>
       </main>
 

@@ -10,7 +10,7 @@ const initialState: TypographyState = {
   width: defaultPreset.width,
   height: defaultPreset.height,
   bgColor: defaultPreset.bgColor,
-  time: 0,
+  time: defaultPreset.duration || 5.0,
   isPlaying: false,
   duration: defaultPreset.duration || 5.0,
   elements: JSON.parse(JSON.stringify(defaultPreset.elements)),
@@ -22,7 +22,15 @@ export const [typographyStore, setTypographyStore] = createStore<TypographyState
 // --- URL State Serialization / Deserialization ---
 
 export function serializeTypographyState(): string {
-  const jsonString = JSON.stringify(typographyStore);
+  // Only serialize the state that matters for saving/sharing
+  const stateToSerialize = {
+    width: typographyStore.width,
+    height: typographyStore.height,
+    bgColor: typographyStore.bgColor,
+    duration: typographyStore.duration,
+    elements: typographyStore.elements,
+  };
+  const jsonString = JSON.stringify(stateToSerialize);
   return LZString.compressToEncodedURIComponent(jsonString);
 }
 

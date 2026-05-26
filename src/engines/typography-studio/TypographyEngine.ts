@@ -22,6 +22,8 @@ export class TypographyEngine {
     private dpr: number = 1;
 
     public isTransparent: boolean = false;
+    public onTimeUpdate?: (time: number) => void;
+    private pausedTime: number = 0;
     
     // Performance Caching
     private charCache = new Map<string, any[]>();
@@ -58,8 +60,8 @@ export class TypographyEngine {
     }
 
     public play() {
-        this.startTime = performance.now();
-        this.loop(this.startTime);
+        this.startTime = performance.now() - (this.pausedTime * 1000);
+        this.loop(performance.now());
     }
 
     public pause() {
@@ -67,16 +69,23 @@ export class TypographyEngine {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
         }
+        this.pausedTime = (performance.now() - this.startTime) / 1000;
     }
 
     public seek(progress: number) {
         if (!this.state) return;
         const timeInSeconds = progress * (this.state.duration || 5);
+        this.pausedTime = timeInSeconds;
         this.renderFrame(timeInSeconds);
     }
 
     public render() {
-        this.seek(1.0);
+        if (!this.state) return;
+        
+        // Render the current time state instead of hardcoding to the end
+        const currentTime = this.state.time !== undefined ? this.state.time : this.pausedTime;
+        const duration = this.state.duration || 5;
+        this.seek(currentTime / duration);
     }
 
     private loop = (timestamp: number) => {
@@ -88,6 +97,7 @@ export class TypographyEngine {
         if (elapsed > duration) elapsed = duration;
 
         this.renderFrame(elapsed);
+        if (this.onTimeUpdate) this.onTimeUpdate(elapsed);
 
         if (elapsed < duration) {
             this.animationFrameId = requestAnimationFrame(this.loop);
