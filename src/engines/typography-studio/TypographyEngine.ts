@@ -79,6 +79,42 @@ export class TypographyEngine {
         this.renderFrame(timeInSeconds);
     }
 
+    public hitTest(x: number, y: number): string | null {
+        if (!this.state) return null;
+        for (let i = this.state.elements.length - 1; i >= 0; i--) {
+            const el = this.state.elements[i];
+            if (el.visible === false || el.locked) continue;
+            
+            let w = 0, h = 0;
+            if (el.type === 'text') {
+                this.ctx.font = `${el.fontWeight} ${el.fontSize}px "${el.fontFamily}"`;
+                const lines = (el as any).text.split('\n');
+                h = lines.length * (el as any).fontSize * 1.1;
+                lines.forEach((line: string) => {
+                    let totalLineW = 0;
+                    for(let c=0; c<line.length; c++) totalLineW += this.ctx.measureText(line[c]).width + ((el as any).letterSpacing||0);
+                    if(line.length>0) totalLineW -= ((el as any).letterSpacing||0);
+                    if (totalLineW > w) w = totalLineW;
+                });
+            } else if (el.type === 'shape') {
+                w = (el as any).w;
+                h = (el as any).h;
+                if ((el as any).shapeType === 'circle') h = w;
+            }
+
+            // Ignoring rotation for simple AABB hit test
+            const left = el.x - w / 2;
+            const right = el.x + w / 2;
+            const top = el.y - h / 2;
+            const bottom = el.y + h / 2;
+
+            if (x >= left && x <= right && y >= top && y <= bottom) {
+                return el.id;
+            }
+        }
+        return null;
+    }
+
     public render() {
         if (!this.state) return;
         
@@ -488,5 +524,60 @@ export class TypographyEngine {
         });
 
         ctx.restore(); 
+
+        if (this.state.selectedId) {
+            const selectedEl = this.state.elements.find(e => e.id === this.state.selectedId);
+            if (selectedEl && selectedEl.visible !== false) {
+                this.drawSelectionBox(selectedEl);
+            }
+        }
+    }
+
+    private drawSelectionBox(el: TypographyElement) {
+        let w = 0, h = 0;
+        if (el.type === 'text') {
+            this.ctx.font = `${el.fontWeight} ${el.fontSize}px "${el.fontFamily}"`;
+            const lines = (el as any).text.split('\n');
+            h = lines.length * (el as any).fontSize * 1.1;
+            lines.forEach((line: string) => {
+                let totalLineW = 0;
+                for(let c=0; c<line.length; c++) totalLineW += this.ctx.measureText(line[c]).width + ((el as any).letterSpacing||0);
+                if(line.length>0) totalLineW -= ((el as any).letterSpacing||0);
+                if (totalLineW > w) w = totalLineW;
+            });
+        } else if (el.type === 'shape') {
+            w = (el as any).w;
+            h = (el as any).h;
+            if ((el as any).shapeType === 'circle') h = w;
+        }
+
+        const pad = 10;
+        w += pad * 2;
+        h += pad * 2;
+
+        this.ctx.save();
+        this.ctx.translate(el.x, el.y);
+        if (el.rotation) this.ctx.rotate(el.rotation * Math.PI / 180);
+
+        this.ctx.strokeStyle = '#3b82f6';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([6, 4]);
+        this.ctx.strokeRect(-w/2, -h/2, w, h);
+        
+        this.ctx.setLineDash([]);
+        this.ctx.fillStyle = '#ffffff';
+        const handleSize = 8;
+        const positions = [
+            [-w/2, -h/2], [0, -h/2], [w/2, -h/2],
+            [-w/2, 0],               [w/2, 0],
+            [-w/2, h/2],  [0, h/2],  [w/2, h/2]
+        ];
+        
+        positions.forEach(([hx, hy]) => {
+            this.ctx.fillRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+            this.ctx.strokeRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+        });
+
+        this.ctx.restore();
     }
 }

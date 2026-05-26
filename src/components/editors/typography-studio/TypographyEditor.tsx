@@ -40,6 +40,7 @@ export default function TypographyEditor() {
   const [isLoaded, setIsLoaded] = createSignal(false);
   const [editorTab, setEditorTab] = createSignal<'presets' | 'layers' | 'properties' | 'canvas'>('presets');
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1'>('16:9');
+  const [selectedCharIndex, setSelectedCharIndex] = createSignal<number>(0);
   
   // Playback & Export
   const [isPlaying, setIsPlaying] = createSignal(false);
@@ -160,13 +161,14 @@ export default function TypographyEditor() {
 
   createEffect(() => {
     if (isLoaded() && engine) {
-      // Explicitly track only layout and design properties, NOT time or selection state
+      // Explicitly track layout, design properties, and selection state
       const trackState = {
         width: typographyStore.width,
         height: typographyStore.height,
         bgColor: typographyStore.bgColor,
         duration: typographyStore.duration,
-        elements: typographyStore.elements
+        elements: typographyStore.elements,
+        selectedId: typographyStore.selectedId
       };
       
       const snapshot = JSON.parse(JSON.stringify(trackState));
@@ -289,6 +291,86 @@ export default function TypographyEditor() {
 
   const selectedEl = () => typographyStore.elements.find(e => e.id === typographyStore.selectedId);
 
+  function handleAddRansomText() {
+    const colors = ['#facc15', '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#fb923c'];
+    const text = "RANSOM";
+    const charStyles = text.split('').map(() => ({
+        fill: colors[Math.floor(Math.random() * colors.length)],
+        s: +(0.8 + Math.random() * 0.4).toFixed(2), 
+        r: Math.floor(-15 + Math.random() * 30) 
+    }));
+    
+    addTypographyElement({
+        id: 'text-'+Date.now(),
+        type: 'text',
+        text: text,
+        charStyles: charStyles,
+        fontFamily: 'Caveat',
+        fontWeight: '900',
+        fontSize: 180,
+        fill: '#ffffff',
+        roughness: 4,
+        innerShadowColor: '#000000',
+        innerShadowBlur: 4,
+        innerShadowX: 2,
+        innerShadowY: 2,
+        innerShadowOpacity: 30,
+        shadowColor: '#000000',
+        shadowBlur: 10,
+        shadowOffsetX: 6,
+        shadowOffsetY: 6,
+        animPreset: 'pop-up',
+        animDuration: 1,
+        x: typographyStore.width / 2,
+        y: typographyStore.height / 2,
+        visible: true,
+        locked: false
+    } as TypographyTextElement);
+  }
+
+  let isDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+
+  const handlePointerDown = (e: PointerEvent) => {
+    if (!engine) return;
+    const rect = canvasRef.getBoundingClientRect();
+    const scaleX = typographyStore.width / rect.width;
+    const scaleY = typographyStore.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    const hitId = engine.hitTest(x, y);
+    if (hitId) {
+      setTypographyStore('selectedId', hitId);
+      setEditorTab('properties');
+      const el = typographyStore.elements.find(e => e.id === hitId);
+      if (el && !el.locked) {
+        isDragging = true;
+        dragOffset = { x: el.x - x, y: el.y - y };
+      }
+    } else {
+      setTypographyStore('selectedId', null);
+    }
+  };
+
+  const handlePointerMove = (e: PointerEvent) => {
+    if (!isDragging || !engine || !typographyStore.selectedId) return;
+    const rect = canvasRef.getBoundingClientRect();
+    const scaleX = typographyStore.width / rect.width;
+    const scaleY = typographyStore.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    updateTypographyElement(typographyStore.selectedId, {
+      x: x + dragOffset.x,
+      y: y + dragOffset.y
+    });
+  };
+
+  const handlePointerUp = () => {
+    isDragging = false;
+  };
+
   return (
     <div class="flex-1 flex flex-col md:flex-row h-[calc(100vh-64px)] w-full overflow-hidden relative text-slate-800 dark:text-text-main bg-app-bg font-sans">
       
@@ -371,9 +453,11 @@ export default function TypographyEditor() {
 
           <Show when={editorTab() === 'layers'}>
              <div class="flex flex-col gap-4 animate-fade-in h-full">
-               <div class="flex gap-2 shrink-0">
-                 <button onClick={() => addTypographyElement({ id: 'text-'+Date.now(), type: 'text', text: 'NEW TEXT', fontFamily: 'Inter', fontWeight: '800', fontSize: 100, fill: '#ffffff', strokeWidth: 0, x: typographyStore.width/2, y: typographyStore.height/2, animPreset: 'none', animDuration: 1, visible: true, locked: false })} class="flex-1 py-2.5 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-700 dark:text-brand-400 font-bold text-xs rounded-lg border border-blueprint-200 dark:border-brand-500/30 hover:bg-blueprint-100 dark:hover:bg-brand-500/20 transition-colors flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"><Icon name="type" class="w-4 h-4"/> Add Text</button>
-                 <button onClick={() => addTypographyElement({ id: 'shape-'+Date.now(), type: 'shape', shapeType: 'circle', w: 200, h: 200, fill: '#ef4444', strokeWidth: 0, x: typographyStore.width/2, y: typographyStore.height/2, animPreset: 'none', animDuration: 1, visible: true, locked: false })} class="flex-1 py-2.5 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-700 dark:text-brand-400 font-bold text-xs rounded-lg border border-blueprint-200 dark:border-brand-500/30 hover:bg-blueprint-100 dark:hover:bg-brand-500/20 transition-colors flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"><Icon name="circle" class="w-4 h-4"/> Add Shape</button>
+               <div class="grid grid-cols-2 gap-2 shrink-0">
+                 <button onClick={() => addTypographyElement({ id: 'text-'+Date.now(), type: 'text', text: 'NEW TEXT', fontFamily: 'Inter', fontWeight: '800', fontSize: 100, fill: '#ffffff', strokeWidth: 0, x: typographyStore.width/2, y: typographyStore.height/2, animPreset: 'none', animDuration: 1, visible: true, locked: false })} class="py-2 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-700 dark:text-brand-400 font-bold text-xs rounded-lg border border-blueprint-200 dark:border-brand-500/30 hover:bg-blueprint-100 dark:hover:bg-brand-500/20 transition-colors flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"><Icon name="type" class="w-4 h-4"/> Add Text</button>
+                 <button onClick={handleAddRansomText} class="py-2 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-500 font-bold text-xs rounded-lg border border-amber-200 dark:border-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"><Icon name="type" class="w-4 h-4"/> Ransom Text</button>
+                 <button onClick={() => addTypographyElement({ id: 'shape-'+Date.now(), type: 'shape', shapeType: 'rect', w: 200, h: 100, borderRadius: 0, fill: '#3b82f6', strokeWidth: 0, x: typographyStore.width/2, y: typographyStore.height/2, animPreset: 'none', animDuration: 1, visible: true, locked: false })} class="py-2 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-700 dark:text-brand-400 font-bold text-xs rounded-lg border border-blueprint-200 dark:border-brand-500/30 hover:bg-blueprint-100 dark:hover:bg-brand-500/20 transition-colors flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"><Icon name="square" class="w-4 h-4"/> Add Rect</button>
+                 <button onClick={() => addTypographyElement({ id: 'shape-'+Date.now(), type: 'shape', shapeType: 'circle', w: 200, h: 200, fill: '#ef4444', strokeWidth: 0, x: typographyStore.width/2, y: typographyStore.height/2, animPreset: 'none', animDuration: 1, visible: true, locked: false })} class="py-2 bg-blueprint-50 dark:bg-brand-500/10 text-blueprint-700 dark:text-brand-400 font-bold text-xs rounded-lg border border-blueprint-200 dark:border-brand-500/30 hover:bg-blueprint-100 dark:hover:bg-brand-500/20 transition-colors flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"><Icon name="circle" class="w-4 h-4"/> Add Circle</button>
                </div>
                
                <div class="flex-1 overflow-y-auto space-y-2 pb-10">
@@ -422,11 +506,30 @@ export default function TypographyEditor() {
                        <div class="grid grid-cols-2 gap-3">
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Font Family</label>
-                           <input type="text" value={(el() as TypographyTextElement).fontFamily} onInput={(e) => updateTypographyElement(el().id, { fontFamily: e.currentTarget.value })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-semibold focus:border-brand-500 outline-none" />
+                           <select value={(el() as TypographyTextElement).fontFamily} onChange={(e) => updateTypographyElement(el().id, { fontFamily: e.currentTarget.value })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-semibold focus:border-brand-500 outline-none">
+                             <option value="Inter">Inter</option>
+                             <option value="Caveat">Caveat (Organic)</option>
+                             <option value="Montserrat">Montserrat</option>
+                             <option value="Plus Jakarta Sans">Plus Jakarta</option>
+                             <option value="Outfit">Outfit</option>
+                             <option value="Rubik">Rubik</option>
+                             <option value="Barlow Condensed">Barlow Cond</option>
+                             <option value="Carrois Gothic">Carrois Gothic</option>
+                             <option value="Roboto">Roboto</option>
+                             <option value="Playfair Display">Playfair Display</option>
+                             <option value="JetBrains Mono">JetBrains Mono</option>
+                           </select>
                          </div>
                          <div class="space-y-1.5">
                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Weight</label>
-                           <input type="text" value={(el() as TypographyTextElement).fontWeight} onInput={(e) => updateTypographyElement(el().id, { fontWeight: e.currentTarget.value })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-semibold focus:border-brand-500 outline-none" />
+                           <select value={(el() as TypographyTextElement).fontWeight} onChange={(e) => updateTypographyElement(el().id, { fontWeight: e.currentTarget.value })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-semibold focus:border-brand-500 outline-none">
+                             <option value="400">Regular (400)</option>
+                             <option value="500">Medium (500)</option>
+                             <option value="600">Semibold (600)</option>
+                             <option value="700">Bold (700)</option>
+                             <option value="800">Extra Bold (800)</option>
+                             <option value="900">Black (900)</option>
+                           </select>
                          </div>
                        </div>
                        <div class="grid grid-cols-2 gap-3">
@@ -435,8 +538,66 @@ export default function TypographyEditor() {
                            <input type="number" value={(el() as TypographyTextElement).fontSize} onInput={(e) => updateTypographyElement(el().id, { fontSize: parseInt(e.currentTarget.value) })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                          <div class="space-y-1.5">
-                           <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Letter Spacing</label>
-                           <input type="number" value={(el() as TypographyTextElement).letterSpacing || 0} onInput={(e) => updateTypographyElement(el().id, { letterSpacing: parseInt(e.currentTarget.value) })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
+                            <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Letter Spacing</label>
+                            <input type="number" value={(el() as TypographyTextElement).letterSpacing || 0} onInput={(e) => updateTypographyElement(el().id, { letterSpacing: parseInt(e.currentTarget.value) })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
+                          </div>
+                        </div>
+
+                       <div class="space-y-4 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 p-4 rounded-xl shadow-sm mt-4">
+                         <label class="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-500 flex items-center gap-1.5"><Icon name="edit-3" class="w-3.5 h-3.5" /> Per-Character Styling</label>
+                         
+                         <div class="flex items-center gap-2">
+                           <label class="text-[9px] font-bold uppercase text-text-muted shrink-0">Select Letter:</label>
+                           <select 
+                             value={selectedCharIndex()} 
+                             onChange={(e) => setSelectedCharIndex(parseInt(e.currentTarget.value))}
+                             class="flex-1 px-2 py-1.5 bg-white dark:bg-zinc-950 border border-amber-200 dark:border-amber-900/50 rounded text-xs font-bold focus:border-amber-500 outline-none"
+                           >
+                             <For each={(el() as TypographyTextElement).text.replace(/\n/g, '').split('')}>
+                               {(char, i) => (
+                                 <option value={i()}>Index {i()}: '{char}'</option>
+                               )}
+                             </For>
+                           </select>
+                         </div>
+
+                         <div class="grid grid-cols-2 gap-3 mt-2">
+                           <div class="space-y-1.5">
+                             <label class="text-[8px] font-bold uppercase text-text-muted">Fill Override</label>
+                             <div class="flex items-center gap-2">
+                               <input type="color" value={(el().charStyles && el().charStyles[selectedCharIndex()]?.fill) || (el() as TypographyTextElement).fill || '#ffffff'} onInput={(e) => {
+                                 const styles = JSON.parse(JSON.stringify(el().charStyles || {}));
+                                 if(!styles[selectedCharIndex()]) styles[selectedCharIndex()] = {};
+                                 styles[selectedCharIndex()].fill = e.currentTarget.value;
+                                 updateTypographyElement(el().id, { charStyles: styles });
+                               }} class="w-full h-7 rounded border border-amber-200 dark:border-amber-900/50 bg-transparent cursor-pointer" />
+                               <button onClick={() => {
+                                 const styles = JSON.parse(JSON.stringify(el().charStyles || {}));
+                                 if(styles[selectedCharIndex()]) {
+                                   delete styles[selectedCharIndex()].fill;
+                                   updateTypographyElement(el().id, { charStyles: styles });
+                                 }
+                               }} class="p-1 text-text-muted hover:text-brand-red" title="Clear override"><Icon name="x" class="w-3.5 h-3.5" /></button>
+                             </div>
+                           </div>
+                           <div class="space-y-1.5">
+                             <div class="flex justify-between"><label class="text-[8px] font-bold uppercase text-text-muted">Scale</label><span class="text-[8px] font-bold text-amber-600 dark:text-amber-500">{(el().charStyles && el().charStyles[selectedCharIndex()]?.s) || 1}x</span></div>
+                             <input type="range" min="0.1" max="3" step="0.1" value={(el().charStyles && el().charStyles[selectedCharIndex()]?.s) || 1} onInput={(e) => {
+                               const styles = JSON.parse(JSON.stringify(el().charStyles || {}));
+                               if(!styles[selectedCharIndex()]) styles[selectedCharIndex()] = {};
+                               styles[selectedCharIndex()].s = parseFloat(e.currentTarget.value);
+                               updateTypographyElement(el().id, { charStyles: styles });
+                             }} class="w-full accent-amber-600 dark:accent-amber-500" />
+                           </div>
+                         </div>
+                         <div class="space-y-1.5">
+                           <div class="flex justify-between"><label class="text-[8px] font-bold uppercase text-text-muted">Rotation</label><span class="text-[8px] font-bold text-amber-600 dark:text-amber-500">{(el().charStyles && el().charStyles[selectedCharIndex()]?.r) || 0}°</span></div>
+                           <input type="range" min="-180" max="180" value={(el().charStyles && el().charStyles[selectedCharIndex()]?.r) || 0} onInput={(e) => {
+                             const styles = JSON.parse(JSON.stringify(el().charStyles || {}));
+                             if(!styles[selectedCharIndex()]) styles[selectedCharIndex()] = {};
+                             styles[selectedCharIndex()].r = parseInt(e.currentTarget.value);
+                             updateTypographyElement(el().id, { charStyles: styles });
+                           }} class="w-full accent-amber-600 dark:accent-amber-500" />
                          </div>
                        </div>
                      </Show>
@@ -463,6 +624,12 @@ export default function TypographyEditor() {
                            <input type="number" value={(el() as TypographyShapeElement).h} onInput={(e) => updateTypographyElement(el().id, { h: parseInt(e.currentTarget.value) })} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-border-color rounded text-xs font-mono font-semibold focus:border-brand-500 outline-none" />
                          </div>
                        </div>
+                       <Show when={(el() as TypographyShapeElement).shapeType === 'rect'}>
+                         <div class="space-y-1.5">
+                           <div class="flex justify-between"><label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Border Radius</label><span class="text-[9px] font-bold text-blueprint-600 dark:text-brand-500">{(el() as TypographyShapeElement).borderRadius || 0}px</span></div>
+                           <input type="range" min="0" max="500" value={(el() as TypographyShapeElement).borderRadius || 0} onInput={(e) => updateTypographyElement(el().id, { borderRadius: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-600 dark:accent-brand-500" />
+                         </div>
+                       </Show>
                      </Show>
 
                      <div class="w-full border-t border-border-color"></div>
@@ -489,6 +656,56 @@ export default function TypographyEditor() {
                      </div>
 
                      <div class="w-full border-t border-border-color"></div>
+
+                     <div class="space-y-4 bg-purple-50/50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-900/30 p-4 rounded-xl shadow-sm">
+                       <label class="text-[10px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-400 flex items-center gap-1.5"><Icon name="scissors" class="w-3.5 h-3.5" /> Paper Cutout FX</label>
+                       
+                       <div class="space-y-1.5">
+                         <div class="flex justify-between"><label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Edge Roughness</label><span class="text-[9px] font-bold text-purple-600 dark:text-purple-400">{el().roughness || 0}</span></div>
+                         <input type="range" min="0" max="50" value={el().roughness || 0} onInput={(e) => updateTypographyElement(el().id, { roughness: parseInt(e.currentTarget.value) })} class="w-full accent-purple-600 dark:accent-purple-500" />
+                       </div>
+
+                       <div class="w-full border-t border-purple-200 dark:border-purple-900/30 my-2"></div>
+                       
+                       <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Inner Shadow (Depth)</label>
+                       <div class="flex items-center gap-3">
+                         <input type="color" value={el().innerShadowColor || '#000000'} onInput={(e) => updateTypographyElement(el().id, { innerShadowColor: e.currentTarget.value })} class="w-8 h-8 rounded border border-purple-200 dark:border-purple-900/50 bg-transparent cursor-pointer shadow-sm shrink-0" />
+                         <div class="flex-1 flex flex-col gap-1">
+                           <div class="flex justify-between"><label class="text-[8px] font-bold uppercase text-text-muted">Opacity</label><span class="text-[8px] font-bold text-purple-600 dark:text-purple-400">{el().innerShadowOpacity ?? 50}%</span></div>
+                           <input type="range" min="0" max="100" value={el().innerShadowOpacity ?? 50} onInput={(e) => updateTypographyElement(el().id, { innerShadowOpacity: parseInt(e.currentTarget.value) })} class="w-full accent-purple-600 dark:accent-purple-500" />
+                         </div>
+                       </div>
+                       
+                       <div class="grid grid-cols-3 gap-2">
+                         <div class="space-y-1"><span class="text-[8px] font-bold text-text-muted ml-1 uppercase">Blur</span><input type="number" value={el().innerShadowBlur || 0} onInput={(e) => updateTypographyElement(el().id, { innerShadowBlur: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 border border-purple-200 dark:border-purple-900/50 bg-white dark:bg-zinc-950 rounded text-xs font-mono font-semibold outline-none" /></div>
+                         <div class="space-y-1"><span class="text-[8px] font-bold text-text-muted ml-1 uppercase">X Offset</span><input type="number" value={el().innerShadowX || 0} onInput={(e) => updateTypographyElement(el().id, { innerShadowX: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 border border-purple-200 dark:border-purple-900/50 bg-white dark:bg-zinc-950 rounded text-xs font-mono font-semibold outline-none" /></div>
+                         <div class="space-y-1"><span class="text-[8px] font-bold text-text-muted ml-1 uppercase">Y Offset</span><input type="number" value={el().innerShadowY || 0} onInput={(e) => updateTypographyElement(el().id, { innerShadowY: parseInt(e.currentTarget.value) })} class="w-full px-2 py-1.5 border border-purple-200 dark:border-purple-900/50 bg-white dark:bg-zinc-950 rounded text-xs font-mono font-semibold outline-none" /></div>
+                       </div>
+                     </div>
+
+                     <div class="space-y-4 bg-slate-50/50 dark:bg-zinc-900/30 border border-slate-200 dark:border-zinc-800 p-4 rounded-xl shadow-sm mt-3">
+                       <label class="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-zinc-300 flex items-center gap-1.5"><Icon name="drop" class="w-3.5 h-3.5" /> Drop Shadow</label>
+                       <div class="space-y-1.5">
+                         <label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Color</label>
+                         <input type="color" value={el().shadowColor || '#000000'} onInput={(e) => updateTypographyElement(el().id, { shadowColor: e.currentTarget.value })} class="w-full h-8 rounded border border-border-color bg-transparent cursor-pointer shadow-sm" />
+                       </div>
+                       <div class="space-y-1.5">
+                         <div class="flex justify-between"><label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Blur</label><span class="text-[9px] font-bold text-blueprint-600 dark:text-brand-500">{el().shadowBlur || 0}px</span></div>
+                         <input type="range" min="0" max="100" value={el().shadowBlur || 0} onInput={(e) => updateTypographyElement(el().id, { shadowBlur: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-600 dark:accent-brand-500" />
+                       </div>
+                       <div class="grid grid-cols-2 gap-3">
+                         <div class="space-y-1.5">
+                           <div class="flex justify-between"><label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Offset X</label><span class="text-[9px] font-bold text-blueprint-600 dark:text-brand-500">{el().shadowOffsetX || 0}px</span></div>
+                           <input type="range" min="-100" max="100" value={el().shadowOffsetX || 0} onInput={(e) => updateTypographyElement(el().id, { shadowOffsetX: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-600 dark:accent-brand-500" />
+                         </div>
+                         <div class="space-y-1.5">
+                           <div class="flex justify-between"><label class="text-[9px] font-bold uppercase tracking-wider text-text-muted">Offset Y</label><span class="text-[9px] font-bold text-blueprint-600 dark:text-brand-500">{el().shadowOffsetY || 0}px</span></div>
+                           <input type="range" min="-100" max="100" value={el().shadowOffsetY || 0} onInput={(e) => updateTypographyElement(el().id, { shadowOffsetY: parseInt(e.currentTarget.value) })} class="w-full accent-blueprint-600 dark:accent-brand-500" />
+                         </div>
+                       </div>
+                     </div>
+
+                     <div class="w-full border-t border-border-color mt-3"></div>
 
                      <div class="space-y-4 bg-blueprint-50/50 dark:bg-brand-500/5 border border-blueprint-100 dark:border-brand-500/10 p-4 rounded-xl shadow-sm">
                        <label class="text-[10px] font-black uppercase tracking-wider text-blueprint-700 dark:text-brand-400 flex items-center gap-1.5"><Icon name="zap" class="w-3.5 h-3.5" /> Animation Mode</label>
@@ -548,7 +765,7 @@ export default function TypographyEditor() {
             <Show when={isFullscreen()}>
                <button onClick={toggleFullscreen} class="absolute bottom-6 right-6 z-30 p-3 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors"><Icon name="minimize" class="w-5 h-5"/></button>
             </Show>
-            <canvas ref={canvasRef} class="object-contain" style={{ "background-color": typographyStore.bgColor }}></canvas>
+            <canvas ref={canvasRef} class="object-contain cursor-crosshair active:cursor-grabbing" style={{ "background-color": typographyStore.bgColor }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}></canvas>
             
             <Show when={isFullscreen()}>
               <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 w-full max-w-2xl px-4 animate-fade-in-up">
