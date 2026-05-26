@@ -343,7 +343,7 @@ export default function ChartPresetTemplate(props: { slug: string }) {
 
             {/* High-Fidelity SVG Skeleton Loader */}
             <div 
-              class={`absolute inset-0 w-full h-full flex flex-col justify-between p-[8%] animate-pulse pointer-events-none select-none transition-opacity duration-500 ease-in-out ${isLoaded() ? 'opacity-0' : 'opacity-100'}`}
+              class={`absolute inset-0 w-full h-full flex flex-col justify-between p-[8%] pointer-events-none select-none transition-all duration-500 ease-in-out ${isLoaded() ? 'opacity-0 invisible' : 'opacity-100 animate-pulse'}`}
             >
               {/* Skeleton Header (Title & Subtitle) */}
               <div class="space-y-2 text-left">

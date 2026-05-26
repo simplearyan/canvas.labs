@@ -834,7 +834,7 @@ export default function ChartEditor() {
 
           {/* High-Fidelity SVG Skeleton Loader */}
           <div 
-            class={`absolute inset-0 w-full h-full flex flex-col justify-between p-[8%] bg-white dark:bg-black animate-pulse pointer-events-none select-none transition-opacity duration-500 ease-in-out ${isLoaded() ? 'opacity-0' : 'opacity-100'}`}
+            class={`absolute inset-0 w-full h-full flex flex-col justify-between p-[8%] pointer-events-none select-none transition-all duration-500 ease-in-out ${isLoaded() ? 'opacity-0 invisible' : 'opacity-100 animate-pulse'}`}
             style={{ "background-color": chartStore.options.bgColor }}
           >
             {/* Skeleton Header (Title & Subtitle) */}
