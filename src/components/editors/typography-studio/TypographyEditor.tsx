@@ -102,8 +102,8 @@ export default function TypographyEditor() {
         const isFS = document.fullscreenElement === wrapper;
         const mainNode = wrapper.closest('main');
         // Calculate max dimensions strictly based on stable bounds to prevent infinite growth feedback loop
-        const maxW = isFS ? window.innerWidth - 96 : (mainNode ? mainNode.clientWidth - 80 : container.clientWidth - 64);
-        const maxH = isFS ? window.innerHeight - 160 : (mainNode ? mainNode.clientHeight - 180 : container.clientHeight - 64);
+        const maxW = isFS ? window.innerWidth : (mainNode ? mainNode.clientWidth - 80 : container.clientWidth - 64);
+        const maxH = isFS ? window.innerHeight : (mainNode ? mainNode.clientHeight - 180 : container.clientHeight - 64);
 
         let w = maxW;
         let h = maxH;
@@ -219,36 +219,65 @@ export default function TypographyEditor() {
   };
 
   const TimelineUI = () => (
-    <div class={`flex items-center gap-2 sm:gap-4 border shadow-sm rounded-xl px-4 sm:px-6 py-3 w-full max-w-2xl ${isFullscreen() ? 'bg-zinc-950/80 backdrop-blur-md border-zinc-800 shadow-2xl' : 'bg-white dark:bg-zinc-950 border-border-color'}`}>
-       <button onClick={resetTime} class={`p-2 rounded-lg transition-colors ${isFullscreen() ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900'}`} title="Rewind to start">
+    <div class={`flex items-center gap-2 sm:gap-4 border shadow-sm rounded-xl px-4 sm:px-6 py-2.5 w-full max-w-2xl transition-all ${
+      isFullscreen() 
+        ? 'bg-black/40 backdrop-blur-md border-white/10 shadow-2xl py-2 px-4' 
+        : 'bg-white dark:bg-zinc-950 border-border-color'
+    }`}>
+       <button onClick={resetTime} class={`p-1.5 rounded-lg transition-colors ${isFullscreen() ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900'}`} title="Rewind to start">
          <Icon name="skip-back" class="w-4 h-4 sm:w-5 sm:h-5" />
        </button>
        
-       <button onClick={handlePlayPause} class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blueprint-900 dark:bg-brand-500 text-white flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all shrink-0">
-         <Show when={isPlaying()} fallback={<svg class="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-1" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>}>
-           <svg class="w-4 h-4 sm:w-5 sm:h-5 fill-current" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+       <button onClick={handlePlayPause} class={`rounded-full flex items-center justify-center shadow-md active:scale-95 transition-all shrink-0 ${
+         isFullscreen() 
+           ? 'w-9 h-9 bg-brand-500 text-zinc-950 hover:bg-brand-400' 
+           : 'w-10 h-10 sm:w-12 sm:h-12 bg-blueprint-900 dark:bg-brand-500 text-white dark:text-zinc-950 hover:scale-105'
+       }`}>
+         <Show when={isPlaying()} fallback={
+           <svg class={`${isFullscreen() ? 'w-3.5 h-3.5' : 'w-4 h-4 sm:w-5 sm:h-5'} fill-current ml-0.5`} viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+         }>
+           <svg class={isFullscreen() ? 'w-3.5 h-3.5' : 'w-4 h-4 sm:w-5 sm:h-5'} viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
          </Show>
        </button>
 
-       <div class="flex-1 flex flex-col gap-1.5 px-2">
-         <div class={`flex justify-between text-[10px] sm:text-xs font-mono font-bold ${isFullscreen() ? 'text-zinc-400' : 'text-text-muted'}`}>
-           <span>{(typographyStore.time).toFixed(1)}s</span>
-           <span>{(typographyStore.duration || 5).toFixed(1)}s</span>
+       <Show when={isFullscreen()} fallback={
+         <div class="flex-1 flex flex-col gap-1.5 px-2">
+           <div class="flex justify-between text-[10px] sm:text-xs font-mono font-bold text-text-muted">
+             <span>{(typographyStore.time).toFixed(1)}s</span>
+             <span>{(typographyStore.duration || 5).toFixed(1)}s</span>
+           </div>
+           <div class="relative w-full h-2 rounded-full flex items-center group bg-slate-200 dark:bg-zinc-800">
+             <div class="absolute left-0 h-full bg-blueprint-500 dark:bg-brand-500 rounded-full pointer-events-none" style={{ width: `${((typographyStore.time) / (typographyStore.duration || 5)) * 100}%` }}></div>
+             <input 
+               type="range" 
+               min="0" max="1" step="0.001" 
+               value={typographyStore.duration ? typographyStore.time / typographyStore.duration : 0}
+               onInput={(e) => scrubTime(parseFloat(e.currentTarget.value))}
+               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+             />
+             <div class="absolute w-3 h-3 sm:w-4 sm:h-4 bg-white border-2 border-blueprint-600 dark:border-brand-500 rounded-full shadow-sm pointer-events-none transition-transform group-hover:scale-125" style={{ left: `calc(${((typographyStore.time) / (typographyStore.duration || 5)) * 100}% - 6px)` }}></div>
+           </div>
          </div>
-         <div class={`relative w-full h-2 rounded-full flex items-center group ${isFullscreen() ? 'bg-zinc-800' : 'bg-slate-200 dark:bg-zinc-800'}`}>
-           <div class="absolute left-0 h-full bg-blueprint-500 dark:bg-brand-500 rounded-full pointer-events-none" style={{ width: `${((typographyStore.time) / (typographyStore.duration || 5)) * 100}%` }}></div>
-           <input 
-             type="range" 
-             min="0" max="1" step="0.001" 
-             value={typographyStore.duration ? typographyStore.time / typographyStore.duration : 0}
-             onInput={(e) => scrubTime(parseFloat(e.currentTarget.value))}
-             class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-           />
-           <div class="absolute w-3 h-3 sm:w-4 sm:h-4 bg-white border-2 border-blueprint-600 dark:border-brand-500 rounded-full shadow-sm pointer-events-none transition-transform group-hover:scale-125" style={{ left: `calc(${((typographyStore.time) / (typographyStore.duration || 5)) * 100}% - 6px)` }}></div>
+       }>
+         {/* Minimal Fullscreen Timeline Inline layout */}
+         <div class="flex-1 flex items-center gap-3 px-1">
+           <span class="text-[10px] sm:text-xs font-mono font-bold text-zinc-300 shrink-0">{(typographyStore.time).toFixed(1)}s</span>
+           <div class="flex-1 relative h-1.5 rounded-full flex items-center bg-zinc-800">
+             <div class="absolute left-0 h-full bg-brand-500 rounded-full pointer-events-none" style={{ width: `${((typographyStore.time) / (typographyStore.duration || 5)) * 100}%` }}></div>
+             <input 
+               type="range" 
+               min="0" max="1" step="0.001" 
+               value={typographyStore.duration ? typographyStore.time / typographyStore.duration : 0}
+               onInput={(e) => scrubTime(parseFloat(e.currentTarget.value))}
+               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+             />
+             <div class="absolute w-2.5 h-2.5 bg-white rounded-full shadow-sm pointer-events-none" style={{ left: `calc(${((typographyStore.time) / (typographyStore.duration || 5)) * 100}% - 5px)` }}></div>
+           </div>
+           <span class="text-[10px] sm:text-xs font-mono font-bold text-zinc-500 shrink-0">{(typographyStore.duration || 5).toFixed(1)}s</span>
          </div>
-       </div>
+       </Show>
 
-       <button onClick={toggleFullscreen} class={`p-2 rounded-lg transition-colors sm:ml-2 ${isFullscreen() ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900'}`} title="Toggle Fullscreen">
+       <button onClick={toggleFullscreen} class={`p-1.5 rounded-lg transition-colors sm:ml-2 ${isFullscreen() ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-text-muted hover:text-text-main hover:bg-slate-50 dark:hover:bg-zinc-900'}`} title="Toggle Fullscreen">
          <Icon name={isFullscreen() ? "minimize" : "maximize"} class="w-4 h-4 sm:w-5 sm:h-5" />
        </button>
     </div>
@@ -330,7 +359,13 @@ export default function TypographyEditor() {
   }
 
   let isDragging = false;
+  let isRotating = false;
+  let activeHandle: string | null = null;
   let dragOffset = { x: 0, y: 0 };
+  let initialFontSize = 100;
+  let initialW = 100;
+  let initialH = 100;
+  let initialDistance = 0;
 
   const handlePointerDown = (e: PointerEvent) => {
     if (!engine) return;
@@ -340,6 +375,38 @@ export default function TypographyEditor() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
     
+    // 1. If there is a selected element, first hit test its handles
+    const selectedId = typographyStore.selectedId;
+    if (selectedId) {
+      const handles = engine.getElementHandles(selectedId);
+      if (handles) {
+        const tolerance = e.pointerType === 'touch' ? 24 : 12;
+        const hitHandle = handles.find(h => Math.hypot(x - h.x, y - h.y) <= tolerance);
+        if (hitHandle) {
+          const el = typographyStore.elements.find(el => el.id === selectedId);
+          if (el && !el.locked) {
+            activeHandle = hitHandle.name;
+            if (activeHandle === 'rot') {
+              isRotating = true;
+            } else {
+              initialDistance = Math.hypot(x - el.x, y - el.y);
+              if (el.type === 'text') {
+                initialFontSize = el.fontSize;
+              } else if (el.type === 'shape') {
+                initialW = el.w;
+                initialH = el.h;
+              }
+            }
+            try {
+              (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            } catch (err) {}
+            return;
+          }
+        }
+      }
+    }
+
+    // 2. Standard element selection / dragging hit test
     const hitId = engine.hitTest(x, y);
     if (hitId) {
       setTypographyStore('selectedId', hitId);
@@ -348,6 +415,9 @@ export default function TypographyEditor() {
       if (el && !el.locked) {
         isDragging = true;
         dragOffset = { x: el.x - x, y: el.y - y };
+        try {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch (err) {}
       }
     } else {
       setTypographyStore('selectedId', null);
@@ -355,21 +425,67 @@ export default function TypographyEditor() {
   };
 
   const handlePointerMove = (e: PointerEvent) => {
-    if (!isDragging || !engine || !typographyStore.selectedId) return;
+    if (!engine || !typographyStore.selectedId) return;
+    
     const rect = canvasRef.getBoundingClientRect();
     const scaleX = typographyStore.width / rect.width;
     const scaleY = typographyStore.height / rect.height;
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
-    
-    updateTypographyElement(typographyStore.selectedId, {
-      x: x + dragOffset.x,
-      y: y + dragOffset.y
-    });
+
+    const el = typographyStore.elements.find(el => el.id === typographyStore.selectedId);
+    if (!el || el.locked) return;
+
+    if (isRotating) {
+      const angleRad = Math.atan2(y - el.y, x - el.x);
+      let angleDeg = angleRad * 180 / Math.PI;
+      angleDeg = Math.round(angleDeg + 90);
+      updateTypographyElement(el.id, { rotation: angleDeg });
+    } else if (activeHandle) {
+      const currentDistance = Math.hypot(x - el.x, y - el.y);
+      const scaleRatio = currentDistance / (initialDistance || 1);
+
+      if (el.type === 'text') {
+        const newFontSize = Math.max(10, Math.round(initialFontSize * scaleRatio));
+        updateTypographyElement(el.id, { fontSize: newFontSize });
+      } else if (el.type === 'shape') {
+        const isCorner = ['tl', 'tr', 'bl', 'br'].includes(activeHandle);
+        const isWidth = ['ml', 'mr'].includes(activeHandle);
+        const isHeight = ['tc', 'bc'].includes(activeHandle);
+        
+        const rad = (el.rotation || 0) * Math.PI / 180;
+        const dx = x - el.x;
+        const dy = y - el.y;
+
+        if (isCorner) {
+          const newW = Math.max(10, Math.round(initialW * scaleRatio));
+          const newH = Math.max(10, Math.round(initialH * scaleRatio));
+          updateTypographyElement(el.id, { w: newW, h: newH });
+        } else if (isWidth) {
+          const localX = dx * Math.cos(rad) + dy * Math.sin(rad);
+          const newW = Math.max(10, Math.round(Math.abs(localX) * 2 - 20));
+          updateTypographyElement(el.id, { w: newW });
+        } else if (isHeight) {
+          const localY = -dx * Math.sin(rad) + dy * Math.cos(rad);
+          const newH = Math.max(10, Math.round(Math.abs(localY) * 2 - 20));
+          updateTypographyElement(el.id, { h: newH });
+        }
+      }
+    } else if (isDragging) {
+      updateTypographyElement(el.id, {
+        x: x + dragOffset.x,
+        y: y + dragOffset.y
+      });
+    }
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: PointerEvent) => {
     isDragging = false;
+    isRotating = false;
+    activeHandle = null;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (err) {}
   };
 
   return (
@@ -770,10 +886,7 @@ export default function TypographyEditor() {
               isFullscreen() ? '!fixed inset-0 z-50 bg-black border-none !rounded-none p-0' : 'rounded-2xl overflow-hidden'
             }`}
           >
-            <Show when={isFullscreen()}>
-               <button onClick={toggleFullscreen} class="absolute bottom-6 right-6 z-30 p-3 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors"><Icon name="minimize" class="w-5 h-5"/></button>
-            </Show>
-            <canvas ref={canvasRef} class="object-contain cursor-crosshair active:cursor-grabbing" style={{ "background-color": typographyStore.bgColor }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}></canvas>
+            <canvas ref={canvasRef} class="object-contain cursor-crosshair active:cursor-grabbing" style={{ "background-color": typographyStore.bgColor, "touch-action": "none", "pointer-events": "auto" }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}></canvas>
             
             <Show when={isFullscreen()}>
               <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 w-full max-w-2xl px-4 animate-fade-in-up">

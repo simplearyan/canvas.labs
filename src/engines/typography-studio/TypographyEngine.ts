@@ -533,7 +533,11 @@ export class TypographyEngine {
         }
     }
 
-    private drawSelectionBox(el: TypographyElement) {
+    public getElementBounds(elId: string): { x: number, y: number, w: number, h: number, rotation: number } | null {
+        if (!this.state) return null;
+        const el = this.state.elements.find(e => e.id === elId);
+        if (!el) return null;
+        
         let w = 0, h = 0;
         if (el.type === 'text') {
             this.ctx.font = `${el.fontWeight} ${el.fontSize}px "${el.fontFamily}"`;
@@ -555,6 +559,41 @@ export class TypographyEngine {
         w += pad * 2;
         h += pad * 2;
 
+        return { x: el.x, y: el.y, w, h, rotation: el.rotation || 0 };
+    }
+
+    public getElementHandles(elId: string): { name: string, x: number, y: number }[] | null {
+        const bounds = this.getElementBounds(elId);
+        if (!bounds) return null;
+
+        const { x, y, w, h, rotation } = bounds;
+        const rad = rotation * Math.PI / 180;
+
+        const localPositions = [
+            { name: 'tl', lx: -w/2, ly: -h/2 },
+            { name: 'tc', lx: 0,    ly: -h/2 },
+            { name: 'tr', lx: w/2,  ly: -h/2 },
+            { name: 'ml', lx: -w/2, ly: 0 },
+            { name: 'mr', lx: w/2,  ly: 0 },
+            { name: 'bl', lx: -w/2, ly: h/2 },
+            { name: 'bc', lx: 0,    ly: h/2 },
+            { name: 'br', lx: w/2,  ly: h/2 },
+            { name: 'rot', lx: 0,   ly: -h/2 - 30 }
+        ];
+
+        return localPositions.map(pos => {
+            const hx = x + pos.lx * Math.cos(rad) - pos.ly * Math.sin(rad);
+            const hy = y + pos.lx * Math.sin(rad) + pos.ly * Math.cos(rad);
+            return { name: pos.name, x: hx, y: hy };
+        });
+    }
+
+    private drawSelectionBox(el: TypographyElement) {
+        const bounds = this.getElementBounds(el.id);
+        if (!bounds) return;
+
+        const { w, h } = bounds;
+
         this.ctx.save();
         this.ctx.translate(el.x, el.y);
         if (el.rotation) this.ctx.rotate(el.rotation * Math.PI / 180);
@@ -564,8 +603,27 @@ export class TypographyEngine {
         this.ctx.setLineDash([6, 4]);
         this.ctx.strokeRect(-w/2, -h/2, w, h);
         
+        // Draw line to rotation handle
+        const rotY = -h/2 - 30;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, -h/2);
+        this.ctx.lineTo(0, rotY);
+        this.ctx.strokeStyle = '#3b82f6';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.stroke();
+
+        // Draw rotation handle
+        this.ctx.beginPath();
+        this.ctx.arc(0, rotY, 5, 0, Math.PI*2);
+        this.ctx.fillStyle = '#3b82f6';
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.stroke();
+
         this.ctx.setLineDash([]);
         this.ctx.fillStyle = '#ffffff';
+        this.ctx.strokeStyle = '#3b82f6';
         const handleSize = 8;
         const positions = [
             [-w/2, -h/2], [0, -h/2], [w/2, -h/2],
