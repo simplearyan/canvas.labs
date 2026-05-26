@@ -2,6 +2,7 @@
 import Layout from "@/layouts/Layout.astro";
 import { SITE_CONFIG } from "@/config/site";
 import ChartEditor from "@/components/editors/chart-animator/ChartEditor";
+import TypographyEditor from "@/components/editors/typography-studio/TypographyEditor";
 
 export function getStaticPaths() {
   return [
@@ -54,13 +55,7 @@ const baseUrl = import.meta.env.BASE_URL;
     {/* Mount SolidJS Editor Component here based on the slug */}
     <div class="flex-1 relative flex overflow-hidden">
       {slug === "chart-animator" && <ChartEditor client:only="solid-js" />}
-      {
-        slug === "typography-studio" && (
-          <div class="w-full h-full flex items-center justify-center text-text-muted">
-            <p>Typography Studio Loading...</p>
-          </div>
-        )
-      }
+      {slug === "typography-studio" && <TypographyEditor client:only="solid-js" />}
       {
         slug === "kinetic-studio" && (
           <div class="w-full h-full flex items-center justify-center text-text-muted">

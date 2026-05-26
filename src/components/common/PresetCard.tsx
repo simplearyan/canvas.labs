@@ -39,7 +39,9 @@ export default function PresetCard(props: PresetCardProps) {
 
   // Resolve preview asset path (fallback to static thumbnail if not ready)
   const slug = props.preset.url ? props.preset.url.split("/").pop() : null;
-  const previewVideoUrl = slug ? `/canvas.labs/previews/charts/${slug}.webm` : null;
+  const isTypography = props.preset.category === "text" || props.preset.url?.includes('typography');
+  const mediaFolder = isTypography ? 'typography' : 'charts';
+  const previewVideoUrl = slug ? `/canvas.labs/previews/${mediaFolder}/${slug}.webm` : null;
 
   return (
     <div 
@@ -57,7 +59,7 @@ export default function PresetCard(props: PresetCardProps) {
         {/* Static End Frame Image (Lighthouse & SEO friendly, lazy loaded) */}
         <Show when={slug}>
           <img
-            src={`/canvas.labs/previews/charts/${slug}.png`}
+            src={`/canvas.labs/previews/${mediaFolder}/${slug}.png`}
             alt={props.preset.title}
             loading="lazy"
             onLoad={() => setImageLoaded(true)}

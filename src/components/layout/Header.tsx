@@ -18,13 +18,13 @@ export default function Header(props: { isTemplate?: boolean }) {
 
   onMount(() => {
     if (typeof window !== "undefined") {
-      const isPage = window.location.pathname.includes("/templates/charts/");
+      const isPage = window.location.pathname.includes("/templates/");
       setIsTemplatePage(isPage);
       if (isPage) {
-        const match = window.location.pathname.match(/\/templates\/charts\/([^/]+)/);
+        const match = window.location.pathname.match(/\/templates\/(?:charts|typography)\/([^/]+)/);
         if (match && match[1]) {
           const slug = match[1];
-          setTemplateTitle(slug.charAt(0).toUpperCase() + slug.slice(1) + " Template");
+          setTemplateTitle(slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) + " Template");
         }
       }
     }

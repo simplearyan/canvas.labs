@@ -173,8 +173,11 @@ export default function ChartEditor() {
     handleResize();
     setTimeout(handleResize, 100);
 
-    // Fade in canvas smoothly
-    setIsLoaded(true);
+    // Delay visibility until next paint to ensure canvas buffers are flushed
+    requestAnimationFrame(() => {
+      if (engine) engine.render();
+      setIsLoaded(true);
+    });
 
     // Listen to font loading to redraw immediately when custom fonts finish loading
     if (typeof document !== 'undefined' && 'fonts' in document) {

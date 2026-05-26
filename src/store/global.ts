@@ -30,7 +30,14 @@ export const templatesData: Preset[] = [
   { id: 208, title: "Temperature Anomaly", category: "charts", color: "bg-[#1e1e2e]", bgHex: "#1e1e2e", accentHex: "#ef4444", type: "chart", url: "/canvas.labs/templates/charts/climate" },
   { id: 209, title: "Pie Chart: Demo", category: "charts", color: "bg-[#1e1e2e]", bgHex: "#1e1e2e", accentHex: "#f43f5e", type: "chart", url: "/canvas.labs/templates/charts/pie" },
   { id: 210, title: "Bar Chart: Demo", category: "charts", color: "bg-[#0f172a]", bgHex: "#0f172a", accentHex: "#f59e0b", type: "chart", url: "/canvas.labs/templates/charts/bar" },
-  { id: 211, title: "Line Chart: Demo", category: "charts", color: "bg-[#18181b]", bgHex: "#18181b", accentHex: "#06b6d4", type: "chart", url: "/canvas.labs/templates/charts/line" }
+  { id: 211, title: "Line Chart: Demo", category: "charts", color: "bg-[#18181b]", bgHex: "#18181b", accentHex: "#06b6d4", type: "chart", url: "/canvas.labs/templates/charts/line" },
+  
+  // New Typography Templates
+  { id: 301, title: "Sam Hogan Drop", category: "text", color: "bg-[#09090b]", bgHex: "#09090b", accentHex: "#f43f5e", type: "waveform", url: "/canvas.labs/templates/typography/sam-hogan-drop" },
+  { id: 302, title: "Sam Hogan Slam", category: "text", color: "bg-[#09090b]", bgHex: "#09090b", accentHex: "#3b82f6", type: "waveform", url: "/canvas.labs/templates/typography/sam-hogan-slam" },
+  { id: 303, title: "Ransom Collage", category: "text", color: "bg-[#e5e5e5]", bgHex: "#e5e5e5", accentHex: "#10b981", type: "waveform", url: "/canvas.labs/templates/typography/ransom-collage" },
+  { id: 304, title: "Stop Motion", category: "text", color: "bg-[#18181b]", bgHex: "#18181b", accentHex: "#8b5cf6", type: "waveform", url: "/canvas.labs/templates/typography/stop-motion" },
+  { id: 305, title: "Fireship Throw", category: "text", color: "bg-[#000000]", bgHex: "#000000", accentHex: "#f59e0b", type: "waveform", url: "/canvas.labs/templates/typography/fireship-throw" }
 ];
 
 // Global Navigation & View Signals
