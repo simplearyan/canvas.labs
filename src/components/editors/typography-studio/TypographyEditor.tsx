@@ -912,7 +912,7 @@ export default function TypographyEditor() {
           </div>
 
           <Show when={!isFullscreen()}>
-            <div class="mt-8 flex items-center justify-center w-full animate-fade-in">
+            <div class="mt-4 md:mt-8 px-4 pb-4 flex items-center justify-center w-full animate-fade-in">
               <TimelineUI />
             </div>
           </Show>

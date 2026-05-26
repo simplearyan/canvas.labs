@@ -561,13 +561,18 @@ export class TypographyEngine {
 
         return { x: el.x, y: el.y, w, h, rotation: el.rotation || 0 };
     }
-
     public getElementHandles(elId: string): { name: string, x: number, y: number }[] | null {
         const bounds = this.getElementBounds(elId);
         if (!bounds) return null;
 
         const { x, y, w, h, rotation } = bounds;
         const rad = rotation * Math.PI / 180;
+
+        const displayScale = (this.canvas && (this.canvas as HTMLCanvasElement).clientWidth)
+            ? this.width / (this.canvas as HTMLCanvasElement).clientWidth
+            : 1;
+
+        const rotOffset = 30 * displayScale;
 
         const localPositions = [
             { name: 'tl', lx: -w/2, ly: -h/2 },
@@ -578,7 +583,7 @@ export class TypographyEngine {
             { name: 'bl', lx: -w/2, ly: h/2 },
             { name: 'bc', lx: 0,    ly: h/2 },
             { name: 'br', lx: w/2,  ly: h/2 },
-            { name: 'rot', lx: 0,   ly: -h/2 - 30 }
+            { name: 'rot', lx: 0,   ly: -h/2 - rotOffset }
         ];
 
         return localPositions.map(pos => {
@@ -594,37 +599,46 @@ export class TypographyEngine {
 
         const { w, h } = bounds;
 
+        const displayScale = (this.canvas && (this.canvas as HTMLCanvasElement).clientWidth)
+            ? this.width / (this.canvas as HTMLCanvasElement).clientWidth
+            : 1;
+
         this.ctx.save();
         this.ctx.translate(el.x, el.y);
         if (el.rotation) this.ctx.rotate(el.rotation * Math.PI / 180);
 
+        const strokeW = 1.5 * displayScale;
+        const lineDash = [6 * displayScale, 4 * displayScale];
+        const rotOffset = 30 * displayScale;
+        const handleSize = 8 * displayScale;
+
         this.ctx.strokeStyle = '#3b82f6';
-        this.ctx.lineWidth = 2;
-        this.ctx.setLineDash([6, 4]);
+        this.ctx.lineWidth = strokeW;
+        this.ctx.setLineDash(lineDash);
         this.ctx.strokeRect(-w/2, -h/2, w, h);
         
         // Draw line to rotation handle
-        const rotY = -h/2 - 30;
+        const rotY = -h/2 - rotOffset;
         this.ctx.beginPath();
         this.ctx.moveTo(0, -h/2);
         this.ctx.lineTo(0, rotY);
         this.ctx.strokeStyle = '#3b82f6';
-        this.ctx.lineWidth = 1.5;
+        this.ctx.lineWidth = 1 * displayScale;
         this.ctx.stroke();
 
         // Draw rotation handle
         this.ctx.beginPath();
-        this.ctx.arc(0, rotY, 5, 0, Math.PI*2);
+        this.ctx.arc(0, rotY, 5 * displayScale, 0, Math.PI*2);
         this.ctx.fillStyle = '#3b82f6';
         this.ctx.fill();
         this.ctx.strokeStyle = '#ffffff';
-        this.ctx.lineWidth = 1.5;
+        this.ctx.lineWidth = 1.5 * displayScale;
         this.ctx.stroke();
 
         this.ctx.setLineDash([]);
         this.ctx.fillStyle = '#ffffff';
         this.ctx.strokeStyle = '#3b82f6';
-        const handleSize = 8;
+        
         const positions = [
             [-w/2, -h/2], [0, -h/2], [w/2, -h/2],
             [-w/2, 0],               [w/2, 0],
