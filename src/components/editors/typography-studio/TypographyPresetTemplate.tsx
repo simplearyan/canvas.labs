@@ -313,7 +313,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
   });
 
   return (
-    <div class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10 space-y-6 flex flex-col overflow-y-auto custom-scrollbar">
+    <div class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 md:p-10 space-y-6 flex flex-col overflow-y-auto custom-scrollbar">
       {/* Portal buttons to template-header-controls in Header */}
       <Show when={portalTarget()}>
         <Portal mount={portalTarget()}>
@@ -568,7 +568,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
         </div>
 
         {/* Right panel: Adjustments Controls */}
-        <div class="flex flex-col gap-6 bg-card-bg border border-border-color p-6 rounded-2xl shadow-sm">
+        <div class="flex flex-col gap-4 sm:gap-6 bg-card-bg border border-border-color p-3 sm:p-6 rounded-2xl shadow-sm">
           <div class="hidden lg:block">
             <span class="text-[10px] font-extrabold uppercase tracking-widest text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20">
               Typography Studio
