@@ -3,6 +3,7 @@ import { isDarkTheme } from "@/store/global";
 import { EXPORT_TIPS } from "@/config/exportTips";
 import Icon from "../ui/Icon";
 import { SITE_CONFIG } from "@/config/site";
+import { AD_CONFIG } from "@/config/ads";
 
 export interface ExportConfig {
   format: 'mp4' | 'webm' | 'mov' | 'zip';
@@ -63,7 +64,7 @@ export default function ExportModal(props: ExportModalProps) {
       const script = document.createElement("script");
       script.id = ADSENSE_ID;
       script.async = true;
-      script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7993314093599705";
+      script.src = `${AD_CONFIG.adsense.scriptUrl}?client=${AD_CONFIG.adsense.clientId}`;
       script.crossOrigin = "anonymous";
       document.head.appendChild(script);
     }
@@ -388,8 +389,8 @@ export default function ExportModal(props: ExportModalProps) {
                   <ins
                     class="adsbygoogle"
                     style={{ display: 'block', width: '250px', height: '125px' }}
-                    data-ad-client="ca-pub-7993314093599705"
-                    data-ad-slot="9342323532"
+                    data-ad-client={AD_CONFIG.adsense.clientId}
+                    data-ad-slot={AD_CONFIG.adsense.slotId}
                     data-ad-format="rectangle"
                     data-full-width-responsive="false"
                   ></ins>

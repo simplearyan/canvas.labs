@@ -7,6 +7,7 @@ import { TypographyEngine } from '@/engines/typography-studio/TypographyEngine';
 import { TYPOGRAPHY_PRESETS } from '@/engines/typography-studio/presets';
 import ExportModal from '@/components/common/ExportModal';
 import { typographyExportProject } from '@/engines/typography-studio/ExportEngine';
+import { AD_CONFIG } from '@/config/ads';
 
 const getPresetBySlug = (slug: string) => {
   const preset = TYPOGRAPHY_PRESETS[slug];
@@ -22,6 +23,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
   const [portalTarget, setPortalTarget] = createSignal<HTMLElement | undefined>(undefined);
 
   const [isPlaying, setIsPlaying] = createSignal(false);
+  const [showCanvasAd, setShowCanvasAd] = createSignal(AD_CONFIG.brandPromo.enabled);
 
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5'>('16:9');
   const [isFullscreen, setIsFullscreen] = createSignal(false);
@@ -227,10 +229,12 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
       const script = document.createElement("script");
       script.id = ADSENSE_ID;
       script.async = true;
-      script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7993314093599705";
+      script.src = `${AD_CONFIG.adsense.scriptUrl}?client=${AD_CONFIG.adsense.clientId}`;
       script.crossOrigin = "anonymous";
       document.head.appendChild(script);
     }
+
+
 
     engine = new TypographyEngine(canvasRef);
 
@@ -323,20 +327,44 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     }
   });
 
-  // Load new ad once preset animation starts playing
+  // Load new ads once preset animation starts playing
   createEffect(() => {
     if (isPlaying()) {
       setTimeout(() => {
         try {
           (window as any).adsbygoogle = (window as any).adsbygoogle || [];
+          // Hydrate the three playhead-triggered ads (Left Vertical, Right Vertical, Horizontal Leaderboard)
+          (window as any).adsbygoogle.push({});
+          (window as any).adsbygoogle.push({});
           (window as any).adsbygoogle.push({});
         } catch (_) { }
-      }, 400);
+      }, 500);
     }
   });
 
   return (
-    <div class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 md:p-10 space-y-6 flex flex-col overflow-y-auto custom-scrollbar">
+    <div class="w-full flex justify-center items-start gap-4 xl:gap-8 px-2 xl:px-4 relative bg-app-bg min-h-screen">
+      
+      {/* Left Vertical Skyscraper Ad - only for desktop (2xl and above) */}
+      <Show when={isPlaying()}>
+        <div 
+          class="hidden 2xl:flex absolute left-4 top-28 shrink-0 flex-col items-center justify-start h-[600px] bg-black/[0.02] dark:bg-white/[0.01] rounded-2xl border border-border-color p-2 overflow-hidden shadow-sm z-10 animate-fade-in"
+          style={{ width: 'clamp(90px, 8vw, 150px)' }}
+        >
+          <span class="text-[8px] font-black text-text-muted uppercase tracking-wider mb-2 select-none">Advertisement</span>
+          <ins
+            class="adsbygoogle"
+            style={{ display: 'block', 'min-width': '90px', width: '100%', height: '560px' }}
+            data-ad-client={AD_CONFIG.adsense.clientId}
+            data-ad-slot={AD_CONFIG.adsense.slotId}
+            data-ad-format="vertical"
+            data-full-width-responsive="true"
+          ></ins>
+        </div>
+      </Show>
+
+      {/* Main Content Area */}
+      <div class="flex-1 max-w-7xl w-full p-3 sm:p-6 md:p-10 space-y-6 flex flex-col overflow-y-auto custom-scrollbar">
       {/* Portal buttons to template-header-controls in Header */}
       <Show when={portalTarget()}>
         <Portal mount={portalTarget()}>
@@ -424,10 +452,10 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
             </Show>
 
             {/* Desktop Horizontal Promo Ad - Shown when playing and hidden when paused/stopped */}
-            <Show when={isPlaying() && !isFullscreen()}>
+            <Show when={isPlaying() && !isFullscreen() && showCanvasAd()}>
               <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[92%] max-w-lg bg-neutral-950/85 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-2.5 shadow-2xl flex items-center justify-between text-white hidden lg:flex animate-fade-in hover:border-brand-500/40 transition-all duration-300 pointer-events-auto">
                 <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-500 to-amber-400 flex items-center justify-center shadow-md shrink-0">
+                  <div class={`w-8 h-8 rounded-lg bg-gradient-to-tr ${AD_CONFIG.brandPromo.gradientFrom} ${AD_CONFIG.brandPromo.gradientTo} flex items-center justify-center shadow-md shrink-0`}>
                     <svg class="w-4.5 h-4.5 text-zinc-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2" />
                       <line x1="12" y1="22" x2="12" y2="15.5" />
@@ -437,15 +465,15 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                     </svg>
                   </div>
                   <div class="flex flex-col text-left">
-                    <span class="text-[9px] font-black text-brand-500 uppercase tracking-widest leading-none">Canvas Labs Pro</span>
-                    <span class="text-[11px] font-bold text-neutral-200 mt-1 select-none">Unlock 4K exports, priority GPU, and all presets!</span>
+                    <span class="text-[9px] font-black text-brand-500 uppercase tracking-widest leading-none">{AD_CONFIG.brandPromo.brandName}</span>
+                    <span class="text-[11px] font-bold text-neutral-200 mt-1 select-none">{AD_CONFIG.brandPromo.promoText}</span>
                   </div>
                 </div>
                 <a 
-                  href="/editor/typography-studio" 
+                  href={AD_CONFIG.brandPromo.upgradeUrl}
                   class="bg-brand-500 hover:bg-brand-600 text-zinc-950 font-black text-[10px] uppercase tracking-wider px-3.5 py-1.5 rounded-lg shadow-sm hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shrink-0"
                 >
-                  Upgrade
+                  {AD_CONFIG.brandPromo.buttonText}
                 </a>
               </div>
             </Show>
@@ -618,12 +646,12 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
 
           {/* AdSense Horizontal Leaderboard Ad - Shown below the controls only when playing on desktop */}
           <Show when={isPlaying()}>
-            <div class="hidden lg:flex flex-col bg-black/[0.02] dark:bg-white/[0.01] rounded-2xl border border-border-color p-4.5 items-center justify-center shadow-sm w-full h-[122px] overflow-hidden transition-all duration-300 animate-fade-in shrink-0">
+            <div class="hidden lg:flex flex-col bg-black/[0.02] dark:bg-white/[0.01] rounded-2xl border border-border-color p-4.5 items-center justify-center shadow-sm w-full h-[122px] overflow-hidden transition-all duration-300 animate-fade-in shrink-0 mt-6">
               <ins
                 class="adsbygoogle"
                 style={{ display: 'inline-block', width: '728px', height: '90px' }}
-                data-ad-client="ca-pub-7993314093599705"
-                data-ad-slot="9342323532"
+                data-ad-client={AD_CONFIG.adsense.clientId}
+                data-ad-slot={AD_CONFIG.adsense.slotId}
                 data-ad-format="horizontal"
                 data-full-width-responsive="true"
               ></ins>
@@ -720,10 +748,10 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
             </div>
 
             <div class="space-y-4 pt-2">
-              {/* Context-Based Format Section - Tab 4 (only visible when selected, slides in stacked on desktop) */}
+              {/* Context-Based Format Section - Tab 4 (only visible when selected on small screens, hidden on desktop) */}
               <Show when={typographyStore.selectedId}>
                 <div class={`space-y-5 animate-fade-in ${
-                  activeTab() === 'format' ? 'block' : 'hidden lg:block'
+                  activeTab() === 'format' ? 'block lg:hidden' : 'hidden'
                 }`}>
                   
                   {/* Alignment Section */}
@@ -934,6 +962,20 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                     />
                   </div>
                 </div>
+
+                <div class="col-span-2 lg:col-span-1 pt-1.5 lg:pt-0">
+                  <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-1.5">Canvas Promo Ad</label>
+                  <button
+                    onClick={() => setShowCanvasAd(!showCanvasAd())}
+                    class="flex items-center justify-between w-full px-3.5 py-2.5 bg-black/5 dark:bg-white/5 border border-border-color rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all cursor-pointer text-left"
+                    type="button"
+                  >
+                    <span class="text-xs font-bold text-text-main">Show Canvas Ad</span>
+                    <div class={`relative w-8 h-4.5 rounded-full border shrink-0 transition-colors ${showCanvasAd() ? 'bg-brand-500 border-brand-500' : 'bg-slate-200 border-slate-300 dark:bg-zinc-800 dark:border-zinc-700'}`}>
+                      <div class={`absolute top-0.5 w-3 h-3 bg-white dark:bg-zinc-950 rounded-full shadow transition-transform ${showCanvasAd() ? 'translate-x-4' : 'translate-x-0.5'}`}></div>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -949,5 +991,25 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
         onExport={typographyExportProject}
       />
     </div>
+
+    {/* Right Vertical Skyscraper Ad - only for desktop (2xl and above) */}
+    <Show when={isPlaying()}>
+      <div 
+        class="hidden 2xl:flex absolute right-4 top-28 shrink-0 flex-col items-center justify-start h-[600px] bg-black/[0.02] dark:bg-white/[0.01] rounded-2xl border border-border-color p-2 overflow-hidden shadow-sm z-10 animate-fade-in"
+        style={{ width: 'clamp(90px, 8vw, 150px)' }}
+      >
+        <span class="text-[8px] font-black text-text-muted uppercase tracking-wider mb-2 select-none">Advertisement</span>
+        <ins
+          class="adsbygoogle"
+          style={{ display: 'block', 'min-width': '90px', width: '100%', height: '560px' }}
+          data-ad-client={AD_CONFIG.adsense.clientId}
+          data-ad-slot={AD_CONFIG.adsense.slotId}
+          data-ad-format="vertical"
+          data-full-width-responsive="true"
+        ></ins>
+      </div>
+    </Show>
+
+  </div>
   );
 }

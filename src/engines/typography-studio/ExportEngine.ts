@@ -81,7 +81,7 @@ export const typographyExportProject = async (
   const offscreenCanvas = new OffscreenCanvas(targetW, targetH);
   const typographyEngine = new TypographyEngine(offscreenCanvas);
   typographyEngine.setDimensions(targetW, targetH, 1);
-  typographyEngine.updateState(state);
+  typographyEngine.updateState({ ...state, selectedId: null });
 
   for (let f = 0; f < totalFrames; f++) {
     if (controller?.isCancelled()) {
