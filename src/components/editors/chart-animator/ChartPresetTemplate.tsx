@@ -136,9 +136,20 @@ export default function ChartPresetTemplate(props: { slug: string }) {
   onMount(() => {
     // 2. Initialize Engine
     engine = new ChartEngine(canvasRef);
+
+    // Initial resize to set dimensions and render first frame before showing canvas
+    handleResize();
+
+    // Fade in canvas smoothly
     setIsLoaded(true);
 
-    handleResize();
+    // Listen to font loading to redraw immediately when custom fonts finish loading
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      document.fonts.ready.then(() => {
+        if (engine) engine.render();
+      });
+    }
+
     window.addEventListener('resize', handleResize);
 
     // Listen to fullscreen changes
@@ -324,10 +335,68 @@ export default function ChartPresetTemplate(props: { slug: string }) {
               </button>
             </Show>
 
+            {/* Dynamic Interactive Canvas */}
             <canvas
               ref={canvasRef}
-              class="w-full h-full object-contain"
+              class={`w-full h-full object-contain transition-opacity duration-500 ease-in-out ${isLoaded() ? 'opacity-100' : 'opacity-0'}`}
             ></canvas>
+
+            {/* High-Fidelity SVG Skeleton Loader */}
+            <div 
+              class={`absolute inset-0 w-full h-full flex flex-col justify-between p-[8%] animate-pulse pointer-events-none select-none transition-opacity duration-500 ease-in-out ${isLoaded() ? 'opacity-0' : 'opacity-100'}`}
+            >
+              {/* Skeleton Header (Title & Subtitle) */}
+              <div class="space-y-2 text-left">
+                <div class="h-6 w-1/3 bg-black/10 dark:bg-white/10 rounded-lg"></div>
+                <div class="h-4 w-1/2 bg-black/5 dark:bg-white/5 rounded-md"></div>
+              </div>
+
+              {/* Skeleton Chart Content (Bars, Pie or Lines based on preset type) */}
+              <div class="flex-1 w-full flex items-end justify-between gap-6 py-8">
+                <Show when={presetData.type === 'vertical' || presetData.type === 'stacked'}>
+                  {/* Bar Chart Skeletons */}
+                  <div class="h-[60%] w-1/4 bg-black/10 dark:bg-white/10 rounded-t-lg"></div>
+                  <div class="h-[80%] w-1/4 bg-black/10 dark:bg-white/10 rounded-t-lg"></div>
+                  <div class="h-[45%] w-1/4 bg-black/10 dark:bg-white/10 rounded-t-lg"></div>
+                  <div class="h-[90%] w-1/4 bg-black/10 dark:bg-white/10 rounded-t-lg"></div>
+                </Show>
+
+                <Show when={presetData.type === 'horizontal'}>
+                  {/* Horizontal Bar Skeletons */}
+                  <div class="flex-1 flex flex-col gap-4 justify-center h-full">
+                    <div class="h-6 w-[70%] bg-black/10 dark:bg-white/10 rounded-r-lg"></div>
+                    <div class="h-6 w-[85%] bg-black/10 dark:bg-white/10 rounded-r-lg"></div>
+                    <div class="h-6 w-[55%] bg-black/10 dark:bg-white/10 rounded-r-lg"></div>
+                    <div class="h-6 w-[90%] bg-black/10 dark:bg-white/10 rounded-r-lg"></div>
+                  </div>
+                </Show>
+
+                <Show when={presetData.type === 'pie'}>
+                  {/* Pie Chart Skeleton */}
+                  <div class="flex-1 flex items-center justify-center">
+                    <div class="w-40 h-40 rounded-full border-8 border-dashed border-black/10 dark:border-white/10 flex items-center justify-center">
+                      <div class="w-20 h-20 rounded-full border-4 border-black/5 dark:border-white/5"></div>
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={presetData.type === 'multiline' || presetData.type === 'line'}>
+                  {/* Line Chart Skeleton */}
+                  <div class="flex-1 h-full relative">
+                    <svg class="absolute inset-0 w-full h-full text-black/10 dark:text-white/10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <path d="M 0,80 Q 25,20 50,60 T 100,10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+                      <path d="M 0,90 Q 25,40 50,75 T 100,30" fill="none" stroke="currentColor" stroke-dasharray="2,2" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                  </div>
+                </Show>
+              </div>
+
+              {/* Skeleton Footer (Source) */}
+              <div class="flex justify-between items-center border-t border-black/[0.06] dark:border-white/[0.06] pt-3">
+                <div class="h-3 w-1/4 bg-black/5 dark:bg-white/5 rounded-md"></div>
+                <div class="h-3 w-16 bg-black/10 dark:bg-white/10 rounded-md"></div>
+              </div>
+            </div>
           </div>
 
           {/* Playback Controls */}
