@@ -221,6 +221,17 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
   };
 
   onMount(() => {
+    // Register Google AdSense script dynamically
+    const ADSENSE_ID = "google-adsense-script";
+    if (typeof document !== 'undefined' && !document.getElementById(ADSENSE_ID)) {
+      const script = document.createElement("script");
+      script.id = ADSENSE_ID;
+      script.async = true;
+      script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7993314093599705";
+      script.crossOrigin = "anonymous";
+      document.head.appendChild(script);
+    }
+
     engine = new TypographyEngine(canvasRef);
 
     engine.onTimeUpdate = (time) => {
@@ -309,6 +320,18 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
 
       const astroBtn = document.getElementById('btn-open-advanced');
       if (astroBtn) astroBtn.setAttribute('href', `/canvas.labs/editor/typography-studio?config=${encoded}`);
+    }
+  });
+
+  // Load new ad once preset animation starts playing
+  createEffect(() => {
+    if (isPlaying()) {
+      setTimeout(() => {
+        try {
+          (window as any).adsbygoogle = (window as any).adsbygoogle || [];
+          (window as any).adsbygoogle.push({});
+        } catch (_) { }
+      }, 400);
     }
   });
 
@@ -592,6 +615,20 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
               <span>SolidJS Engine</span>
             </div>
           </div>
+
+          {/* AdSense Horizontal Leaderboard Ad - Shown below the controls only when playing on desktop */}
+          <Show when={isPlaying()}>
+            <div class="hidden lg:flex flex-col bg-black/[0.02] dark:bg-white/[0.01] rounded-2xl border border-border-color p-4.5 items-center justify-center shadow-sm w-full h-[122px] overflow-hidden transition-all duration-300 animate-fade-in shrink-0">
+              <ins
+                class="adsbygoogle"
+                style={{ display: 'inline-block', width: '728px', height: '90px' }}
+                data-ad-client="ca-pub-7993314093599705"
+                data-ad-slot="9342323532"
+                data-ad-format="horizontal"
+                data-full-width-responsive="true"
+              ></ins>
+            </div>
+          </Show>
         </div>
 
         {/* Right panel: Adjustments Controls */}
