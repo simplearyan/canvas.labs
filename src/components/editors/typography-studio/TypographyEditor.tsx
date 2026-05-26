@@ -59,6 +59,8 @@ export default function TypographyEditor() {
     }
   }
 
+
+
   onMount(() => {
     engine = new TypographyEngine(canvasRef);
     
@@ -68,6 +70,10 @@ export default function TypographyEditor() {
         setIsPlaying(false);
       }
     };
+
+    if (typographyStore.width && typographyStore.height) {
+      syncAspectRatioFromDimensions(typographyStore.width, typographyStore.height);
+    }
 
     handleResize();
     setTimeout(handleResize, 100);
@@ -316,11 +322,26 @@ export default function TypographyEditor() {
     );
   }
 
+  const syncAspectRatioFromDimensions = (w: number, h: number) => {
+    const ratio = w / h;
+    if (Math.abs(ratio - 16/9) < 0.05) setAspectRatio('16:9');
+    else if (Math.abs(ratio - 9/16) < 0.05) setAspectRatio('9:16');
+    else if (Math.abs(ratio - 1/1) < 0.05) setAspectRatio('1:1');
+    else if (Math.abs(ratio - 4/5) < 0.05) setAspectRatio('4:5');
+    else if (Math.abs(ratio - 3/4) < 0.05) setAspectRatio('3:4');
+    else if (Math.abs(ratio - 4/3) < 0.05) setAspectRatio('4:3');
+    else if (Math.abs(ratio - 2/1) < 0.05) setAspectRatio('2:1');
+  };
+
   function loadPreset(key: string) {
     const p = TYPOGRAPHY_PRESETS[key];
     if(!p) return;
     engine.pause();
     setIsPlaying(false);
+
+    // Sync aspect ratio to keep canvas coordinate systems aligned
+    syncAspectRatioFromDimensions(p.width, p.height);
+
     const duration = p.duration || 5.0;
     setTypographyStore({
       width: p.width,

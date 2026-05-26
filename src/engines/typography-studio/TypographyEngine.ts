@@ -102,11 +102,12 @@ export class TypographyEngine {
                 if ((el as any).shapeType === 'circle') h = w;
             }
 
-            // Ignoring rotation for simple AABB hit test
-            const left = el.x - w / 2;
-            const right = el.x + w / 2;
-            const top = el.y - h / 2;
-            const bottom = el.y + h / 2;
+            // Ignoring rotation for simple AABB hit test - with 25px hit padding for enhanced usability
+            const hitPadding = 25;
+            const left = el.x - w / 2 - hitPadding;
+            const right = el.x + w / 2 + hitPadding;
+            const top = el.y - h / 2 - hitPadding;
+            const bottom = el.y + h / 2 + hitPadding;
 
             if (x >= left && x <= right && y >= top && y <= bottom) {
                 return el.id;

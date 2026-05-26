@@ -1,6 +1,7 @@
-import { createEffect, createSignal, onMount, onCleanup, Show } from 'solid-js';
+import { createEffect, createSignal, onMount, onCleanup, Show, For } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { typographyStore, setTypographyStore, serializeTypographyState, updateTypographyGlobal } from '@/store/typographyStore';
+import { typographyStore, setTypographyStore, serializeTypographyState, updateTypographyGlobal, updateTypographyElement } from '@/store/typographyStore';
+import type { TypographyTextElement } from '@/engines/typography-studio/types';
 import { isDarkTheme } from '@/store/global';
 import { TypographyEngine } from '@/engines/typography-studio/TypographyEngine';
 import { TYPOGRAPHY_PRESETS } from '@/engines/typography-studio/presets';
@@ -21,22 +22,34 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
   const [portalTarget, setPortalTarget] = createSignal<HTMLElement | undefined>(undefined);
 
   const [isPlaying, setIsPlaying] = createSignal(false);
-  let playTimeoutId: any = null;
 
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5'>('16:9');
   const [isFullscreen, setIsFullscreen] = createSignal(false);
   const [isExporting, setIsExporting] = createSignal(false);
+  const [activeTab, setActiveTab] = createSignal<'text' | 'settings' | 'ratio' | 'format'>('text');
   let canvasContainerRef!: HTMLDivElement;
+
+  createEffect(() => {
+    const selectedId = typographyStore.selectedId;
+    if (selectedId) {
+      setActiveTab('format');
+    } else {
+      if (activeTab() === 'format') {
+        setActiveTab('text');
+      }
+    }
+  });
 
   // Hydrate Store
   const presetData = getPresetBySlug(props.slug);
+  const initialDuration = presetData.duration || 5.0;
   setTypographyStore({
       width: presetData.width,
       height: presetData.height,
       bgColor: presetData.bgColor,
-      duration: presetData.duration || 5.0,
+      duration: initialDuration,
       elements: JSON.parse(JSON.stringify(presetData.elements)),
-      time: 0,
+      time: initialDuration,
       isPlaying: false,
       selectedId: null
   });
@@ -55,6 +68,135 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     }
   };
 
+  let isDragging = false;
+  let isRotating = false;
+  let activeHandle: string | null = null;
+  let dragOffset = { x: 0, y: 0 };
+  let initialFontSize = 100;
+  let initialW = 100;
+  let initialH = 100;
+  let initialDistance = 0;
+
+  const handleCanvasPointerDown = (e: PointerEvent) => {
+    if (!engine) return;
+    const rect = canvasRef.getBoundingClientRect();
+    const scaleX = typographyStore.width / rect.width;
+    const scaleY = typographyStore.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    // 1. If there is a selected element, first hit test its handles
+    const selectedId = typographyStore.selectedId;
+    if (selectedId) {
+      const handles = engine.getElementHandles(selectedId);
+      if (handles) {
+        const tolerance = e.pointerType === 'touch' ? 24 : 12;
+        const hitHandle = handles.find(h => Math.hypot(x - h.x, y - h.y) <= tolerance);
+        if (hitHandle) {
+          const el = typographyStore.elements.find(el => el.id === selectedId);
+          if (el && !el.locked) {
+            activeHandle = hitHandle.name;
+            if (activeHandle === 'rot') {
+              isRotating = true;
+            } else {
+              initialDistance = Math.hypot(x - el.x, y - el.y);
+              if (el.type === 'text') {
+                initialFontSize = el.fontSize;
+              } else if (el.type === 'shape') {
+                initialW = el.w;
+                initialH = el.h;
+              }
+            }
+            try {
+              (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            } catch (err) {}
+            return;
+          }
+        }
+      }
+    }
+
+    // 2. Standard element selection / dragging hit test
+    const hitId = engine.hitTest(x, y);
+    if (hitId) {
+      updateTypographyGlobal({ selectedId: hitId });
+      const el = typographyStore.elements.find(e => e.id === hitId);
+      if (el && !el.locked) {
+        isDragging = true;
+        dragOffset = { x: el.x - x, y: el.y - y };
+        try {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch (err) {}
+      }
+    } else {
+      updateTypographyGlobal({ selectedId: null });
+    }
+  };
+
+  const handleCanvasPointerMove = (e: PointerEvent) => {
+    if (!engine || !typographyStore.selectedId) return;
+    
+    const rect = canvasRef.getBoundingClientRect();
+    const scaleX = typographyStore.width / rect.width;
+    const scaleY = typographyStore.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    const el = typographyStore.elements.find(el => el.id === typographyStore.selectedId);
+    if (!el || el.locked) return;
+
+    if (isRotating) {
+      const angleRad = Math.atan2(y - el.y, x - el.x);
+      let angleDeg = angleRad * 180 / Math.PI;
+      angleDeg = Math.round(angleDeg + 90);
+      updateTypographyElement(el.id, { rotation: angleDeg });
+    } else if (activeHandle) {
+      const currentDistance = Math.hypot(x - el.x, y - el.y);
+      const scaleRatio = currentDistance / (initialDistance || 1);
+
+      if (el.type === 'text') {
+        const newFontSize = Math.max(10, Math.round(initialFontSize * scaleRatio));
+        updateTypographyElement(el.id, { fontSize: newFontSize });
+      } else if (el.type === 'shape') {
+        const isCorner = ['tl', 'tr', 'bl', 'br'].includes(activeHandle);
+        const isWidth = ['ml', 'mr'].includes(activeHandle);
+        const isHeight = ['tc', 'bc'].includes(activeHandle);
+        
+        const rad = (el.rotation || 0) * Math.PI / 180;
+        const dx = x - el.x;
+        const dy = y - el.y;
+
+        if (isCorner) {
+          const newW = Math.max(10, Math.round(initialW * scaleRatio));
+          const newH = Math.max(10, Math.round(initialH * scaleRatio));
+          updateTypographyElement(el.id, { w: newW, h: newH });
+        } else if (isWidth) {
+          const localX = dx * Math.cos(rad) + dy * Math.sin(rad);
+          const newW = Math.max(10, Math.round(Math.abs(localX) * 2 - 20));
+          updateTypographyElement(el.id, { w: newW });
+        } else if (isHeight) {
+          const localY = -dx * Math.sin(rad) + dy * Math.cos(rad);
+          const newH = Math.max(10, Math.round(Math.abs(localY) * 2 - 20));
+          updateTypographyElement(el.id, { h: newH });
+        }
+      }
+    } else if (isDragging) {
+      updateTypographyElement(el.id, {
+        x: x + dragOffset.x,
+        y: y + dragOffset.y
+      });
+    }
+  };
+
+  const handleCanvasPointerUp = (e: PointerEvent) => {
+    isDragging = false;
+    isRotating = false;
+    activeHandle = null;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
   const handleFullscreenChange = () => {
     const active = document.fullscreenElement === canvasContainerRef;
     setIsFullscreen(active);
@@ -68,25 +210,26 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     if (isPlaying()) {
       engine.pause();
       setIsPlaying(false);
-      if (playTimeoutId) {
-        clearTimeout(playTimeoutId);
-        playTimeoutId = null;
-      }
     } else {
+      if (typographyStore.time >= (typographyStore.duration || 5)) {
+        updateTypographyGlobal({ time: 0 });
+        engine.seek(0);
+      }
       engine.play();
       setIsPlaying(true);
-      if (playTimeoutId) clearTimeout(playTimeoutId);
-
-      const durationMs = (typographyStore.duration || 5) * 1000;
-      playTimeoutId = setTimeout(() => {
-        setIsPlaying(false);
-        playTimeoutId = null;
-      }, durationMs);
     }
   };
 
   onMount(() => {
     engine = new TypographyEngine(canvasRef);
+
+    engine.onTimeUpdate = (time) => {
+      updateTypographyGlobal({ time });
+      if (time >= (typographyStore.duration || 5)) {
+        setIsPlaying(false);
+      }
+    };
+
     handleResize();
 
     // Fade in canvas smoothly by waiting for next paint
@@ -118,7 +261,6 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     if (typeof window !== 'undefined') window.removeEventListener('resize', handleResize);
     if (typeof document !== 'undefined') document.removeEventListener('fullscreenchange', handleFullscreenChange);
     if (engine) engine.pause();
-    if (playTimeoutId) clearTimeout(playTimeoutId);
   });
 
   const handleResize = () => {
@@ -131,6 +273,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     else if (ratio === '1:1') { renderW = 1080; renderH = 1080; } 
     else if (ratio === '4:5') { renderW = 1080; renderH = 1350; }
 
+    updateTypographyGlobal({ width: renderW, height: renderH });
     engine.setDimensions(renderW, renderH, window.devicePixelRatio || 1);
   };
 
@@ -143,8 +286,23 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
 
   createEffect(() => {
     if (isLoaded() && engine) {
-      const snapshot = JSON.parse(JSON.stringify(typographyStore));
-      engine.updateState(snapshot);
+      // Explicitly track layout, design properties, and selection state (excluding time)
+      const trackState = {
+        width: typographyStore.width,
+        height: typographyStore.height,
+        bgColor: typographyStore.bgColor,
+        duration: typographyStore.duration,
+        elements: typographyStore.elements,
+        selectedId: typographyStore.selectedId
+      };
+
+      const snapshot = JSON.parse(JSON.stringify(trackState));
+
+      // Do not re-apply state if we are currently playing to avoid interrupting the loop
+      if (!isPlaying()) {
+        const fullSnapshot = { ...snapshot, time: typographyStore.time };
+        engine.updateState(fullSnapshot);
+      }
 
       const encoded = serializeTypographyState();
       setTransitionUrl(`/canvas.labs/editor/typography-studio?config=${encoded}`);
@@ -203,7 +361,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
         <div class="lg:col-span-2 flex flex-col gap-4">
           <div
             ref={canvasContainerRef}
-            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative transition-all duration-300 ${
+            class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative ${
               isFullscreen()
                 ? '!w-full !h-full !aspect-none !rounded-none !bg-zinc-950 !border-none !p-0'
                 : aspectRatio() === '9:16'
@@ -244,8 +402,121 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
 
             <canvas
               ref={canvasRef}
-              class={`w-full h-full object-contain transition-opacity duration-500 ease-in-out ${isLoaded() ? 'opacity-100' : 'opacity-0'}`}
+              onPointerDown={handleCanvasPointerDown}
+              onPointerMove={handleCanvasPointerMove}
+              onPointerUp={handleCanvasPointerUp}
+              class={`w-full h-full object-contain cursor-pointer transition-opacity duration-500 ease-in-out ${isLoaded() ? 'opacity-100' : 'opacity-0'}`}
+              style={{ "touch-action": "none" }}
             ></canvas>
+
+            {/* Floating Context Toolbar */}
+            <Show when={typographyStore.selectedId}>
+              {() => {
+                const el = () => typographyStore.elements.find(e => e.id === typographyStore.selectedId);
+                return (
+                  <Show when={el()}>
+                    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-30 hidden lg:flex items-center gap-1 bg-black/80 backdrop-blur-xl border border-white/15 px-3 py-1.5 rounded-full shadow-2xl animate-fade-in pointer-events-auto">
+                      <span class="text-[9px] font-black text-white/50 uppercase tracking-widest px-2.5 border-r border-white/10 select-none">
+                        {el()?.type === 'text' ? 'Text' : 'Shape'}
+                      </span>
+                      
+                      {/* Align Horizontally */}
+                      <button
+                        onClick={() => updateTypographyElement(typographyStore.selectedId!, { x: typographyStore.width / 2 })}
+                        class="p-2 hover:bg-white/10 text-white/80 hover:text-brand-500 rounded-full transition-all duration-200 cursor-pointer group"
+                        title="Align Center Horizontal"
+                        type="button"
+                      >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="12" y1="2" x2="12" y2="22" />
+                          <rect x="5" y="8" width="14" height="8" rx="1.5" />
+                        </svg>
+                      </button>
+
+                      {/* Align Vertically */}
+                      <button
+                        onClick={() => updateTypographyElement(typographyStore.selectedId!, { y: typographyStore.height / 2 })}
+                        class="p-2 hover:bg-white/10 text-white/80 hover:text-brand-500 rounded-full transition-all duration-200 cursor-pointer group"
+                        title="Align Center Vertical"
+                        type="button"
+                      >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="2" y1="12" x2="22" y2="12" />
+                          <rect x="8" y="5" width="8" height="14" rx="1.5" />
+                        </svg>
+                      </button>
+
+                      <div class="h-4 w-px bg-white/10 mx-1"></div>
+
+                      {/* Rotation Controls (with discrete premium rotation buttons) */}
+                      <button
+                        onClick={() => {
+                          const currentRot = el()?.rotation || 0;
+                          updateTypographyElement(typographyStore.selectedId!, { rotation: (currentRot - 45) % 360 });
+                        }}
+                        class="p-2 hover:bg-white/10 text-white/80 hover:text-brand-500 rounded-full transition-all duration-200 cursor-pointer"
+                        title="Rotate -45°"
+                        type="button"
+                      >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                          <path d="M21 3v5h-5" />
+                        </svg>
+                      </button>
+
+                      <div class="flex items-center gap-1.5 px-2 bg-white/5 border border-white/10 rounded-full h-8">
+                        <button
+                          onClick={() => updateTypographyElement(typographyStore.selectedId!, { rotation: 0 })}
+                          class="p-0.5 hover:bg-white/10 rounded text-white/60 hover:text-brand-500 transition-colors cursor-pointer group flex items-center justify-center"
+                          title="Reset Rotation to 0°"
+                          type="button"
+                        >
+                          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                          </svg>
+                        </button>
+                        <input
+                          type="number"
+                          value={el()?.rotation || 0}
+                          onInput={(e) => updateTypographyElement(typographyStore.selectedId!, { rotation: parseInt(e.currentTarget.value) || 0 })}
+                          class="w-9 bg-transparent border-none text-center font-mono text-[11px] font-bold text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span class="text-[10px] font-bold text-white/40 select-none">°</span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const currentRot = el()?.rotation || 0;
+                          updateTypographyElement(typographyStore.selectedId!, { rotation: (currentRot + 45) % 360 });
+                        }}
+                        class="p-2 hover:bg-white/10 text-white/80 hover:text-brand-500 rounded-full transition-all duration-200 cursor-pointer"
+                        title="Rotate +45°"
+                        type="button"
+                      >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                          <path d="M3 3v5h5" />
+                        </svg>
+                      </button>
+
+                      {/* Deselect element */}
+                      <div class="h-4 w-px bg-white/10 mx-1"></div>
+                      <button
+                        onClick={() => updateTypographyGlobal({ selectedId: null })}
+                        class="p-2 hover:bg-white/10 text-white/60 hover:text-red-400 rounded-full transition-all duration-200 cursor-pointer"
+                        title="Clear Selection"
+                        type="button"
+                      >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
+                  </Show>
+                );
+              }}
+            </Show>
 
             <div class={`absolute inset-0 w-full h-full flex flex-col justify-center items-center pointer-events-none select-none transition-all duration-500 ease-in-out ${isLoaded() ? 'opacity-0 invisible' : 'opacity-100 animate-pulse'}`}>
               <div class="h-12 w-2/3 bg-black/10 dark:bg-white/10 rounded-lg mb-4"></div>
@@ -284,7 +555,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
               </button>
 
               <div class="h-1.5 w-32 md:w-64 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden flex-shrink-0">
-                <div class="h-full bg-brand-500" style={{ width: "0%" }}></div>
+                <div class="h-full bg-brand-500" style={{ width: `${((typographyStore.time) / (typographyStore.duration || 5)) * 100}%` }}></div>
               </div>
               <span class="font-mono text-xs text-brand-500">Preview Mode</span>
             </div>
@@ -340,52 +611,259 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
               Quick Adjustments
             </h3>
 
-            <div class="space-y-4 pt-2">
-               <div>
-                  <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-2">Preview Aspect Ratio</label>
-                  <div class="grid grid-cols-4 gap-2">
-                    {['16:9', '9:16', '1:1', '4:5'].map(ratio => (
-                      <button
-                        onClick={() => setAspectRatio(ratio as any)}
-                        class={`py-2 rounded-lg text-[10px] font-bold border transition-all ${
-                          aspectRatio() === ratio 
-                            ? 'bg-brand-500 text-white border-brand-500 shadow-sm' 
-                            : 'bg-black/5 dark:bg-white/5 border-border-color text-text-main hover:border-brand-500/30'
-                        }`}
-                      >
-                        {ratio}
-                      </button>
-                    ))}
-                  </div>
-               </div>
-               
-               <div class="grid grid-cols-2 gap-3.5 pt-2">
-                 <div>
-                    <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-1.5">Background</label>
-                    <div class="flex items-center gap-2.5 bg-black/5 dark:bg-white/5 border border-border-color px-2.5 py-1.5 rounded-xl">
-                       <input 
-                          type="color" 
-                          value={typographyStore.bgColor}
-                          onInput={(e) => updateTypographyGlobal({ bgColor: e.currentTarget.value })}
-                          class="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border border-border-color bg-transparent"
-                       />
-                       <span class="text-xs font-mono font-bold uppercase truncate">{typographyStore.bgColor}</span>
-                    </div>
-                 </div>
+            {/* Tab Switcher - only visible on small screens (< lg) with horizontal scrolling */}
+            <div class="flex border-b border-border-color/30 lg:hidden mb-4 overflow-x-auto whitespace-nowrap gap-4 scrollbar-none pb-1">
+              <button
+                onClick={() => setActiveTab('text')}
+                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${activeTab() === 'text'
+                    ? 'border-brand-500 text-brand-500'
+                    : 'border-transparent text-text-muted hover:text-text-main'
+                  }`}
+              >
+                Customize Text
+              </button>
 
-                 <div>
-                    <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-1.5">Duration (s)</label>
-                    <div class="flex items-center gap-2.5 bg-black/5 dark:bg-white/5 border border-border-color px-2.5 py-1.5 rounded-xl h-11">
-                       <input 
-                          type="number" 
-                          step="0.5"
-                          value={typographyStore.duration || 5}
-                          onInput={(e) => updateTypographyGlobal({ duration: parseFloat(e.currentTarget.value) || 5 })}
-                          class="w-full bg-transparent text-xs font-mono font-bold uppercase truncate focus:outline-none"
-                       />
+              <Show when={typographyStore.selectedId}>
+                <button
+                  onClick={() => setActiveTab('format')}
+                  class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${activeTab() === 'format'
+                      ? 'border-brand-500 text-brand-500'
+                      : 'border-transparent text-text-muted hover:text-text-main'
+                    }`}
+                >
+                  Format Selection
+                </button>
+              </Show>
+
+              <button
+                onClick={() => setActiveTab('settings')}
+                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${activeTab() === 'settings'
+                    ? 'border-brand-500 text-brand-500'
+                    : 'border-transparent text-text-muted hover:text-text-main'
+                  }`}
+              >
+                Settings
+              </button>
+              <button
+                onClick={() => setActiveTab('ratio')}
+                class={`pb-2 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all duration-300 cursor-pointer flex-shrink-0 ${activeTab() === 'ratio'
+                    ? 'border-brand-500 text-brand-500'
+                    : 'border-transparent text-text-muted hover:text-text-main'
+                  }`}
+              >
+                Canvas Ratio
+              </button>
+            </div>
+
+            <div class="space-y-4 pt-2">
+              {/* Context-Based Format Section - Tab 4 (only visible when selected, slides in stacked on desktop) */}
+              <Show when={typographyStore.selectedId}>
+                <div class={`space-y-3.5 p-4 rounded-xl border border-brand-500/20 bg-brand-500/5 dark:bg-brand-500/10 shadow-sm animate-fade-in ${
+                  activeTab() === 'format' ? 'block' : 'hidden lg:block'
+                }`}>
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black text-brand-500 uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="m10 15 5-3-5-3v6Z" />
+                      </svg>
+                      Format Selection
+                    </span>
+                    <button
+                      onClick={() => updateTypographyGlobal({ selectedId: null })}
+                      class="text-[9px] font-extrabold px-2 py-0.5 rounded-md border border-border-color bg-black/5 dark:bg-white/5 text-text-muted hover:text-red-500 transition-all cursor-pointer"
+                      type="button"
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2.5">
+                    {/* Align Horizontal */}
+                    <button
+                      onClick={() => updateTypographyElement(typographyStore.selectedId!, { x: typographyStore.width / 2 })}
+                      class="flex items-center justify-center gap-1.5 py-2.5 bg-white dark:bg-zinc-900 border border-border-color hover:border-brand-500/50 hover:bg-black/5 rounded-xl text-xs font-bold text-text-main transition-colors cursor-pointer"
+                      type="button"
+                    >
+                      <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="2" x2="12" y2="22" />
+                        <rect x="5" y="8" width="14" height="8" rx="1.5" />
+                      </svg>
+                      Center Horizontally
+                    </button>
+                    {/* Align Vertical */}
+                    <button
+                      onClick={() => updateTypographyElement(typographyStore.selectedId!, { y: typographyStore.height / 2 })}
+                      class="flex items-center justify-center gap-1.5 py-2.5 bg-white dark:bg-zinc-900 border border-border-color hover:border-brand-500/50 hover:bg-black/5 rounded-xl text-xs font-bold text-text-main transition-colors cursor-pointer"
+                      type="button"
+                    >
+                      <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                        <rect x="8" y="5" width="8" height="14" rx="1.5" />
+                      </svg>
+                      Center Vertically
+                    </button>
+                  </div>
+
+                  {/* Rotation Adjustments */}
+                  <div class="space-y-1.5">
+                    <label class="block text-[9px] font-bold text-text-muted uppercase tracking-wider">Rotation Angle</label>
+                    <div class="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const currentRot = typographyStore.elements.find(e => e.id === typographyStore.selectedId)?.rotation || 0;
+                          updateTypographyElement(typographyStore.selectedId!, { rotation: (currentRot - 45) % 360 });
+                        }}
+                        class="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors border border-border-color text-text-muted hover:text-brand-500 cursor-pointer flex-shrink-0"
+                        type="button"
+                      >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                          <path d="M21 3v5h-5" />
+                        </svg>
+                      </button>
+
+                      <div class="flex-1 flex items-center justify-center gap-2 px-3.5 bg-white dark:bg-zinc-900 border border-border-color rounded-xl h-10">
+                        <input
+                          type="range"
+                          min="-180" max="180"
+                          value={typographyStore.elements.find(e => e.id === typographyStore.selectedId)?.rotation || 0}
+                          onInput={(e) => updateTypographyElement(typographyStore.selectedId!, { rotation: parseInt(e.currentTarget.value) || 0 })}
+                          class="w-full accent-brand-500 cursor-pointer"
+                        />
+                        <span class="font-mono text-xs font-bold text-text-main shrink-0 min-w-8 text-right">
+                          {typographyStore.elements.find(e => e.id === typographyStore.selectedId)?.rotation || 0}°
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const currentRot = typographyStore.elements.find(e => e.id === typographyStore.selectedId)?.rotation || 0;
+                          updateTypographyElement(typographyStore.selectedId!, { rotation: (currentRot + 45) % 360 });
+                        }}
+                        class="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors border border-border-color text-text-muted hover:text-brand-500 cursor-pointer flex-shrink-0"
+                        type="button"
+                      >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                          <path d="M3 3v5h5" />
+                        </svg>
+                      </button>
                     </div>
-                 </div>
-               </div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Text Content Inputs - Tab 1 (fully reactive direct iteration to fix empty textarea input bug) */}
+              <div class={`space-y-3.5 pb-2 lg:block ${activeTab() === 'text' ? 'block' : 'hidden'}`}>
+                <For each={typographyStore.elements}>
+                  {(el) => (
+                    <Show when={el.type === 'text'}>
+                      {(() => {
+                        const isSelected = () => typographyStore.selectedId === el.id;
+                        return (
+                          <div class={`space-y-1.5 p-3 rounded-xl border transition-all ${
+                            isSelected() 
+                              ? 'border-brand-500 bg-brand-500/5 dark:bg-brand-500/10 shadow-sm animate-fade-in' 
+                              : 'border-border-color bg-black/5 dark:bg-white/5'
+                          }`}>
+                            <div class="flex items-center justify-between">
+                              <span class="text-[10px] font-extrabold text-text-muted uppercase tracking-wider flex items-center gap-1.5 select-none">
+                                <svg class="w-3.5 h-3.5 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                </svg>
+                                Edit Text
+                              </span>
+                              <div class="flex items-center gap-2">
+                                {/* Align Horizontally Center */}
+                                <button
+                                  onClick={() => updateTypographyElement(el.id, { x: typographyStore.width / 2 })}
+                                  class="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors text-text-muted hover:text-brand-500 cursor-pointer"
+                                  title="Align Horizontally Center"
+                                  type="button"
+                                >
+                                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="2" x2="12" y2="22" />
+                                    <rect x="5" y="8" width="14" height="8" rx="1.5" />
+                                  </svg>
+                                </button>
+                                {/* Selection indicator */}
+                                <button
+                                  onClick={() => updateTypographyGlobal({ selectedId: isSelected() ? null : el.id })}
+                                  class={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                                    isSelected()
+                                      ? 'bg-brand-500 border-brand-500 text-white shadow-sm font-black'
+                                      : 'bg-black/5 dark:bg-white/5 border-border-color text-text-muted hover:text-text-main hover:border-brand-500/30'
+                                  }`}
+                                  type="button"
+                                >
+                                  {isSelected() ? 'Selected' : 'Select'}
+                                </button>
+                              </div>
+                            </div>
+                            <textarea
+                              rows="2"
+                              value={(el as TypographyTextElement).text}
+                              onInput={(e) => updateTypographyElement(el.id, { text: e.currentTarget.value })}
+                              onFocus={() => updateTypographyGlobal({ selectedId: el.id })}
+                              class="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-border-color rounded-lg text-xs font-semibold text-text-main resize-none focus:outline-none focus:border-brand-500 transition-colors"
+                              placeholder="Type text content..."
+                            ></textarea>
+                          </div>
+                        );
+                      })()}
+                    </Show>
+                  )}
+                </For>
+              </div>
+
+              {/* Aspect Ratio Selector - Tab 2 */}
+              <div class={`space-y-3 lg:block ${activeTab() === 'ratio' ? 'block' : 'hidden'}`}>
+                <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-2">Preview Aspect Ratio</label>
+                <div class="grid grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-2">
+                  {['16:9', '9:16', '1:1', '4:5'].map(ratio => (
+                    <button
+                      onClick={() => setAspectRatio(ratio as any)}
+                      class={`py-2.5 rounded-xl text-[10px] font-extrabold border transition-all cursor-pointer ${
+                        aspectRatio() === ratio 
+                          ? 'bg-brand-500 text-white border-brand-500 shadow-sm' 
+                          : 'bg-black/5 dark:bg-white/5 border-border-color text-text-main hover:border-brand-500/30'
+                      }`}
+                    >
+                      {ratio}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Background & Duration Settings - Tab 3 */}
+              <div class={`grid grid-cols-2 gap-3.5 lg:block lg:space-y-3.5 lg:border-t border-border-color/50 lg:pt-4 ${activeTab() === 'settings' ? 'grid' : 'hidden'}`}>
+                <div>
+                  <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-1.5">Background</label>
+                  <div class="flex items-center gap-2.5 bg-black/5 dark:bg-white/5 border border-border-color px-2.5 py-1.5 rounded-xl">
+                    <input 
+                      type="color" 
+                      value={typographyStore.bgColor}
+                      onInput={(e) => updateTypographyGlobal({ bgColor: e.currentTarget.value })}
+                      class="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border border-border-color bg-transparent"
+                    />
+                    <span class="text-xs font-mono font-bold uppercase truncate">{typographyStore.bgColor}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-[10px] font-extrabold text-text-muted uppercase tracking-wider mb-1.5">Duration (s)</label>
+                  <div class="flex items-center gap-2.5 bg-black/5 dark:bg-white/5 border border-border-color px-2.5 py-1.5 rounded-xl h-11">
+                    <input 
+                      type="number" 
+                      step="0.5"
+                      value={typographyStore.duration || 5}
+                      onInput={(e) => updateTypographyGlobal({ duration: parseFloat(e.currentTarget.value) || 5 })}
+                      class="w-full bg-transparent text-xs font-mono font-bold uppercase truncate focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
