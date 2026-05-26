@@ -9,6 +9,7 @@ interface PresetCardProps {
 
 export default function PresetCard(props: PresetCardProps) {
   const [isHovered, setIsHovered] = createSignal(false);
+  const [imageLoaded, setImageLoaded] = createSignal(false);
   let videoRef: HTMLVideoElement | undefined;
 
   const handleClick = () => {
@@ -59,10 +60,12 @@ export default function PresetCard(props: PresetCardProps) {
             src={`/canvas.labs/previews/charts/${slug}.png`}
             alt={props.preset.title}
             loading="lazy"
+            onLoad={() => setImageLoaded(true)}
             class={`absolute inset-0 w-full h-full object-cover transition-all duration-500 pointer-events-none z-0 ${isHovered() ? 'scale-[1.07]' : 'scale-[1.02]'}`}
             onError={(e) => {
               // Hide image if it fails to load, gracefully falling back to styling gradients
               e.currentTarget.style.display = 'none';
+              setImageLoaded(false);
             }}
           />
         </Show>
@@ -81,9 +84,11 @@ export default function PresetCard(props: PresetCardProps) {
         </Show>
 
         {/* Abstract Mock Canvas Graphic (visible only if no static image loads) */}
-        <div class="text-white font-black text-2xl tracking-tighter opacity-80 select-none pointer-events-none">
-          {props.preset.title.split(":")[0]}
-        </div>
+        <Show when={!imageLoaded()}>
+          <div class="text-white font-black text-2xl tracking-tighter opacity-80 select-none pointer-events-none z-20">
+            {props.preset.title.split(":")[0]}
+          </div>
+        </Show>
       </div>
       
       {/* Info */}
