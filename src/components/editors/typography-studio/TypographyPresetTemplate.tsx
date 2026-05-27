@@ -85,6 +85,38 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     });
   };
 
+  const startEditingCanvasText = (elementId: string) => {
+    setIsEditingCanvasText(true);
+    setTypographyStore('selectedId', elementId);
+    
+    // Compute the bounds synchronously to prevent any race condition
+    const el = typographyStore.elements.find(e => e.id === elementId);
+    if (el && el.type === 'text' && canvasRef && canvasContainerRef && engine) {
+      const containerRect = canvasContainerRef.getBoundingClientRect();
+      const canvasRect = canvasRef.getBoundingClientRect();
+
+      const scaleX = canvasRect.width / typographyStore.width;
+      const scaleY = canvasRect.height / typographyStore.height;
+
+      const bounds = engine.getElementBounds(elementId);
+      if (bounds) {
+        const centerX = canvasRect.left - containerRect.left + (bounds.x * scaleX);
+        const centerY = canvasRect.top - containerRect.top + (bounds.y * scaleY);
+        const w = bounds.w * scaleX;
+        const h = bounds.h * scaleY;
+
+        setDomBounds({
+          left: centerX - w / 2,
+          top: centerY - h / 2,
+          width: w,
+          height: h,
+          rotation: bounds.rotation,
+          scale: scaleX
+        });
+      }
+    }
+  };
+
   createEffect(() => {
     const el = selectedTextElement();
     if (!el || !isLoaded()) {
@@ -106,7 +138,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     if (selectedId && selectedId !== prevSelectedId) {
       const activeEl = document.activeElement;
       const isTextarea = activeEl && activeEl.tagName === 'TEXTAREA';
-      if (!isTextarea) {
+      if (!isTextarea && !isEditingCanvasText()) {
         setActiveTab('style');
       }
     }
@@ -201,7 +233,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
       const currentTime = performance.now();
       const tapDelay = currentTime - lastTapTime;
       if (el && el.type === 'text' && hitId === lastTapId && tapDelay < 300) {
-        setIsEditingCanvasText(true);
+        startEditingCanvasText(hitId);
       }
       lastTapTime = currentTime;
       lastTapId = hitId;
@@ -416,15 +448,33 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
   });
 
   const handleResize = () => {
-    if (!canvasRef || !engine) return;
+    if (!canvasRef || !engine || !canvasContainerRef) return;
     let renderW = 1920;
     let renderH = 1080;
 
     const ratio = aspectRatio();
-    if (ratio === '9:16') { renderW = 1080; renderH = 1920; } 
-    else if (ratio === '1:1') { renderW = 1080; renderH = 1080; } 
-    else if (ratio === '4:5') { renderW = 1080; renderH = 1350; }
-    else if (ratio === '4:3') { renderW = 1440; renderH = 1080; }
+    let targetRatio = 16 / 9;
+    if (ratio === '9:16') { renderW = 1080; renderH = 1920; targetRatio = 9 / 16; } 
+    else if (ratio === '1:1') { renderW = 1080; renderH = 1080; targetRatio = 1; } 
+    else if (ratio === '4:5') { renderW = 1080; renderH = 1350; targetRatio = 4 / 5; }
+    else if (ratio === '4:3') { renderW = 1440; renderH = 1080; targetRatio = 4 / 3; }
+
+    const maxW = isFullscreen() ? window.innerWidth : canvasContainerRef.clientWidth;
+    const maxH = isFullscreen() ? window.innerHeight : canvasContainerRef.clientHeight;
+
+    let displayW = maxW;
+    let displayH = maxH;
+
+    if (maxW / maxH > targetRatio) {
+      displayH = maxH;
+      displayW = displayH * targetRatio;
+    } else {
+      displayW = maxW;
+      displayH = displayW / targetRatio;
+    }
+
+    canvasRef.style.width = `${Math.round(displayW)}px`;
+    canvasRef.style.height = `${Math.round(displayH)}px`;
 
     updateTypographyGlobal({ width: renderW, height: renderH });
     engine.setDimensions(renderW, renderH, window.devicePixelRatio || 1);
@@ -631,7 +681,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
               onPointerDown={handleCanvasPointerDown}
               onPointerMove={handleCanvasPointerMove}
               onPointerUp={handleCanvasPointerUp}
-              class={`w-full h-full object-contain cursor-pointer transition-opacity duration-500 ease-in-out ${isLoaded() ? 'opacity-100' : 'opacity-0'}`}
+              class={`object-contain cursor-pointer transition-opacity duration-500 ease-in-out ${isLoaded() ? 'opacity-100' : 'opacity-0'}`}
               style={{ "touch-action": "none" }}
             ></canvas>
 
@@ -1483,6 +1533,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                     <Show when={el.type === 'text'}>
                       <div 
                         onClick={() => {
+                          if (isEditingCanvasText()) return;
                           updateTypographyGlobal({ selectedId: el.id });
                           setActiveTab('style');
                         }}
@@ -1502,8 +1553,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              updateTypographyGlobal({ selectedId: el.id });
-                              setIsEditingCanvasText(true);
+                              startEditingCanvasText(el.id);
                             }}
                             class="group/btn flex items-center gap-1 text-[9px] font-extrabold text-brand-500 hover:text-brand-600 bg-brand-500/5 hover:bg-brand-500/10 border border-brand-500/10 px-2 py-0.5 rounded-md cursor-pointer transition-all select-none active:scale-95 flex-shrink-0"
                             type="button"
