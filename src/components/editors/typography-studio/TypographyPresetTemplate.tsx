@@ -36,7 +36,11 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     const selectedId = typographyStore.selectedId;
     setActiveSlider('none'); // Reset floating context slider on select change
     if (selectedId && selectedId !== prevSelectedId) {
-      setActiveTab('style');
+      const activeEl = document.activeElement;
+      const isTextarea = activeEl && activeEl.tagName === 'TEXTAREA';
+      if (!isTextarea) {
+        setActiveTab('style');
+      }
     }
     prevSelectedId = selectedId;
   });
@@ -917,13 +921,13 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                   const hasSelection = () => !!typographyStore.selectedId;
                   return (<>
                     <Show when={!hasSelection() && activeTab() === 'style'}>
-                      <div class="block lg:hidden py-3 px-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-border-color/20 animate-fade-in">
+                      <div class="block lg:hidden py-3 px-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-border-color/20 animate-pure-fade-in">
                         <p class="text-[10px] font-bold text-text-muted uppercase tracking-wider text-center">
                           Tap an element on canvas to style it
                         </p>
                       </div>
                     </Show>
-                    <div class={`space-y-4 animate-fade-in ${
+                    <div class={`space-y-4 animate-pure-fade-in ${
                       activeTab() === 'style' ? 'block lg:hidden' : 'hidden'
                     }`}>
                       <Show when={mobileStylePanel() === 'none'} fallback={
@@ -931,7 +935,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                         <Show when={mobileStylePanel() === 'rotation'} fallback={
                           <Show when={mobileStylePanel() === 'dropShadow'} fallback={
                             /* standard letterSpacing or wiggle views */
-                            <div class="space-y-4 py-2.5 animate-fade-in">
+                            <div class="space-y-4 py-2.5 animate-pure-fade-in">
                               <div class="flex items-center gap-3">
                                 <button
                                   onClick={() => setMobileStylePanel('none')}
@@ -983,7 +987,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                             </div>
                           }>
                             {/* Drop Shadow Slider Panel View */}
-                            <div class="space-y-4 py-2.5 animate-fade-in">
+                            <div class="space-y-4 py-2.5 animate-pure-fade-in">
                               <div class="flex items-center gap-3">
                                 <button
                                   onClick={() => setMobileStylePanel('none')}
@@ -1078,7 +1082,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                           </Show>
                         }>
                           {/* Rotation Panel View */}
-                          <div class="space-y-4 py-2.5 animate-fade-in">
+                          <div class="space-y-4 py-2.5 animate-pure-fade-in">
                             <div class="flex items-center gap-3">
                               <button
                                 onClick={() => setMobileStylePanel('none')}
@@ -1300,11 +1304,17 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                 <For each={typographyStore.elements}>
                   {(el) => (
                     <Show when={el.type === 'text'}>
-                      <div class={`space-y-2 py-1.5 transition-all ${
-                        typographyStore.selectedId === el.id 
-                          ? 'border-l-2 border-brand-500 pl-3.5 animate-fade-in' 
-                          : 'border-l-2 border-transparent pl-3.5'
-                      }`}>
+                      <div 
+                        onClick={() => {
+                          updateTypographyGlobal({ selectedId: el.id });
+                          setActiveTab('style');
+                        }}
+                        class={`space-y-1.5 py-1.5 transition-all cursor-pointer ${
+                          typographyStore.selectedId === el.id 
+                            ? 'border-l-2 border-brand-500 pl-3.5' 
+                            : 'border-l-2 border-transparent pl-3.5'
+                        }`}
+                      >
                         <div class="flex items-center justify-between">
                           <span class="text-[10px] font-extrabold text-text-muted uppercase tracking-wider flex items-center gap-1.5 select-none">
                             <svg class="w-3.5 h-3.5 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1312,39 +1322,16 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                             </svg>
                             Edit Text
                           </span>
-                          <div class="flex items-center gap-2">
-                            {/* Align Horizontally Center */}
-                            <button
-                              onClick={() => updateTypographyElement(el.id, { x: typographyStore.width / 2 })}
-                              class="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors text-text-muted hover:text-brand-500 cursor-pointer"
-                              title="Align Horizontally Center"
-                              type="button"
-                            >
-                              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="2" x2="12" y2="22" />
-                                <rect x="5" y="8" width="14" height="8" rx="1.5" />
-                              </svg>
-                            </button>
-                            {/* Selection indicator */}
-                            <button
-                              onClick={() => updateTypographyGlobal({ selectedId: typographyStore.selectedId === el.id ? null : el.id })}
-                              class={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
-                                typographyStore.selectedId === el.id
-                                  ? 'bg-brand-500 border-brand-500 text-white shadow-sm font-black'
-                                  : 'bg-black/5 dark:bg-white/5 border-border-color text-text-muted hover:text-text-main hover:border-brand-500/30'
-                              }`}
-                              type="button"
-                            >
-                              {typographyStore.selectedId === el.id ? 'Selected' : 'Select'}
-                            </button>
-                          </div>
                         </div>
                         <textarea
                           rows="2"
                           value={(el as TypographyTextElement).text}
                           onInput={(e) => updateTypographyElement(el.id, { text: e.currentTarget.value })}
-                          onFocus={() => updateTypographyGlobal({ selectedId: el.id })}
-                          class="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-border-color rounded-lg text-xs font-semibold text-text-main resize-none focus:outline-none focus:border-brand-500 transition-colors"
+                          onFocus={() => {
+                            updateTypographyGlobal({ selectedId: el.id });
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          class="w-full px-3 py-2 bg-black/5 dark:bg-white/5 border-0 rounded-lg text-xs font-semibold text-text-main resize-none focus:outline-none focus:bg-black/[0.08] dark:focus:bg-white/[0.08] transition-all duration-200"
                           placeholder="Type text content..."
                         ></textarea>
                       </div>
@@ -1360,7 +1347,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                 
                 return (
                   <Show when={el()}>
-                    <div class="hidden lg:block space-y-4 border-t border-border-color/30 pt-4.5 animate-fade-in">
+                    <div class="hidden lg:block space-y-4 border-t border-border-color/30 pt-4.5 animate-pure-fade-in">
                       <h3 class="font-bold text-xs text-text-main uppercase tracking-widest flex items-center gap-2 select-none">
                         <svg class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                           <rect width="12" height="12" x="3" y="3" rx="2" />
@@ -1401,7 +1388,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                                 </span>
                               </Show>
                               <svg 
-                                class={`w-3 h-3 text-slate-400 dark:text-zinc-500 transition-transform duration-300 ${
+                                class={`w-3 h-3 text-slate-400 dark:text-zinc-500 ${
                                   isShadowOpen() ? 'rotate-180' : ''
                                 }`} 
                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -1411,10 +1398,8 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                             </div>
                           </button>
 
-                          <div class={`transition-all duration-300 overflow-hidden ${
-                            isShadowOpen() ? 'max-h-[300px] mt-2 opacity-100 pb-1' : 'max-h-0 opacity-0 pointer-events-none'
-                          }`}>
-                            <div class="space-y-4 px-1 py-2.5 bg-transparent border-0 rounded-none shadow-none">
+                          <Show when={isShadowOpen()}>
+                            <div class="space-y-4 px-1 py-2.5 bg-transparent border-0 rounded-none shadow-none mt-2">
                               
                               {/* Shadow Color */}
                               <div class="flex items-center justify-between gap-3">
@@ -1489,7 +1474,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                               </div>
 
                             </div>
-                          </div>
+                          </Show>
                         </div>
 
                       </div>

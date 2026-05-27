@@ -1,4 +1,4 @@
-import { createSignal, Show } from "solid-js";
+import { createSignal, Show, onMount } from "solid-js";
 import Icon from "../ui/Icon";
 import { openQuickEditor } from "../../store/global";
 import type { Preset } from "../../store/global";
@@ -12,6 +12,13 @@ export default function PresetCard(props: PresetCardProps) {
   const [imageLoaded, setImageLoaded] = createSignal(false);
   const [isVideoReady, setIsVideoReady] = createSignal(false);
   let videoRef: HTMLVideoElement | undefined;
+  let imgRef: HTMLImageElement | undefined;
+
+  onMount(() => {
+    if (imgRef && imgRef.complete) {
+      setImageLoaded(true);
+    }
+  });
 
   const handleClick = () => {
     if (props.preset.url) {
@@ -61,6 +68,7 @@ export default function PresetCard(props: PresetCardProps) {
         {/* Static End Frame Image (Lighthouse & SEO friendly, lazy loaded) */}
         <Show when={slug}>
           <img
+            ref={imgRef}
             src={`/canvas.labs/previews/${mediaFolder}/${slug}.png`}
             alt={props.preset.title}
             loading="lazy"

@@ -1,6 +1,7 @@
 import { Show, createEffect, createSignal, onMount } from "solid-js";
 import { SITE_CONFIG } from "../../config/site";
 import Icon from "../ui/Icon";
+import Logo from "./Logo";
 import {
   isViewingEditor,
   isMobileSearchActive,
@@ -45,23 +46,16 @@ export default function Header(props: { isTemplate?: boolean }) {
     <Show when={!isViewingEditor()}>
       <header class="fixed top-0 right-0 left-0 h-16 bg-card-bg z-50 flex items-center justify-between px-4 border-border-color/10 border-b-0 xl:border-b xl:bg-header-glass-bg xl:backdrop-blur-md">
 
-        <div class="flex items-center gap-2 md:gap-3">
+        <div class={`flex items-center gap-2 md:gap-3 ${isTemplatePage() ? 'min-w-0 flex-1 mr-4' : ''}`}>
           {/* Hamburger Toggle */}
-          <button onClick={handleHamburgerClick} class="p-2 -ml-2 rounded-lg text-text-muted hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer outline-none">
+          <button onClick={handleHamburgerClick} class="p-2 -ml-2 rounded-lg text-text-muted hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer outline-none flex-shrink-0">
             <Icon name="menu" class="w-5 h-5" />
           </button>
 
           {/* Brand Monogram / Template Title */}
-          <Show when={isTemplatePage()} fallback={
-            <a href="/canvas.labs" class="flex items-center gap-3 group">
-              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#2c2c2c] to-[#121212] border border-white/5 flex items-center justify-center">
-                <span class="font-sans font-black text-white tracking-tighter leading-none flex items-center justify-center" style="font-size: 14px; margin-top: 1px;">{SITE_CONFIG.branding.acronym}</span>
-              </div>
-              <span class="text-base sm:text-xl font-bold tracking-tight text-text-main leading-none flex items-center">{SITE_CONFIG.branding.name}</span>
-            </a>
-          }>
-            <div class="flex items-center gap-1.5 border-l border-border-color/20 pl-2.5 sm:pl-4 ml-1">
-              <span class="text-sm sm:text-base font-extrabold tracking-tight text-text-main truncate capitalize">
+          <Show when={isTemplatePage()} fallback={<Logo />}>
+            <div class="flex items-center gap-1.5 border-l border-border-color/20 pl-2.5 sm:pl-4 ml-1 min-w-0 flex-1">
+              <span class="text-xs sm:text-sm md:text-base font-extrabold tracking-tight text-text-main truncate capitalize select-none">
                 {templateTitle()}
               </span>
             </div>
