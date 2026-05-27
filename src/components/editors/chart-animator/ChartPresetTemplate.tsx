@@ -292,11 +292,11 @@ export default function ChartPresetTemplate(props: { slug: string }) {
               isFullscreen()
                 ? '!w-full !h-full !aspect-none !rounded-none !bg-zinc-950 !border-none !p-0'
                 : aspectRatio() === '9:16'
-                  ? 'aspect-[9/16] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto'
+                  ? 'aspect-[9/16] w-full max-w-[168px] sm:max-w-[253px] md:max-w-[281px] mx-auto'
                   : aspectRatio() === '1:1'
-                    ? 'aspect-square h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto'
+                    ? 'aspect-square w-full max-w-[300px] sm:max-w-[450px] md:max-w-[500px] mx-auto'
                     : aspectRatio() === '4:5'
-                      ? 'aspect-[4/5] h-[300px] sm:h-[450px] md:h-[500px] w-auto mx-auto'
+                      ? 'aspect-[4/5] w-full max-w-[240px] sm:max-w-[360px] md:max-w-[400px] mx-auto'
                       : 'aspect-video w-full'
             }`}
             style={{ "background-color": chartStore.options.bgColor }}
