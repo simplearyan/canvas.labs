@@ -17,10 +17,23 @@ const getPresetBySlug = (slug: string) => {
 
 export default function TypographyPresetTemplate(props: { slug: string }) {
   let canvasRef!: HTMLCanvasElement;
+  let editTextAreaRef: HTMLTextAreaElement | undefined;
   let engine: TypographyEngine;
   const [isLoaded, setIsLoaded] = createSignal(false);
   const [transitionUrl, setTransitionUrl] = createSignal('/editor/typography-studio');
   const [portalTarget, setPortalTarget] = createSignal<HTMLElement | undefined>(undefined);
+
+  createEffect(() => {
+    if (isEditingCanvasText()) {
+      setTimeout(() => {
+        if (editTextAreaRef) {
+          editTextAreaRef.focus();
+          const len = editTextAreaRef.value.length;
+          editTextAreaRef.setSelectionRange(len, len);
+        }
+      }, 60);
+    }
+  });
 
   const [isPlaying, setIsPlaying] = createSignal(false);
   const [showCanvasAd, setShowCanvasAd] = createSignal(AD_CONFIG.brandPromo.enabled);
@@ -30,6 +43,61 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
   const [isExporting, setIsExporting] = createSignal(false);
   const [activeTab, setActiveTab] = createSignal<'text' | 'settings' | 'ratio' | 'style'>('text');
   const [activeSlider, setActiveSlider] = createSignal<'none' | 'letterSpacing' | 'wiggle'>('none');
+  const [isEditingCanvasText, setIsEditingCanvasText] = createSignal(false);
+  const selectedTextElement = () => {
+    const id = typographyStore.selectedId;
+    if (!id) return null;
+    const el = typographyStore.elements.find(e => e.id === id);
+    return el && el.type === 'text' ? el : null;
+  };
+  const [domBounds, setDomBounds] = createSignal<{ left: number, top: number, width: number, height: number, rotation: number, scale: number } | null>(null);
+
+  const updateDomBoundsDirect = () => {
+    const el = selectedTextElement();
+    if (!el || !canvasRef || !canvasContainerRef || !engine) {
+      setDomBounds(null);
+      return;
+    }
+    const containerRect = canvasContainerRef.getBoundingClientRect();
+    const canvasRect = canvasRef.getBoundingClientRect();
+
+    const scaleX = canvasRect.width / typographyStore.width;
+    const scaleY = canvasRect.height / typographyStore.height;
+
+    const bounds = engine.getElementBounds(el.id);
+    if (!bounds) {
+      setDomBounds(null);
+      return;
+    }
+
+    const centerX = canvasRect.left - containerRect.left + (bounds.x * scaleX);
+    const centerY = canvasRect.top - containerRect.top + (bounds.y * scaleY);
+    const w = bounds.w * scaleX;
+    const h = bounds.h * scaleY;
+
+    setDomBounds({
+      left: centerX - w / 2,
+      top: centerY - h / 2,
+      width: w,
+      height: h,
+      rotation: bounds.rotation,
+      scale: scaleX
+    });
+  };
+
+  createEffect(() => {
+    const el = selectedTextElement();
+    if (!el || !isLoaded()) {
+      setDomBounds(null);
+      return;
+    }
+    aspectRatio();
+    isFullscreen();
+    
+    // Update synchronously on aspect ratio or fullscreen layout shifts
+    updateDomBoundsDirect();
+  });
+
   let canvasContainerRef!: HTMLDivElement;
   let prevSelectedId: string | null = null;
   createEffect(() => {
@@ -82,6 +150,9 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
   let initialH = 100;
   let initialDistance = 0;
 
+  let lastTapTime = 0;
+  let lastTapId: string | null = null;
+
   const handleCanvasPointerDown = (e: PointerEvent) => {
     if (!engine) return;
     const rect = canvasRef.getBoundingClientRect();
@@ -126,6 +197,15 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     if (hitId) {
       updateTypographyGlobal({ selectedId: hitId });
       const el = typographyStore.elements.find(e => e.id === hitId);
+      
+      const currentTime = performance.now();
+      const tapDelay = currentTime - lastTapTime;
+      if (el && el.type === 'text' && hitId === lastTapId && tapDelay < 300) {
+        setIsEditingCanvasText(true);
+      }
+      lastTapTime = currentTime;
+      lastTapId = hitId;
+
       if (el && !el.locked) {
         isDragging = true;
         dragOffset = { x: el.x - x, y: el.y - y };
@@ -135,7 +215,9 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
       }
     } else {
       updateTypographyGlobal({ selectedId: null });
+      lastTapId = null;
     }
+    updateDomBoundsDirect();
   };
 
   const handleCanvasPointerMove = (e: PointerEvent) => {
@@ -191,6 +273,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
         y: y + dragOffset.y
       });
     }
+    updateDomBoundsDirect();
   };
 
   const handleCanvasPointerUp = (e: PointerEvent) => {
@@ -200,6 +283,7 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     } catch (err) {}
+    updateDomBoundsDirect();
   };
 
   const handleFullscreenChange = () => {
@@ -344,6 +428,10 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
 
     updateTypographyGlobal({ width: renderW, height: renderH });
     engine.setDimensions(renderW, renderH, window.devicePixelRatio || 1);
+
+    requestAnimationFrame(() => {
+      updateDomBoundsDirect();
+    });
   };
 
   createEffect(() => {
@@ -362,7 +450,8 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
         bgColor: typographyStore.bgColor,
         duration: typographyStore.duration,
         elements: typographyStore.elements,
-        selectedId: typographyStore.selectedId
+        selectedId: typographyStore.selectedId,
+        isEditingText: isEditingCanvasText()
       };
 
       const snapshot = JSON.parse(JSON.stringify(trackState));
@@ -378,6 +467,9 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
 
       const astroBtn = document.getElementById('btn-open-advanced');
       if (astroBtn) astroBtn.setAttribute('href', `/canvas.labs/editor/typography-studio?config=${encoded}`);
+
+      // Synchronously recalculate bounds AFTER the engine has loaded the fresh state
+      updateDomBoundsDirect();
     }
   });
 
@@ -542,6 +634,91 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
               class={`w-full h-full object-contain cursor-pointer transition-opacity duration-500 ease-in-out ${isLoaded() ? 'opacity-100' : 'opacity-0'}`}
               style={{ "touch-action": "none" }}
             ></canvas>
+
+            {/* Direct Inline Bounding Box Editor / Bounding Box Controls */}
+            {/* Direct Inline Bounding Box Editor Overlay */}
+            <Show when={isEditingCanvasText()}>
+              {() => {
+                const el = () => selectedTextElement();
+                const bounds = () => domBounds();
+
+                return (
+                  <Show when={el() && bounds() && !isPlaying()}>
+                    {/* Click Outside Invisible Backdrop */}
+                    <div 
+                      onClick={() => setIsEditingCanvasText(false)}
+                      class="absolute inset-0 bg-black/15 z-40 pointer-events-auto cursor-default animate-pure-fade-in"
+                    ></div>
+
+                    {/* Rotated & Positioned Input Container exactly matching Bounding Box */}
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        left: `${bounds()!.left}px`,
+                        top: `${bounds()!.top}px`,
+                        width: `${bounds()!.width}px`,
+                        height: `${bounds()!.height}px`,
+                        transform: `rotate(${bounds()!.rotation}deg)`,
+                        "transform-origin": "center center",
+                        "pointer-events": "none",
+                        "z-index": "45"
+                      }}
+                      class="animate-pure-scale-in"
+                    >
+                      <textarea
+                        ref={editTextAreaRef}
+                        rows="2"
+                        value={el()!.text || ''}
+                        onInput={(e) => updateTypographyElement(el()!.id, { text: e.currentTarget.value })}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          background: 'transparent',
+                          color: el()!.fill || '',
+                          "font-family": `"${el()!.fontFamily || ''}"`,
+                          "font-size": `${el()!.fontSize * bounds()!.scale}px`,
+                          "letter-spacing": `${(el()!.letterSpacing || 0) * bounds()!.scale}px`,
+                          "font-weight": el()!.fontWeight || '',
+                          "text-align": 'center',
+                          "line-height": '1.1',
+                          resize: 'none',
+                          overflow: 'hidden',
+                          outline: 'none',
+                          padding: '0px',
+                          margin: '0px',
+                          "pointer-events": 'auto',
+                          "touch-action": 'auto'
+                        }}
+                        class="border-2 border-dashed border-brand-500 rounded-sm focus:ring-0 focus:border-brand-500 shadow-inner-sm select-text"
+                        placeholder="Type text..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            setIsEditingCanvasText(false);
+                          }
+                        }}
+                      />
+
+                      {/* Floating circular save/checkmark button in top-right corner */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsEditingCanvasText(false);
+                        }}
+                        style={{ "pointer-events": "auto" }}
+                        class="absolute -top-4.5 -right-4.5 w-9 h-9 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-90 cursor-pointer border-2 border-white dark:border-zinc-950 group/float-save z-50 shrink-0"
+                        title="Save changes"
+                        type="button"
+                      >
+                        <svg class="w-4.5 h-4.5 group-hover/float-save:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </Show>
+                );
+              }}
+            </Show>
 
             {/* Floating Context Toolbar */}
             <Show when={typographyStore.selectedId}>
@@ -1322,6 +1499,23 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                             </svg>
                             Edit Text
                           </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateTypographyGlobal({ selectedId: el.id });
+                              setIsEditingCanvasText(true);
+                            }}
+                            class="group/btn flex items-center gap-1 text-[9px] font-extrabold text-brand-500 hover:text-brand-600 bg-brand-500/5 hover:bg-brand-500/10 border border-brand-500/10 px-2 py-0.5 rounded-md cursor-pointer transition-all select-none active:scale-95 flex-shrink-0"
+                            type="button"
+                            title="Edit directly on canvas"
+                          >
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M15 3h6v6" />
+                              <path d="M10 14 21 3" />
+                              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            </svg>
+                            Edit on Canvas
+                          </button>
                         </div>
                         <textarea
                           rows="2"

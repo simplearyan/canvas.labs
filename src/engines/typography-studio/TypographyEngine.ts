@@ -424,6 +424,7 @@ export class TypographyEngine {
 
         this.state.elements.forEach(el => {
             if (el.visible === false) return;
+            if (this.state.selectedId === el.id && this.state.isEditingText) return;
             ctx.save();
             
             ctx.translate(el.x, el.y);

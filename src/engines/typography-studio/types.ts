@@ -72,6 +72,7 @@ export interface TypographyState {
   duration: number;
   elements: TypographyElement[];
   selectedId: string | null;
+  isEditingText?: boolean;
 }
 
 export interface TypographyPreset {
