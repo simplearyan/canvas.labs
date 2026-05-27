@@ -14,8 +14,9 @@ import {
 import { TypographyEngine } from '@/engines/typography-studio/TypographyEngine';
 import { TYPOGRAPHY_PRESETS } from '@/engines/typography-studio/presets';
 import type { TypographyAnimPreset, TypographyElement, TypographyTextElement, TypographyShapeElement } from '@/engines/typography-studio/types';
-import Icon from '@/components/ui/Icon';
 import ExportModal from '@/components/common/ExportModal';
+import SnapshotModal from '@/components/common/SnapshotModal';
+import Icon from '@/components/ui/Icon';
 import { typographyExportProject } from '@/engines/typography-studio/ExportEngine';
 import { isDarkTheme, toggleTheme } from '@/store/global';
 
@@ -47,6 +48,9 @@ export default function TypographyEditor() {
   const [isPlaying, setIsPlaying] = createSignal(false);
   const [isFullscreen, setIsFullscreen] = createSignal(false);
   const [isExporting, setIsExporting] = createSignal(false);
+  const [isExportingSnapshot, setIsExportingSnapshot] = createSignal(false);
+  
+  const [activeSlider, setActiveSlider] = createSignal<'none' | 'letterSpacing' | 'wiggle'>('none');
   
   let canvasContainerRef!: HTMLDivElement;
   let playTimeoutId: any = null;
@@ -58,6 +62,12 @@ export default function TypographyEditor() {
       loadTypographyStateFromUrl(encodedConfig);
     }
   }
+
+  createEffect(() => {
+    // Reset active slider when selection changes
+    typographyStore.selectedId;
+    setActiveSlider('none');
+  });
 
 
 
@@ -98,6 +108,68 @@ export default function TypographyEditor() {
     document.removeEventListener('fullscreenchange', handleFullscreenChange);
     if (engine) engine.pause();
   });
+
+  const exportSnapshotFrame = async (resParam: "1080" | "1440" | "2160", transparentParam: boolean) => {
+    try {
+      const res = parseInt(resParam);
+      const aspect = aspectRatio();
+      
+      let targetW = 1920;
+      let targetH = 1080;
+      
+      if (aspect === '16:9') {
+        targetW = 1920;
+        targetH = 1080;
+      } else if (aspect === '9:16') {
+        targetW = 1080;
+        targetH = 1920;
+      } else if (aspect === '1:1') {
+        targetW = 1080;
+        targetH = 1080;
+      } else if (aspect === '4:5') {
+        targetW = 1080;
+        targetH = 1350;
+      } else if (aspect === '3:4') {
+        targetW = 1080;
+        targetH = 1440;
+      } else if (aspect === '4:3') {
+        targetW = 1440;
+        targetH = 1080;
+      } else if (aspect === '2:1') {
+        targetW = 2160;
+        targetH = 1080;
+      }
+      
+      const isLandscape = aspect === '16:9' || aspect === '4:3' || aspect === '2:1';
+      const baseSize = isLandscape ? targetH : targetW;
+      const multiplier = res / baseSize;
+      
+      targetW = Math.round(targetW * multiplier);
+      targetH = Math.round(targetH * multiplier);
+
+      const offscreen = new OffscreenCanvas(targetW, targetH);
+      const snapEngine = new TypographyEngine(offscreen);
+      snapEngine.isTransparent = transparentParam;
+      snapEngine.setDimensions(targetW, targetH, 1);
+
+      const snapshot = JSON.parse(JSON.stringify(typographyStore));
+      snapEngine.updateState(snapshot);
+      
+      const duration = typographyStore.duration || 5;
+      const progress = duration > 0 ? (typographyStore.time / duration) : 0;
+      snapEngine.seek(progress);
+
+      const blob = await offscreen.convertToBlob({ type: 'image/png' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `typography_snapshot_${resParam}p.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert("Failed to export snapshot: " + err.message);
+    }
+  };
 
   const handleResize = () => {
     if (!canvasRef || !engine) return;
@@ -925,6 +997,218 @@ export default function TypographyEditor() {
           >
             <canvas ref={canvasRef} class="object-contain cursor-crosshair active:cursor-grabbing" style={{ "background-color": typographyStore.bgColor, "touch-action": "none", "pointer-events": "auto" }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}></canvas>
             
+            {/* Floating Context Toolbar */}
+            <Show when={typographyStore.selectedId}>
+              {() => {
+                const el = () => typographyStore.elements.find(e => e.id === typographyStore.selectedId);
+                return (
+                  <Show when={el()}>
+                    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-30 hidden lg:flex items-center gap-1.5 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-slate-200/80 dark:border-zinc-800/80 px-3.5 py-1.5 rounded-full shadow-[0_10px_30px_-5px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_40px_-5px_rgba(0,0,0,0.5)] animate-fade-in pointer-events-auto transition-all duration-300 text-slate-800 dark:text-text-main">
+                      <Show when={activeSlider() === 'none'} fallback={
+                        /* In-line Slider Drawer */
+                        <div class="flex items-center gap-3 px-1.5 py-0.5 animate-fade-in">
+                          <button 
+                            onClick={() => setActiveSlider('none')}
+                            class="p-1.5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 dark:text-zinc-500 hover:text-brand-600 dark:hover:text-brand-400 rounded-full transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0"
+                            title="Back"
+                            type="button"
+                          >
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="19" y1="12" x2="5" y2="12"></line>
+                              <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                          </button>
+                          
+                          <span class="text-[9px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-widest select-none shrink-0 border-r border-slate-200 dark:border-zinc-800 pr-2.5">
+                            {activeSlider() === 'letterSpacing' ? 'Spacing' : 'Wiggle'}
+                          </span>
+
+                          <input
+                            type="range"
+                            min={activeSlider() === 'letterSpacing' ? "-10" : "0"}
+                            max={activeSlider() === 'letterSpacing' ? "60" : "120"}
+                            value={
+                              activeSlider() === 'letterSpacing' 
+                                ? (el() as TypographyTextElement).letterSpacing || 0 
+                                : el()?.animShake !== undefined ? el()?.animShake : 20
+                            }
+                            onInput={(e) => {
+                              const val = parseInt(e.currentTarget.value);
+                              if (activeSlider() === 'letterSpacing') {
+                                updateTypographyElement(typographyStore.selectedId!, { letterSpacing: val });
+                              } else {
+                                updateTypographyElement(typographyStore.selectedId!, { animShake: val });
+                              }
+                            }}
+                            class="w-32 md:w-40 h-1.5 accent-brand-600 dark:accent-brand-400 bg-slate-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer focus:outline-none"
+                          />
+
+                          <span class="px-2 py-0.5 rounded bg-brand-50 dark:bg-brand-500/10 text-[11px] font-mono font-bold text-brand-600 dark:text-brand-400 min-w-[36px] text-center shrink-0 select-none">
+                            {activeSlider() === 'letterSpacing' 
+                              ? `${(el() as TypographyTextElement).letterSpacing || 0}px` 
+                              : `${el()?.animShake !== undefined ? el()?.animShake : 20}`}
+                          </span>
+
+                          <div class="h-4 w-px bg-slate-200 dark:bg-zinc-800 mx-1 shrink-0"></div>
+
+                          <button 
+                            onClick={() => setActiveSlider('none')}
+                            class="p-1.5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 rounded-full transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0"
+                            title="Close Slider"
+                            type="button"
+                          >
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          </button>
+                        </div>
+                      }>
+                        <span class="px-2.5 py-0.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200/50 dark:border-zinc-800/50 rounded-full text-[9px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-widest select-none shrink-0">
+                          {el()?.type === 'text' ? 'Text' : 'Shape'}
+                        </span>
+                        
+                        <div class="h-4 w-px bg-slate-200 dark:bg-zinc-800 mx-1 shrink-0"></div>
+
+                        {/* Align Horizontally */}
+                        <button
+                          onClick={() => updateTypographyElement(typographyStore.selectedId!, { x: typographyStore.width / 2 })}
+                          class="p-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400 rounded-full transition-all duration-200 cursor-pointer group flex items-center justify-center shrink-0"
+                          title="Align Center Horizontal"
+                          type="button"
+                        >
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="2" x2="12" y2="22" />
+                            <rect x="5" y="8" width="14" height="8" rx="1.5" />
+                          </svg>
+                        </button>
+
+                        {/* Align Vertically */}
+                        <button
+                          onClick={() => updateTypographyElement(typographyStore.selectedId!, { y: typographyStore.height / 2 })}
+                          class="p-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400 rounded-full transition-all duration-200 cursor-pointer group flex items-center justify-center shrink-0"
+                          title="Align Center Vertical"
+                          type="button"
+                        >
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="2" y1="12" x2="22" y2="12" />
+                            <rect x="8" y="5" width="8" height="14" rx="1.5" />
+                          </svg>
+                        </button>
+
+                        <div class="h-4 w-px bg-slate-200 dark:bg-zinc-800 mx-1 shrink-0"></div>
+
+                        {/* Contextual Properties (Letter Spacing & Wiggle Shake) */}
+                        <Show when={el()?.type === 'text'}>
+                          <button
+                            onClick={() => setActiveSlider('letterSpacing')}
+                            class={`p-2 rounded-full transition-all duration-200 cursor-pointer group flex items-center justify-center shrink-0 ${
+                              activeSlider() === 'letterSpacing'
+                                ? 'bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400 ring-1 ring-brand-500/20'
+                                : 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400'
+                            }`}
+                            title="Adjust Letter Spacing"
+                            type="button"
+                          >
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M4 7V4h16v3" />
+                              <path d="M9 20h6" />
+                              <path d="M12 4v16" />
+                              <path d="m5 12-3 3 3 3" />
+                              <path d="m19 12 3 3-3 3" />
+                              <path d="M2 15h20" />
+                            </svg>
+                          </button>
+                        </Show>
+
+                        <button
+                          onClick={() => setActiveSlider('wiggle')}
+                          class={`p-2 rounded-full transition-all duration-200 cursor-pointer group flex items-center justify-center shrink-0 ${
+                            activeSlider() === 'wiggle'
+                              ? 'bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400 ring-1 ring-brand-500/20'
+                              : 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400'
+                          }`}
+                          title="Adjust Wiggle Shake"
+                          type="button"
+                        >
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 12c.6 0 1.2-.4 1.4-1l1.2-4.2c.4-1.2 2-1.2 2.4 0l2 7c.4 1.2 2 1.2 2.4 0l1.2-4.2c.2-.6.8-1 1.4-1h9" />
+                          </svg>
+                        </button>
+
+                        <div class="h-4 w-px bg-slate-200 dark:bg-zinc-800 mx-1 shrink-0"></div>
+
+                        {/* Rotation Controls (with discrete premium rotation buttons) */}
+                        <button
+                          onClick={() => {
+                            const currentRot = el()?.rotation || 0;
+                            updateTypographyElement(typographyStore.selectedId!, { rotation: (currentRot - 45) % 360 });
+                          }}
+                          class="p-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400 rounded-full transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0"
+                          title="Rotate -45°"
+                          type="button"
+                        >
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                            <path d="M21 3v5h-5" />
+                          </svg>
+                        </button>
+
+                        <div class="flex items-center gap-1.5 px-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-full h-7 shrink-0">
+                          <button
+                            onClick={() => updateTypographyElement(typographyStore.selectedId!, { rotation: 0 })}
+                            class="p-0.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-400 dark:text-zinc-500 hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer group flex items-center justify-center shrink-0"
+                            title="Reset Rotation to 0°"
+                            type="button"
+                          >
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                            </svg>
+                          </button>
+                          <input
+                            type="number"
+                            value={el()?.rotation || 0}
+                            onInput={(e) => updateTypographyElement(typographyStore.selectedId!, { rotation: parseInt(e.currentTarget.value) || 0 })}
+                            class="w-9 bg-transparent border-none text-center font-mono text-[11px] font-extrabold text-slate-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 select-none">°</span>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            const currentRot = el()?.rotation || 0;
+                            updateTypographyElement(typographyStore.selectedId!, { rotation: (currentRot + 45) % 360 });
+                          }}
+                          class="p-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400 rounded-full transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0"
+                          title="Rotate +45°"
+                          type="button"
+                        >
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                            <path d="M3 3v5h5" />
+                          </svg>
+                        </button>
+
+                        {/* Deselect element */}
+                        <div class="h-4 w-px bg-slate-200 dark:bg-zinc-800 mx-1 shrink-0"></div>
+                        <button
+                          onClick={() => updateTypographyGlobal({ selectedId: null })}
+                          class="p-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 rounded-full transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0"
+                          title="Clear Selection"
+                          type="button"
+                        >
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </Show>
+                    </div>
+                  </Show>
+                );
+              }}
+            </Show>
+
             <Show when={isFullscreen()}>
               <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 w-full max-w-2xl px-4 animate-fade-in-up">
                 <TimelineUI />
@@ -970,6 +1254,16 @@ export default function TypographyEditor() {
 
           <div class="hidden md:block w-[1px] h-4 bg-slate-200 dark:bg-zinc-800 mx-0.5"></div>
 
+          {/* Camera Snapshot Button */}
+          <button
+            onClick={() => setIsExportingSnapshot(true)}
+            class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-text-main font-bold text-[10px] sm:text-xs uppercase tracking-widest transition border border-blueprint-200 dark:border-zinc-800 cursor-pointer shadow-sm shrink-0"
+            title="Export High-Res PNG Snapshot"
+          >
+            <Icon name="camera" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-text-muted" />
+            <span class="hidden sm:inline">Camera Snapshot</span>
+          </button>
+
           <button onClick={() => setIsExporting(true)} class="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-md bg-blueprint-900 hover:bg-blueprint-800 dark:bg-brand-500 dark:hover:bg-brand-600 font-bold text-[10px] sm:text-xs uppercase tracking-widest transition cursor-pointer shadow-md shrink-0" title="Export Video Animation" style={{ color: isDarkTheme() ? '#09090b' : '#ffffff' }}>
             <Icon name="export" class={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDarkTheme() ? 'text-zinc-950' : 'text-white'}`} />
             <span class="hidden sm:inline">Export Video</span>
@@ -986,6 +1280,14 @@ export default function TypographyEditor() {
         aspectRatio={aspectRatio()}
         projectTitle="Typography_Animation"
         onExport={typographyExportProject}
+      />
+
+      {/* SNAPSHOT EXPORT MODAL */}
+      <SnapshotModal
+        isOpen={isExportingSnapshot()}
+        onClose={() => setIsExportingSnapshot(false)}
+        projectTitle="Typography_Animation"
+        onExport={exportSnapshotFrame}
       />
 
     </div>

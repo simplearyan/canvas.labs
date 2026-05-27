@@ -10,6 +10,7 @@ interface PresetCardProps {
 export default function PresetCard(props: PresetCardProps) {
   const [isHovered, setIsHovered] = createSignal(false);
   const [imageLoaded, setImageLoaded] = createSignal(false);
+  const [isVideoReady, setIsVideoReady] = createSignal(false);
   let videoRef: HTMLVideoElement | undefined;
 
   const handleClick = () => {
@@ -32,6 +33,7 @@ export default function PresetCard(props: PresetCardProps) {
 
   const handleMouseLeave = () => {
     setIsHovered(false);
+    setIsVideoReady(false);
     if (videoRef) {
       videoRef.pause();
     }
@@ -48,11 +50,11 @@ export default function PresetCard(props: PresetCardProps) {
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      class="group flex flex-col gap-3.5 cursor-pointer bg-card-bg rounded-2xl p-4 transition-all duration-300"
+      class="group flex flex-col gap-4.5 cursor-pointer bg-transparent border border-transparent hover:bg-black/[0.015] dark:hover:bg-white/[0.015] hover:border-black/5 dark:hover:border-white/5 p-4 rounded-[32px] transition-all duration-500 ease-out shadow-none hover:shadow-2xl hover:shadow-black/[0.02] dark:hover:shadow-white/[0.01]"
     >
       {/* Thumbnail Placeholder with color gradient */}
       <div 
-        class={`w-full aspect-[4/3] rounded-xl flex items-center justify-center relative overflow-hidden transition-all duration-500 isolate transform translate-z-0 ${props.preset.color}`}
+        class={`w-full aspect-[4/3] rounded-[24px] flex items-center justify-center relative overflow-hidden transition-all duration-500 ease-out isolate transform translate-z-0 ${props.preset.color}`}
         style="-webkit-mask-image: -webkit-radial-gradient(white, black);"
       >
 
@@ -63,7 +65,7 @@ export default function PresetCard(props: PresetCardProps) {
             alt={props.preset.title}
             loading="lazy"
             onLoad={() => setImageLoaded(true)}
-            class={`absolute inset-0 w-full h-full object-cover transition-all duration-500 pointer-events-none z-0 ${isHovered() ? 'scale-[1.07]' : 'scale-[1.02]'}`}
+            class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-out pointer-events-none z-0"
             onError={(e) => {
               // Hide image if it fails to load, gracefully falling back to styling gradients
               e.currentTarget.style.display = 'none';
@@ -81,7 +83,8 @@ export default function PresetCard(props: PresetCardProps) {
             muted
             playsinline
             preload="none"
-            class={`absolute inset-0 w-full h-full object-cover transition-all duration-500 pointer-events-none z-10 ${isHovered() ? 'opacity-100 scale-[1.07]' : 'opacity-0 scale-[1.02]'}`}
+            onPlaying={() => setIsVideoReady(true)}
+            class={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-out pointer-events-none z-10 ${isHovered() && isVideoReady() ? 'opacity-100' : 'opacity-0'}`}
           />
         </Show>
 
@@ -102,3 +105,4 @@ export default function PresetCard(props: PresetCardProps) {
     </div>
   );
 }
+

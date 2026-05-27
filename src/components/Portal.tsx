@@ -327,7 +327,7 @@ export default function Portal() {
           
           {/* VIEW A: GALLERY VIEW */}
           <Show when={!isFocusMode()}>
-            <div class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10 space-y-8 animate-fade-in">
+            <div class="flex-1 max-w-[1500px] w-full mx-auto px-8 md:px-16 xl:px-24 py-12 md:py-20 space-y-16 xl:space-y-24 animate-fade-in">
               
               {/* Category Header */}
               <div class="space-y-3 max-w-3xl">
@@ -342,7 +342,7 @@ export default function Portal() {
               {/* Grouped view switcher */}
               <Show when={currentCategory() === "all" && searchQuery().trim() === ""} fallback={
                 /* Flat Grid of Preset Cards for specific categories or search queries */
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 xl:gap-12">
                   <For each={filteredCards()}>
                     {(preset) => (
                       <PresetCard preset={preset} />
@@ -351,7 +351,7 @@ export default function Portal() {
                 </div>
               }>
                 {/* Grouped view by category, showing up to 4 from each */}
-                <div class="space-y-12">
+                <div class="space-y-20 xl:space-y-24">
                   <For each={["backgrounds", "charts", "ui", "text"]}>
                     {(catId) => {
                       const catName = catId === "ui" ? "UI elements" : catId;
@@ -360,9 +360,9 @@ export default function Portal() {
                       
                       return (
                         <Show when={catCards().length > 0}>
-                          <div class="space-y-5">
+                          <div class="space-y-6">
                             <div class="flex items-center justify-between">
-                              <h2 class="text-xl md:text-2xl font-black tracking-tight text-text-main capitalize">
+                              <h2 class="text-2xl md:text-3xl font-black tracking-tight text-text-main capitalize">
                                 {catName}
                               </h2>
                               <button 
@@ -372,7 +372,7 @@ export default function Portal() {
                                 View all <Icon name="chevron-right" class="w-4 h-4" />
                               </button>
                             </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 xl:gap-12">
                               <For each={catCards()}>
                                 {(preset) => (
                                   <PresetCard preset={preset} />

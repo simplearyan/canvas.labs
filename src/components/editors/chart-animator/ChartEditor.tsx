@@ -5,6 +5,7 @@ import { ChartEngine } from '@/engines/chart-animator/ChartEngine';
 import type { ChartType, ColorPalette, ChartState } from '@/engines/chart-animator/types';
 import { CHART_PRESETS, type ChartPreset } from '@/engines/chart-animator/presets';
 import ExportModal from '@/components/common/ExportModal';
+import SnapshotModal from '@/components/common/SnapshotModal';
 import { isDarkTheme, toggleTheme } from '@/store/global';
 import Icon from '@/components/ui/Icon';
 import { exportProject } from '@/engines/chart-animator/ExportEngine';
@@ -39,8 +40,6 @@ export default function ChartEditor() {
   const [activePreset, setActivePreset] = createSignal<string | null>('vertical');
 
   // Snapshot State
-  const [snapshotRes, setSnapshotRes] = createSignal<'1080' | '1440' | '2160'>('1080');
-  const [snapshotTransparent, setSnapshotTransparent] = createSignal(false);
   const [isExportingSnapshot, setIsExportingSnapshot] = createSignal(false);
 
   // Fullscreen & Playback State
@@ -88,9 +87,9 @@ export default function ChartEditor() {
     );
   }
 
-  const exportSnapshotFrame = async () => {
+  const exportSnapshotFrame = async (resParam: "1080" | "1440" | "2160", transparentParam: boolean) => {
     try {
-      const res = parseInt(snapshotRes());
+      const res = parseInt(resParam);
       const aspect = aspectRatio();
       
       let targetW = 1920;
@@ -128,7 +127,7 @@ export default function ChartEditor() {
 
       const offscreen = new OffscreenCanvas(targetW, targetH);
       const snapEngine = new ChartEngine(offscreen);
-      snapEngine.isTransparent = snapshotTransparent();
+      snapEngine.isTransparent = transparentParam;
       snapEngine.setDimensions(targetW, targetH, 1);
 
       const snapshot = JSON.parse(JSON.stringify(chartStore));
@@ -139,10 +138,9 @@ export default function ChartEditor() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${chartStore.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_snapshot_${snapshotRes()}p.png`;
+      a.download = `${chartStore.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_snapshot_${resParam}p.png`;
       a.click();
       URL.revokeObjectURL(url);
-      setIsExportingSnapshot(false);
     } catch (err: any) {
       alert("Failed to export snapshot: " + err.message);
     }
@@ -930,52 +928,12 @@ export default function ChartEditor() {
       />
 
       {/* SNAPSHOT EXPORT MODAL */}
-      {isExportingSnapshot() && (
-        <div class="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 flex items-center justify-center p-4 transition-opacity">
-          <div class="bg-white dark:bg-zinc-950 border-2 border-blueprint-900 dark:border-zinc-800 shadow-2xl p-8 max-w-md w-full relative flex flex-col gap-6 text-slate-800 dark:text-text-main">
-            <button onClick={() => setIsExportingSnapshot(false)} class="absolute top-4 right-4 text-slate-400 dark:text-text-muted hover:text-red-500 dark:hover:text-red-400 transition cursor-pointer">
-              ✕
-            </button>
-
-            <div class="flex flex-col gap-1">
-              <h3 class="text-xl font-black text-blueprint-900 dark:text-brand-500 uppercase tracking-tighter">
-                Export Frame Snapshot
-              </h3>
-              <p class="text-xs text-slate-500 dark:text-text-muted font-medium">
-                Save the current frame as a high-resolution PNG image.
-              </p>
-            </div>
-
-            <div class="flex flex-col gap-4">
-              <div class="flex flex-col gap-1.5">
-                <label class="text-[10px] font-bold text-blueprint-900 dark:text-brand-500 uppercase tracking-widest">Resolution</label>
-                <select value={snapshotRes()} onInput={(e) => setSnapshotRes(e.currentTarget.value as any)} class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-blueprint-200 dark:border-zinc-800 text-slate-800 dark:text-text-main text-sm font-medium outline-none focus:border-blueprint-900 dark:focus:border-brand-500 cursor-pointer">
-                  <option value="1080">HD (1080p)</option>
-                  <option value="1440">2K (1440p)</option>
-                  <option value="2160">4K (2160p)</option>
-                </select>
-              </div>
-
-              <div class="flex items-center justify-between bg-slate-50 dark:bg-zinc-900/50 p-3 border border-blueprint-100 dark:border-zinc-800">
-                <div class="flex flex-col">
-                  <span class="text-xs font-bold text-slate-800 dark:text-text-main uppercase tracking-wider">Transparent Background</span>
-                  <span class="text-[9px] text-slate-400 dark:text-text-muted font-medium">PNG alpha layer with no background color fill.</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={snapshotTransparent()}
-                  onChange={(e) => setSnapshotTransparent(e.currentTarget.checked)}
-                  class="w-5 h-5 accent-blueprint-900 dark:accent-brand-500 cursor-pointer"
-                />
-              </div>
-
-              <button onClick={exportSnapshotFrame} class="w-full py-3.5 bg-red-650 hover:bg-red-750 bg-blueprint-900 dark:bg-brand-500 text-white font-black uppercase tracking-widest transition shadow-[4px_4px_0px_rgba(0,51,102,0.1)] mt-2 cursor-pointer">
-                Download PNG Frame
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SnapshotModal
+        isOpen={isExportingSnapshot()}
+        onClose={() => setIsExportingSnapshot(false)}
+        projectTitle={chartStore.title}
+        onExport={exportSnapshotFrame}
+      />
 
       {/* Portaling controls to header to keep editor interface premium */}
       <Portal mount={document.getElementById('editor-header-controls') || undefined}>

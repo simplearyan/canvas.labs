@@ -32,6 +32,6 @@ export const AD_CONFIG: AdConfig = {
     upgradeUrl: "/editor/typography-studio",
     gradientFrom: "from-brand-500",
     gradientTo: "to-amber-400",
-    enabled: true,
+    enabled: false,
   }
 };
