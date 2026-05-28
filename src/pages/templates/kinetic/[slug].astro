@@ -1,0 +1,27 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { SITE_CONFIG } from '@/config/site';
+import KineticPresetTemplate from '@/components/editors/kinetic-studio/KineticPresetTemplate';
+import Header from '@/components/layout/Header';
+import Sidebar from '@/components/layout/Sidebar';
+
+export function getStaticPaths() {
+  return [
+    { params: { slug: 'kinetic-intro' } },
+    { params: { slug: 'kinetic-text-reveal' } },
+    { params: { slug: 'kinetic-modern-ui' } },
+  ];
+}
+
+const { slug } = Astro.params;
+---
+
+<Layout title={`Template: ${slug} | ${SITE_CONFIG.branding.name}`} useSecondaryLayout={false}>
+  <div class="min-h-screen relative transition-colors duration-300 antialiased font-sans bg-app-bg text-text-main flex flex-col">
+    <Header client:load isTemplate={true} />
+    <Sidebar client:load hideDesktop={true} />
+    <main class="flex-1 w-full flex flex-col relative pt-16">
+      <KineticPresetTemplate client:only="solid-js" slug={slug as string} />
+    </main>
+  </div>
+</Layout>

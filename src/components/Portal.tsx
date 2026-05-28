@@ -352,9 +352,9 @@ export default function Portal() {
               }>
                 {/* Grouped view by category, showing up to 4 from each */}
                 <div class="space-y-20 xl:space-y-24">
-                  <For each={["backgrounds", "charts", "ui", "text"]}>
+                  <For each={["video", "text", "charts", "backgrounds", "ui"]}>
                     {(catId) => {
-                      const catName = catId === "ui" ? "UI elements" : catId;
+                      const catName = catId === "ui" ? "UI elements" : catId === "video" ? "Video titles" : catId;
                       // Get up to 4 cards from this category
                       const catCards = () => templatesData.filter(t => t.category === catId).slice(0, 4);
                       

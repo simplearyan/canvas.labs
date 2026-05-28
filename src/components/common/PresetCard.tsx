@@ -49,7 +49,8 @@ export default function PresetCard(props: PresetCardProps) {
   // Resolve preview asset path (fallback to static thumbnail if not ready)
   const slug = props.preset.url ? props.preset.url.split("/").pop() : null;
   const isTypography = props.preset.category === "text" || props.preset.url?.includes('typography');
-  const mediaFolder = isTypography ? 'typography' : 'charts';
+  const isKinetic = props.preset.url?.includes('kinetic');
+  const mediaFolder = isTypography ? 'typography' : isKinetic ? 'kinetic' : 'charts';
   const previewVideoUrl = slug ? `/canvas.labs/previews/${mediaFolder}/${slug}.webm` : null;
 
   return (

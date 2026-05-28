@@ -8,7 +8,7 @@ export interface Preset {
   color: string;
   bgHex: string;
   accentHex: string;
-  type: "waveform" | "sumi" | "orbit" | "grid" | "chart";
+  type: "waveform" | "sumi" | "orbit" | "grid" | "chart" | "kinetic";
   url?: string;
 }
 
@@ -37,7 +37,12 @@ export const templatesData: Preset[] = [
   { id: 302, title: "Sam Hogan Slam", category: "text", color: "bg-[#09090b]", bgHex: "#09090b", accentHex: "#3b82f6", type: "waveform", url: "/canvas.labs/templates/typography/sam-hogan-slam" },
   { id: 303, title: "Ransom Collage", category: "text", color: "bg-[#e5e5e5]", bgHex: "#e5e5e5", accentHex: "#10b981", type: "waveform", url: "/canvas.labs/templates/typography/ransom-collage" },
   { id: 304, title: "Stop Motion", category: "text", color: "bg-[#18181b]", bgHex: "#18181b", accentHex: "#8b5cf6", type: "waveform", url: "/canvas.labs/templates/typography/stop-motion" },
-  { id: 305, title: "Fireship Throw", category: "text", color: "bg-[#000000]", bgHex: "#000000", accentHex: "#f59e0b", type: "waveform", url: "/canvas.labs/templates/typography/fireship-throw" }
+  { id: 305, title: "Fireship Throw", category: "text", color: "bg-[#000000]", bgHex: "#000000", accentHex: "#f59e0b", type: "waveform", url: "/canvas.labs/templates/typography/fireship-throw" },
+  
+  // New Kinetic Studio Templates
+  { id: 401, title: "Kinetic Intro", category: "video", color: "bg-[#18181b]", bgHex: "#18181b", accentHex: "#10b981", type: "kinetic", url: "/canvas.labs/templates/kinetic/kinetic-intro" },
+  { id: 402, title: "Text Reveal", category: "video", color: "bg-[#09090b]", bgHex: "#09090b", accentHex: "#3b82f6", type: "kinetic", url: "/canvas.labs/templates/kinetic/kinetic-text-reveal" },
+  { id: 403, title: "Modern UI Flow", category: "video", color: "bg-[#e5e5e5]", bgHex: "#e5e5e5", accentHex: "#8b5cf6", type: "kinetic", url: "/canvas.labs/templates/kinetic/kinetic-modern-ui" }
 ];
 
 // Global Navigation & View Signals
