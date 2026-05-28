@@ -3,6 +3,8 @@ import Icon from '../../ui/Icon';
 import type { KineticState, KineticSlide, KineticElement, KineticElementType } from '@/engines/kinetic-studio/types';
 import { serializeKineticState, deserializeKineticState, generateId } from '@/engines/kinetic-studio/KineticEngineUtils';
 import { renderFrame, SLIDE_DURATION } from '@/engines/kinetic-studio/KineticEngine';
+import ExportModal from '@/components/common/ExportModal';
+import SnapshotModal from '@/components/common/SnapshotModal';
 
 export default function KineticEditor() {
   const getInitialData = () => {
@@ -16,19 +18,37 @@ export default function KineticEditor() {
   // Editor UI State
   const [activeSlideIndex, setActiveSlideIndex] = createSignal(0);
   const [activeElementId, setActiveElementId] = createSignal<string | null>(null);
-  const [leftTab, setLeftTab] = createSignal<'slides' | 'add'>('slides');
+  const [leftTab, setLeftTab] = createSignal<'slides' | 'add' | 'audio' | 'settings'>('slides');
   const [rightTab, setRightTab] = createSignal<'layers' | 'props'>('props');
-  const [mobileTab, setMobileTab] = createSignal<'slides' | 'add' | 'layers' | 'props'>('slides');
+  const [mobileTab, setMobileTab] = createSignal<'slides' | 'add' | 'audio' | 'settings' | 'layers' | 'props'>('slides');
+  const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1'>('16:9');
+  const [isExportingSnapshot, setIsExportingSnapshot] = createSignal(false);
   
   createEffect(() => {
     const mt = mobileTab();
-    if (mt === 'slides' || mt === 'add') setLeftTab(mt);
+    if (mt === 'slides' || mt === 'add' || mt === 'audio' || mt === 'settings') setLeftTab(mt);
     if (mt === 'layers' || mt === 'props') setRightTab(mt);
   });
   
   // Playback State
   const [isPlaying, setIsPlaying] = createSignal(false);
   const [globalTime, setGlobalTime] = createSignal(0);
+  const [isExporting, setIsExporting] = createSignal(false);
+
+  // Audio State
+  const [audioFileLabel, setAudioFileLabel] = createSignal('');
+  const [audioTrimIn, setAudioTrimIn] = createSignal(0);
+  const [audioTrimOut, setAudioTrimOut] = createSignal(0);
+  const [audioVolume, setAudioVolume] = createSignal(1);
+  const [isMuted, setIsMuted] = createSignal(false);
+  const [audioDuration, setAudioDuration] = createSignal(0);
+
+  let audioCtx: AudioContext | null = null;
+  let currentAudioBuffer: AudioBuffer | null = null;
+  let currentAudioSource: AudioBufferSourceNode | null = null;
+  let globalGainNode: GainNode | null = null;
+  let exportAudioDest: MediaStreamAudioDestinationNode | null = null;
+  let waveformCanvasRef: HTMLCanvasElement | undefined;
   
   let canvasRef: HTMLCanvasElement | undefined;
   let containerRef: HTMLDivElement | undefined;
@@ -92,8 +112,17 @@ export default function KineticEditor() {
   };
 
   const addElement = (type: KineticElementType) => {
-    const startX = 400; // arbitrary center logic for default
-    const startY = 250;
+    const aspect = aspectRatio();
+    let nativeW = 1920; let nativeH = 1080;
+    if (aspect === '9:16') { nativeW = 1080; nativeH = 1920; }
+    else if (aspect === '1:1') { nativeW = 1080; nativeH = 1080; }
+    else if (aspect === '4:5') { nativeW = 1080; nativeH = 1350; }
+    else if (aspect === '3:4') { nativeW = 1080; nativeH = 1440; }
+    else if (aspect === '4:3') { nativeW = 1440; nativeH = 1080; }
+    else if (aspect === '2:1') { nativeW = 2160; nativeH = 1080; }
+
+    const startX = nativeW / 2;
+    const startY = nativeH / 2;
     
     const newEl: KineticElement = {
       id: generateId(), type,
@@ -153,20 +182,99 @@ export default function KineticEditor() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
 
-    // Map fixed logical coordinates (800x500) to actual fluid canvas
-    const scale = Math.min(rect.width / 800, rect.height / 500);
-    const offsetX = (rect.width - 800 * scale) / 2;
-    const offsetY = (rect.height - 500 * scale) / 2;
+    const aspect = aspectRatio();
+    let nativeW = 1920; let nativeH = 1080;
+    if (aspect === '9:16') { nativeW = 1080; nativeH = 1920; }
+    else if (aspect === '1:1') { nativeW = 1080; nativeH = 1080; }
+    else if (aspect === '4:5') { nativeW = 1080; nativeH = 1350; }
+    else if (aspect === '3:4') { nativeW = 1080; nativeH = 1440; }
+    else if (aspect === '4:3') { nativeW = 1440; nativeH = 1080; }
+    else if (aspect === '2:1') { nativeW = 2160; nativeH = 1080; }
+
+    const scale = Math.min(rect.width / nativeW, rect.height / nativeH);
+    const offsetX = (rect.width - nativeW * scale) / 2;
+    const offsetY = (rect.height - nativeH * scale) / 2;
 
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
 
-    renderFrame(ctx, globalTime(), 800, 500, state().slides, false, true, isPlaying(), activeElementId());
+    renderFrame(ctx, globalTime(), nativeW, nativeH, state().slides, false, true, isPlaying(), activeElementId());
+
+    // Call drawWaveform periodically if playing
+    if (isPlaying() && audioCtx) {
+      drawWaveform();
+    }
   };
 
   createEffect(() => {
-    // Whenever state or visual parameters change, we should request a render
-    // Re-run this effect tracking state, globalTime, activeElementId, etc.
+    aspectRatio();
+    requestRender();
+  });
+
+  const exportSnapshotFrame = async (resParam: "1080" | "1440" | "2160", transparentParam: boolean) => {
+    try {
+      const res = parseInt(resParam);
+      const aspect = aspectRatio();
+      
+      let targetW = 1920; let targetH = 1080;
+      if (aspect === '9:16') { targetW = 1080; targetH = 1920; }
+      else if (aspect === '1:1') { targetW = 1080; targetH = 1080; }
+      else if (aspect === '4:5') { targetW = 1080; targetH = 1350; }
+      else if (aspect === '3:4') { targetW = 1080; targetH = 1440; }
+      else if (aspect === '4:3') { targetW = 1440; targetH = 1080; }
+      else if (aspect === '2:1') { targetW = 2160; targetH = 1080; }
+      
+      const isLandscape = aspect === '16:9' || aspect === '4:3' || aspect === '2:1';
+      const baseSize = isLandscape ? targetH : targetW;
+      const multiplier = res / baseSize;
+      
+      targetW = Math.round(targetW * multiplier);
+      targetH = Math.round(targetH * multiplier);
+
+      const offscreen = new OffscreenCanvas(targetW, targetH);
+      const offCtx = offscreen.getContext('2d') as CanvasRenderingContext2D;
+      
+      if (!transparentParam) {
+        offCtx.fillStyle = isDarkTheme() ? '#000000' : '#ffffff';
+        offCtx.fillRect(0, 0, targetW, targetH);
+      }
+
+      renderFrame(offCtx, globalTime(), targetW, targetH, state().slides, false, false, false, null);
+
+      const blob = await offscreen.convertToBlob({ type: 'image/png' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kinetic_snapshot_${resParam}p.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert("Failed to export snapshot: " + err.message);
+    }
+  };
+
+  function AspectRatioCard(props: { value: '16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '2:1', label: string, shape: string, orientation: string }) {
+    const isActive = () => aspectRatio() === props.value;
+    return (
+      <button
+        onClick={() => setAspectRatio(props.value)}
+        class={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all duration-200 cursor-pointer group shadow-sm ${
+          isActive()
+            ? 'bg-emerald-50/70 border-emerald-500 dark:bg-emerald-500/10 dark:border-emerald-500 text-emerald-700 dark:text-emerald-400 ring-2 ring-emerald-500/10'
+            : 'bg-white hover:bg-emerald-50/30 dark:bg-zinc-800 dark:hover:bg-zinc-700/50 border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-300'
+        }`}
+        type="button"
+      >
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="text-[11px] font-bold tracking-tight">{props.label}</span>
+          <div class={`relative rounded ${isActive() ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-zinc-600'} ${props.shape} flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity duration-200`}></div>
+        </div>
+        <span class={`text-[8px] uppercase tracking-wider font-semibold ${isActive() ? 'text-emerald-600 dark:text-emerald-500' : 'text-gray-400 dark:text-zinc-500'}`}>{props.orientation}</span>
+      </button>
+    );
+  }
+
+  createEffect(() => {
     state(); globalTime(); activeElementId();
     requestRender();
   });
@@ -268,36 +376,238 @@ export default function KineticEditor() {
     document.fonts.ready.then(requestRender);
   });
 
+  // Audio Engine
+  const initAudio = () => {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+  };
+
+  const stopAudio = () => {
+    if (currentAudioSource) {
+      try { currentAudioSource.stop(); } catch(e){}
+      currentAudioSource.disconnect();
+      currentAudioSource = null;
+    }
+  };
+
+  const playAudio = (globalTimeOffset: number) => {
+    if (!currentAudioBuffer || !audioCtx) return;
+    stopAudio();
+    
+    currentAudioSource = audioCtx.createBufferSource();
+    currentAudioSource.buffer = currentAudioBuffer;
+    
+    globalGainNode = audioCtx.createGain();
+    globalGainNode.gain.value = isMuted() ? 0 : audioVolume();
+    currentAudioSource.connect(globalGainNode);
+    
+    if (isExporting() && exportAudioDest) {
+      globalGainNode.connect(exportAudioDest);
+    } else {
+      globalGainNode.connect(audioCtx.destination);
+    }
+
+    const trackDur = audioTrimOut() - audioTrimIn();
+    if (trackDur <= 0) return;
+
+    let playOffset = globalTimeOffset % trackDur;
+    let startPos = audioTrimIn() + playOffset;
+    
+    currentAudioSource.loop = true;
+    currentAudioSource.loopStart = audioTrimIn();
+    currentAudioSource.loopEnd = audioTrimOut();
+
+    currentAudioSource.start(0, startPos);
+  };
+
+  const drawWaveform = () => {
+    if (!currentAudioBuffer || !waveformCanvasRef) return;
+    const wCtx = waveformCanvasRef.getContext('2d');
+    if (!wCtx) return;
+    const rect = waveformCanvasRef.parentElement!.getBoundingClientRect();
+    waveformCanvasRef.width = rect.width;
+    waveformCanvasRef.height = rect.height;
+
+    const data = currentAudioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / waveformCanvasRef.width);
+    const amp = waveformCanvasRef.height / 2;
+
+    wCtx.clearRect(0, 0, waveformCanvasRef.width, waveformCanvasRef.height);
+    wCtx.fillStyle = '#10b981';
+
+    for (let i = 0; i < waveformCanvasRef.width; i++) {
+      let min = 1.0, max = -1.0;
+      for (let j = 0; j < step; j++) {
+        const datum = data[(i * step) + j];
+        if (datum < min) min = datum;
+        if (datum > max) max = datum;
+      }
+      const y = (1 + min) * amp;
+      const h = Math.max(1, (max - min) * amp);
+      wCtx.fillRect(i, y, 1, h);
+    }
+
+    const dur = currentAudioBuffer.duration;
+    const startX = (audioTrimIn() / dur) * waveformCanvasRef.width;
+    const endX = (audioTrimOut() / dur) * waveformCanvasRef.width;
+
+    wCtx.fillStyle = 'rgba(0,0,0,0.6)';
+    wCtx.fillRect(0, 0, startX, waveformCanvasRef.height);
+    wCtx.fillRect(endX, 0, waveformCanvasRef.width - endX, waveformCanvasRef.height);
+  };
+
+  createEffect(() => {
+    audioTrimIn(); audioTrimOut();
+    drawWaveform();
+  });
+
+  const handleAudioUpload = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    initAudio();
+    setAudioFileLabel(file.name);
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      audioCtx!.decodeAudioData(evt.target!.result as ArrayBuffer, (buffer) => {
+        currentAudioBuffer = buffer;
+        setAudioDuration(buffer.duration);
+        setAudioTrimIn(0);
+        setAudioTrimOut(buffer.duration);
+        drawWaveform();
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  let offCanvasExport: HTMLCanvasElement | null = null;
+  let offCtxExport: CanvasRenderingContext2D | null = null;
+  let mediaRecorder: MediaRecorder | null = null;
+  let recordedChunks: Blob[] = [];
+
   const gameLoop = (timestamp: number) => {
     if (!isPlaying()) { lastTimestamp = timestamp; return; }
     const dt = (timestamp - lastTimestamp) / 1000;
     lastTimestamp = timestamp;
     
     let newTime = globalTime() + dt;
-    if (newTime >= maxDuration()) newTime = 0; // Loop
+    if (newTime >= maxDuration()) {
+      if (isExporting()) {
+        newTime = maxDuration();
+      } else {
+        newTime = 0; // Loop
+        playAudio(0);
+      }
+    }
     setGlobalTime(newTime);
     
-    // Auto switch active slide visually
     const newActiveIdx = Math.floor(newTime / SLIDE_DURATION) % Math.max(1, state().slides.length);
-    if (newActiveIdx !== activeSlideIndex()) {
+    if (newActiveIdx !== activeSlideIndex() && !isExporting()) {
       setActiveSlideIndex(newActiveIdx || 0);
       setActiveElementId(null);
     }
     
+    if (isExporting() && offCanvasExport && offCtxExport) {
+      offCtxExport.save();
+      offCtxExport.setTransform(1, 0, 0, 1, 0, 0);
+      offCtxExport.clearRect(0, 0, offCanvasExport.width, offCanvasExport.height);
+      renderFrame(offCtxExport, globalTime(), offCanvasExport.width, offCanvasExport.height, state().slides, false, false, true, null);
+      offCtxExport.restore();
+    }
+
     animationFrameId = requestAnimationFrame(gameLoop);
   };
 
   const togglePlay = () => {
+    initAudio();
     setIsPlaying(!isPlaying());
     if (isPlaying()) {
       lastTimestamp = performance.now();
       setActiveElementId(null);
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      playAudio(globalTime());
       animationFrameId = requestAnimationFrame(gameLoop);
     } else {
       cancelAnimationFrame(animationFrameId);
+      stopAudio();
       const currIdx = Math.floor(globalTime() / SLIDE_DURATION);
       if(currIdx !== activeSlideIndex()) setActiveSlideIndex(currIdx);
       requestRender();
+    }
+  };
+
+  const exportVideo = async () => {
+    if (isExporting() || (mediaRecorder && mediaRecorder.state === 'recording')) return;
+    setIsExporting(true);
+
+    const aspect = aspectRatio();
+    let nativeW = 1920; let nativeH = 1080;
+    if (aspect === '9:16') { nativeW = 1080; nativeH = 1920; }
+    else if (aspect === '1:1') { nativeW = 1080; nativeH = 1080; }
+    else if (aspect === '4:5') { nativeW = 1080; nativeH = 1350; }
+    else if (aspect === '3:4') { nativeW = 1080; nativeH = 1440; }
+    else if (aspect === '4:3') { nativeW = 1440; nativeH = 1080; }
+    else if (aspect === '2:1') { nativeW = 2160; nativeH = 1080; }
+
+    offCanvasExport = new OffscreenCanvas(nativeW, nativeH) as unknown as HTMLCanvasElement;
+    offCtxExport = offCanvasExport.getContext('2d');
+
+    try {
+      initAudio();
+      if(audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+      
+      const stream = (offCanvasExport as any).captureStream(30);
+      const tracks = [...stream.getVideoTracks()];
+
+      if (currentAudioBuffer && audioCtx) {
+        exportAudioDest = audioCtx.createMediaStreamDestination();
+        tracks.push(...exportAudioDest.stream.getAudioTracks());
+      }
+
+      const combinedStream = new MediaStream(tracks);
+      let options = { mimeType: 'video/webm; codecs=vp9' };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'video/mp4' };
+      }
+
+      mediaRecorder = new MediaRecorder(combinedStream, options);
+      recordedChunks = [];
+
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: options.mimeType || 'video/mp4' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `motion-export-${Date.now()}.${options.mimeType.includes('webm') ? 'webm' : 'mp4'}`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
+        
+        setIsExporting(false);
+        offCanvasExport = null;
+        offCtxExport = null;
+        exportAudioDest = null;
+      };
+
+      if(isPlaying()) togglePlay();
+      setGlobalTime(0);
+      setActiveElementId(null);
+      mediaRecorder.start();
+      togglePlay();
+
+      setTimeout(() => {
+        if (mediaRecorder?.state === 'recording') {
+          togglePlay();
+          mediaRecorder.stop();
+          setGlobalTime(0);
+        }
+      }, maxDuration() * 1000 + 300);
+
+    } catch (err) {
+      console.error(err);
+      setIsExporting(false);
     }
   };
 
@@ -307,6 +617,31 @@ export default function KineticEditor() {
   return (
     <div class="w-full h-[calc(100vh-3.5rem)] flex flex-col bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 overflow-hidden font-sans">
       
+      {/* HEADER SECTION */}
+      <header class="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-white/10 shrink-0 z-30 relative shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-sm border border-emerald-200 dark:border-emerald-800">
+            <Icon name="layers" class="w-4 h-4" />
+          </div>
+          <div>
+            <h1 class="text-sm font-bold text-gray-900 dark:text-white tracking-tight leading-tight">Kinetic Studio</h1>
+            <p class="text-[10px] text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Motion Graphics Editor</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <button onClick={() => setIsExportingSnapshot(true)} class="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 hover:border-emerald-300 dark:hover:border-white/20 text-xs font-semibold shadow-sm transition-all text-gray-700 dark:text-gray-300 cursor-pointer">
+            <Icon name="camera" class="w-4 h-4 text-emerald-500" />
+            <span class="hidden sm:inline">Snapshot</span>
+          </button>
+          
+          <button onClick={() => setIsExporting(true)} class="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white border border-transparent shadow-md transition-all text-xs font-semibold cursor-pointer">
+            <Icon name="download" class="w-4 h-4" />
+            <span class="hidden sm:inline">Export Video</span>
+          </button>
+        </div>
+      </header>
+
       {/* MAIN LAYOUT */}
       <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative z-10 p-2 sm:p-4 gap-4">
         
@@ -317,6 +652,8 @@ export default function KineticEditor() {
           <div class="hidden lg:flex border-t lg:border-t-0 lg:border-b border-gray-200 dark:border-white/5 bg-gray-100/50 dark:bg-black/20 shrink-0">
             <button class={`flex-1 py-3 text-xs font-semibold border-b-2 transition-colors uppercase tracking-wider ${leftTab() === 'slides' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`} onClick={() => setLeftTab('slides')}>Slides</button>
             <button class={`flex-1 py-3 text-xs font-semibold border-b-2 transition-colors uppercase tracking-wider ${leftTab() === 'add' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`} onClick={() => setLeftTab('add')}>Add</button>
+            <button class={`flex-1 py-3 text-xs font-semibold border-b-2 transition-colors uppercase tracking-wider ${leftTab() === 'audio' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`} onClick={() => setLeftTab('audio')}>Audio</button>
+            <button class={`flex-1 py-3 text-xs font-semibold border-b-2 transition-colors uppercase tracking-wider ${leftTab() === 'settings' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`} onClick={() => setLeftTab('settings')}>Settings</button>
           </div>
 
           <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
@@ -343,6 +680,21 @@ export default function KineticEditor() {
                     </div>
                   </div>
                 )}</For>
+              </div>
+            </Show>
+
+            <Show when={leftTab() === 'settings'}>
+              <div class="flex flex-col gap-3">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Canvas Aspect Ratio</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <AspectRatioCard value="16:9" label="16:9 Landscape" shape="w-8 h-4.5" orientation="Horizontal Video" />
+                  <AspectRatioCard value="9:16" label="9:16 Portrait" shape="w-4.5 h-8" orientation="TikTok & Shorts" />
+                  <AspectRatioCard value="1:1" label="1:1 Square" shape="w-6 h-6" orientation="Instagram Feed" />
+                  <AspectRatioCard value="4:5" label="4:5 Portrait" shape="w-6.5 h-8" orientation="Social Media" />
+                  <AspectRatioCard value="3:4" label="3:4 Standard" shape="w-6 h-8" orientation="Pinterest Pin" />
+                  <AspectRatioCard value="4:3" label="4:3 Standard" shape="w-8 h-6" orientation="Classic Desktop" />
+                  <AspectRatioCard value="2:1" label="2:1 Panoramic" shape="w-8 h-4" orientation="Panoramic Banner" />
+                </div>
               </div>
             </Show>
 
@@ -373,14 +725,8 @@ export default function KineticEditor() {
         {/* CENTER CANVASES */}
         <section class="flex-none h-[50vh] lg:h-auto lg:flex-1 flex flex-col relative min-w-0 min-h-0 bg-transparent order-1 lg:order-2">
           {/* Canvas Viewport */}
-          <div class="flex-1 relative overflow-hidden" ref={containerRef}>
-            <div 
-              class="absolute top-2 sm:top-6 left-2 sm:left-6 right-2 sm:right-6 bottom-2 sm:bottom-6 bg-white dark:bg-black rounded-2xl shadow-xl overflow-hidden ring-1 ring-gray-200 dark:ring-white/10"
-              style={{
-                "background-image": "radial-gradient(rgba(128,128,128,0.1) 1px, transparent 1px)",
-                "background-size": "24px 24px"
-              }}
-            >
+          <div class="flex-1 min-h-[300px] relative bg-gray-100/50 dark:bg-black/50 border border-gray-200 dark:border-white/5 rounded-xl shadow-inner overflow-hidden flex items-center justify-center p-4">
+            <div ref={containerRef} class="w-full h-full relative flex items-center justify-center" id="kinetic-canvas-container">
               <canvas ref={canvasRef} class="absolute inset-0 w-full h-full cursor-pointer touch-none"></canvas>
             </div>
           </div>
@@ -395,21 +741,30 @@ export default function KineticEditor() {
             <div class="font-mono text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 w-12 shrink-0 bg-gray-100 dark:bg-black/40 px-2 py-1 rounded border border-gray-200 dark:border-white/5 text-center shadow-inner">
               {globalTime().toFixed(1)}s
             </div>
-            <input 
-              type="range" 
-              min="0" max={maxDuration()} step="0.01" 
-              value={globalTime()} 
-              onInput={(e) => {
-                const t = parseFloat(e.currentTarget.value);
-                setGlobalTime(t);
-                const newIdx = Math.floor(t / SLIDE_DURATION) % Math.max(1, state().slides.length);
-                if (newIdx !== activeSlideIndex()) {
-                  setActiveSlideIndex(newIdx);
-                  setActiveElementId(null);
-                }
-              }}
-              class="flex-1 accent-emerald-500 cursor-pointer h-1.5 bg-gray-200 dark:bg-white/10 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
-            />
+              <input 
+                type="range" 
+                min="0" max={maxDuration()} step="0.01" 
+                value={globalTime()} 
+                onInput={(e) => {
+                  const t = parseFloat(e.currentTarget.value);
+                  setGlobalTime(t);
+                  const newIdx = Math.floor(t / SLIDE_DURATION) % Math.max(1, state().slides.length);
+                  if (newIdx !== activeSlideIndex()) {
+                    setActiveSlideIndex(newIdx);
+                    setActiveElementId(null);
+                  }
+                  if(isPlaying()) playAudio(t);
+                }}
+                class="flex-1 accent-emerald-500 cursor-pointer h-1.5 bg-gray-200 dark:bg-white/10 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+              />
+            <button onClick={() => { setIsMuted(!isMuted()); if(globalGainNode) globalGainNode.gain.value = !isMuted() ? 0 : audioVolume(); }} class="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 transition-colors shrink-0">
+              <Icon name={isMuted() ? "volume-x" : "volume-2"} class="w-5 h-5" />
+            </button>
+            <button onClick={exportVideo} disabled={isExporting()} class="bg-gradient-to-b from-emerald-400 to-emerald-600 hover:from-emerald-300 hover:to-emerald-500 text-zinc-950 px-4 py-1.5 rounded-full font-bold text-xs shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+              <Show when={isExporting()} fallback={<><Icon name="download" class="w-3.5 h-3.5" /> Export</>}>
+                Rendering...
+              </Show>
+            </button>
           </div>
         </section>
 
@@ -548,8 +903,6 @@ export default function KineticEditor() {
                     </div>
                   </div>
                   
-                  {/* Animation config could go here if we expand, keeping it simple for the preview */}
-                  
                 </div>
               }>
                 <div class="space-y-6">
@@ -613,32 +966,53 @@ export default function KineticEditor() {
         {/* MOBILE UNIFIED TABS */}
         <div class="flex lg:hidden w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden shrink-0 shadow-sm order-4">
           <button 
-            class={`flex-1 py-3 text-xs font-bold transition-colors uppercase tracking-wider ${mobileTab() === 'slides' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-500 dark:text-zinc-500'}`} 
+            class={`flex-1 py-3 text-[10px] sm:text-xs font-bold transition-colors uppercase tracking-wider flex flex-col items-center gap-1 ${mobileTab() === 'slides' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-500 dark:text-zinc-500'}`} 
             onClick={() => setMobileTab('slides')}
           >
             Slides
           </button>
           <button 
-            class={`flex-1 py-3 text-xs font-bold transition-colors uppercase tracking-wider ${mobileTab() === 'add' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-500 dark:text-zinc-500'}`} 
+            class={`flex-1 py-3 text-[10px] sm:text-xs font-bold transition-colors uppercase tracking-wider flex flex-col items-center gap-1 ${mobileTab() === 'add' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-500 dark:text-zinc-500'}`} 
             onClick={() => setMobileTab('add')}
           >
             Add
           </button>
           <button 
-            class={`flex-1 py-3 text-xs font-bold transition-colors uppercase tracking-wider ${mobileTab() === 'layers' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-500 dark:text-zinc-500'}`} 
+            class={`flex-1 py-3 text-[10px] sm:text-xs font-bold transition-colors uppercase tracking-wider flex flex-col items-center gap-1 ${mobileTab() === 'audio' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-500 dark:text-zinc-500'}`} 
+            onClick={() => setMobileTab('audio')}
+          >
+            Audio
+          </button>
+          <button 
+            class={`flex-1 py-3 text-[10px] sm:text-xs font-bold transition-colors uppercase tracking-wider flex flex-col items-center gap-1 ${mobileTab() === 'layers' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-500 dark:text-zinc-500'}`} 
             onClick={() => setMobileTab('layers')}
           >
             Layers
           </button>
           <button 
-            class={`flex-1 py-3 text-xs font-bold transition-colors uppercase tracking-wider ${mobileTab() === 'props' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-500 dark:text-zinc-500'}`} 
+            class={`flex-1 py-3 text-[10px] sm:text-xs font-bold transition-colors uppercase tracking-wider flex flex-col items-center gap-1 ${mobileTab() === 'props' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-500 dark:text-zinc-500'}`} 
             onClick={() => setMobileTab('props')}
           >
             Props
           </button>
         </div>
       </main>
+      
+      {/* MODALS */}
+      <ExportModal
+        isOpen={isExporting()}
+        onClose={() => setIsExporting(false)}
+        store={{ ...state(), duration: maxDuration() } as any}
+        aspectRatio={aspectRatio()}
+        projectTitle="Kinetic_Studio_Export"
+        onExport={exportVideo}
+      />
+      
+      <SnapshotModal
+        isOpen={isExportingSnapshot()}
+        onClose={() => setIsExportingSnapshot(false)}
+        onExport={exportSnapshotFrame}
+      />
     </div>
   );
 }
-

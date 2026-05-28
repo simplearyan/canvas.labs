@@ -1,0 +1,139 @@
+/* 
+  Kinetic Theme
+  Extracted from KineticEditor.tsx
+*/
+
+@theme {
+  /* Kinetic Emerald Accent Colors */
+  --color-kinetic-50: #ecfdf5;
+  --color-kinetic-100: #d1fae5;
+  --color-kinetic-200: #a7f3d0;
+  --color-kinetic-300: #6ee7b7;
+  --color-kinetic-400: #34d399;
+  --color-kinetic-500: #10b981;
+  --color-kinetic-600: #059669;
+  --color-kinetic-700: #047857;
+  --color-kinetic-800: #065f46;
+  --color-kinetic-900: #064e3b;
+
+  /* Fonts */
+  --font-kinetic-sans: 'Inter', 'Outfit', sans-serif;
+  --font-kinetic-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+/* 
+  Global Variable Overrides 
+  Apply data-theme-palette="kinetic" to HTML or Body to use this globally across the app
+*/
+:root[data-theme-palette="kinetic"] {
+  --brand-500: var(--color-kinetic-500);
+  --brand-600: var(--color-kinetic-600);
+  --brand-700: var(--color-kinetic-700);
+  
+  --app-bg: #f9fafb; /* gray-50 */
+  --header-bg: #ffffff; /* white */
+  --sidebar-bg: rgba(255, 255, 255, 0.7); /* white/70 */
+  --card-bg: #ffffff;
+  --filter-bg: rgba(255, 255, 255, 0.95);
+  --border-color: #e5e7eb; /* gray-200 */
+  --text-main: #111827; /* gray-900 */
+  --text-muted: #6b7280; /* gray-500 */
+  --header-glass-bg: rgba(255, 255, 255, 0.7);
+  --scrollbar-thumb: #d1d5db; /* gray-300 */
+  --scrollbar-thumb-hover: #9ca3af; /* gray-400 */
+}
+
+.dark[data-theme-palette="kinetic"] {
+  --brand-500: var(--color-kinetic-500);
+  --brand-600: var(--color-kinetic-600);
+  --brand-700: var(--color-kinetic-700);
+
+  --app-bg: #09090b; /* zinc-950 */
+  --header-bg: #18181b; /* zinc-900 */
+  --sidebar-bg: rgba(24, 24, 27, 0.75); /* zinc-900/75 */
+  --card-bg: #27272a; /* zinc-800 */
+  --filter-bg: rgba(24, 24, 27, 0.9);
+  --border-color: rgba(255, 255, 255, 0.1); /* white/10 */
+  --text-main: #f4f4f5; /* zinc-100 */
+  --text-muted: #a1a1aa; /* zinc-400 */
+  --header-glass-bg: rgba(9, 9, 11, 0.7);
+  --scrollbar-thumb: #3f3f46; /* zinc-700 */
+  --scrollbar-thumb-hover: #52525b; /* zinc-600 */
+}
+
+/* Custom UI Utilities Extracted from Kinetic Editor */
+@utility kinetic-glass {
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(24px);
+  border: 1px solid #e5e7eb;
+
+  .dark & {
+    background-color: rgba(24, 24, 27, 0.75);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+@utility kinetic-panel-bg {
+  background-color: rgba(243, 244, 246, 0.5); /* gray-100/50 */
+  border: 1px solid #e5e7eb;
+  
+  .dark & {
+    background-color: rgba(0, 0, 0, 0.5); /* black/50 */
+    border-color: rgba(255, 255, 255, 0.05); /* white/5 */
+  }
+}
+
+@utility kinetic-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem; /* rounded-xl */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+
+  .dark & {
+    background-color: rgba(0, 0, 0, 0.2); /* black/20 */
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+@utility kinetic-card-hover {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+
+  &:hover {
+    border-color: var(--color-kinetic-300);
+  }
+
+  .dark &:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+@utility kinetic-card-active {
+  background-color: var(--color-kinetic-50);
+  border-color: var(--color-kinetic-500);
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+
+  .dark & {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: var(--color-kinetic-500);
+  }
+}
+
+@utility kinetic-gradient-btn {
+  background-image: linear-gradient(to bottom, var(--color-kinetic-400), var(--color-kinetic-600));
+  color: #09090b; /* zinc-950 */
+  font-weight: 700;
+  border-radius: 9999px; /* rounded-full */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 150ms;
+  
+  &:hover {
+    background-image: linear-gradient(to bottom, var(--color-kinetic-300), var(--color-kinetic-500));
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

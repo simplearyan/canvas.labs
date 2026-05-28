@@ -37,3 +37,43 @@
       linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   }
 }
+
+/* 
+  Global Variable Overrides 
+  Apply data-theme-palette="blueprint" to HTML or Body to use this globally across the app
+*/
+:root[data-theme-palette="blueprint"] {
+  --brand-500: var(--color-blueprint-500);
+  --brand-600: var(--color-blueprint-800);
+  --brand-700: var(--color-blueprint-900);
+  
+  --app-bg: #f4f7fa; /* blueprint-50 tinted */
+  --header-bg: #ffffff;
+  --sidebar-bg: #f4f7fa;
+  --card-bg: #ffffff;
+  --filter-bg: rgba(255, 255, 255, 0.95);
+  --border-color: var(--color-blueprint-200);
+  --text-main: #102a43; /* blueprint-800 */
+  --text-muted: #627d98; /* blueprint-500 */
+  --header-glass-bg: rgba(255, 255, 255, 0.7);
+  --scrollbar-thumb: var(--color-blueprint-300);
+  --scrollbar-thumb-hover: var(--color-blueprint-400);
+}
+
+.dark[data-theme-palette="blueprint"] {
+  --brand-500: var(--color-blueprint-400);
+  --brand-600: var(--color-blueprint-500);
+  --brand-700: var(--color-blueprint-800);
+
+  --app-bg: #050505;
+  --header-bg: rgba(5, 5, 5, 0.85);
+  --sidebar-bg: #050505;
+  --card-bg: #111111;
+  --filter-bg: rgba(5, 5, 5, 0.9);
+  --border-color: rgba(255, 255, 255, 0.05); /* white/5 */
+  --text-main: #f0f4f8; /* blueprint-50 */
+  --text-muted: #829ab1; /* blueprint-400 */
+  --header-glass-bg: rgba(10, 10, 12, 0.7);
+  --scrollbar-thumb: #27272a;
+  --scrollbar-thumb-hover: #3f3f46;
+}

@@ -609,16 +609,16 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
             <div
               ref={canvasContainerRef}
               class={`rounded-2xl border border-border-color shadow-sm flex items-center justify-center overflow-hidden relative ${isFullscreen()
-                  ? '!w-full !h-full !aspect-none !rounded-none !bg-zinc-950 !border-none !p-0'
-                  : aspectRatio() === '9:16'
-                    ? 'aspect-[9/16] w-full max-w-[168px] sm:max-w-[253px] md:max-w-[281px] mx-auto'
-                    : aspectRatio() === '1:1'
-                      ? 'aspect-square w-full max-w-[300px] sm:max-w-[450px] md:max-w-[500px] mx-auto'
-                      : aspectRatio() === '4:5'
-                        ? 'aspect-[4/5] w-full max-w-[240px] sm:max-w-[360px] md:max-w-[400px] mx-auto'
-                        : aspectRatio() === '4:3'
-                          ? 'aspect-[4/3] w-full max-w-[400px] sm:max-w-[600px] md:max-w-[666px] mx-auto'
-                          : 'aspect-video w-full'
+                ? '!w-full !h-full !aspect-none !rounded-none !bg-zinc-950 !border-none !p-0'
+                : aspectRatio() === '9:16'
+                  ? 'aspect-[9/16] w-full max-w-[168px] sm:max-w-[253px] md:max-w-[281px] mx-auto'
+                  : aspectRatio() === '1:1'
+                    ? 'aspect-square w-full max-w-[300px] sm:max-w-[450px] md:max-w-[500px] mx-auto'
+                    : aspectRatio() === '4:5'
+                      ? 'aspect-[4/5] w-full max-w-[240px] sm:max-w-[360px] md:max-w-[400px] mx-auto'
+                      : aspectRatio() === '4:3'
+                        ? 'aspect-[4/3] w-full max-w-[400px] sm:max-w-[600px] md:max-w-[666px] mx-auto'
+                        : 'aspect-video w-full'
                 }`}
               style={{ "background-color": typographyStore.bgColor }}
             >
@@ -875,8 +875,8 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                             <button
                               onClick={() => setActiveSlider('letterSpacing')}
                               class={`p-2 rounded-full transition-all duration-200 cursor-pointer group flex items-center justify-center shrink-0 ${activeSlider() === 'letterSpacing'
-                                  ? 'bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400 ring-1 ring-brand-500/20'
-                                  : 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400'
+                                ? 'bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400 ring-1 ring-brand-500/20'
+                                : 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400'
                                 }`}
                               title="Adjust Letter Spacing"
                               type="button"
@@ -895,8 +895,8 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                           <button
                             onClick={() => setActiveSlider('wiggle')}
                             class={`p-2 rounded-full transition-all duration-200 cursor-pointer group flex items-center justify-center shrink-0 ${activeSlider() === 'wiggle'
-                                ? 'bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400 ring-1 ring-brand-500/20'
-                                : 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400'
+                              ? 'bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400 ring-1 ring-brand-500/20'
+                              : 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400'
                               }`}
                             title="Adjust Wiggle Shake"
                             type="button"
@@ -1532,8 +1532,8 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                             setActiveTab('style');
                           }}
                           class={`space-y-1.5 py-1.5 transition-all cursor-pointer ${typographyStore.selectedId === el.id
-                              ? 'border-l-2 border-brand-500 pl-3.5'
-                              : 'border-l-2 border-transparent pl-3.5'
+                            ? 'border-l-2 border-brand-500 pl-3.5'
+                            : 'border-l-2 border-transparent pl-3.5'
                             }`}
                         >
                           <div class="flex items-center justify-between">
@@ -1728,8 +1728,8 @@ export default function TypographyPresetTemplate(props: { slug: string }) {
                     <button
                       onClick={() => setAspectRatio(ratio as any)}
                       class={`py-2.5 rounded-xl text-[10px] font-extrabold border transition-all cursor-pointer ${aspectRatio() === ratio
-                          ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
-                          : 'bg-black/5 dark:bg-white/5 border-border-color text-text-main hover:border-brand-500/30'
+                        ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
+                        : 'bg-black/5 dark:bg-white/5 border-border-color text-text-main hover:border-brand-500/30'
                         }`}
                     >
                       {ratio}

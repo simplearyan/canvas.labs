@@ -5,7 +5,7 @@ export const SITE_CONFIG = {
     creator: "Canvas Labs Team",
     defaultAccent: "#8b5cf6", // brand violet/purple
     defaultBg: "#050505",     // pitch black base
-    darkModePalette: "capcut-v2", // Choose dark mode color scheme: "deep-black" (classic pitch black) or "capcut-v2" (matte cinematic grey)
+    themePalette: "capcut-v2",  // Choose site color scheme: "default", "capcut-v2", "kinetic", "blueprint"
   },
   seo: {
     title: "CanvasLabs — Premium Animated Background Templates",

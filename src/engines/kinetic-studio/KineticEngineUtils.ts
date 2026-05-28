@@ -15,7 +15,7 @@ export const defaultKineticState: KineticState = {
       elements: [
         {
           id: generateId(), type: 'circle',
-          x: 400, y: 250, size: 220, rotation: 0,
+          x: 960, y: 540, size: 450, rotation: 0,
           fill: '#10b981', stroke: '#000000', strokeWidth: 0,
           shadowColor: '#000000', shadowBlur: 30, shadowOffsetX: 0, shadowOffsetY: 10,
           animIn: 'fadeScale', animInEase: 'easeOut', inDur: 0.6,
@@ -25,8 +25,8 @@ export const defaultKineticState: KineticState = {
         },
         {
           id: generateId(), type: 'text',
-          text: 'STUDIO', font: "'Space Grotesk'", fontWeight: '700', letterSpacing: 0, size: 120,
-          x: 450, y: 250, rotation: 0,
+          text: 'STUDIO', font: "'Space Grotesk'", fontWeight: '700', letterSpacing: 0, size: 280,
+          x: 960, y: 540, rotation: 0,
           fill: '#ffffff', stroke: '#000000', strokeWidth: 0,
           shadowColor: '#000000', shadowBlur: 20, shadowOffsetX: 0, shadowOffsetY: 10,
           animIn: 'typewriterPlus', animInEase: 'linear', inDur: 1.0,
@@ -44,8 +44,8 @@ export const defaultKineticState: KineticState = {
       elements: [
         {
           id: generateId(), type: 'text',
-          text: 'PRO', font: "'Plus Jakarta Sans'", fontWeight: '800', letterSpacing: 10, size: 160,
-          x: 450, y: 250, rotation: 0,
+          text: 'PRO', font: "'Plus Jakarta Sans'", fontWeight: '800', letterSpacing: 10, size: 380,
+          x: 960, y: 540, rotation: 0,
           fill: '#60a5fa', stroke: '#000000', strokeWidth: 0,
           shadowColor: '#000000', shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0, 
           animIn: 'bounceInWord', animInEase: 'bounce', inDur: 1.0,

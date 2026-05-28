@@ -89,7 +89,8 @@ export function drawSlide(
   // Draw Background
   if (!transparentBg && slide.bg !== 'transparent') {
     ctxToDraw.fillStyle = slide.bg;
-    ctxToDraw.fillRect(0, 0, width, height);
+    // Overdraw slightly to prevent anti-aliasing gaps between adjacent slides during transition
+    ctxToDraw.fillRect(-2, -2, width + 4, height + 4);
   }
 
   // Draw Elements (Painter's algorithm - lower index is back)
@@ -295,11 +296,12 @@ export function renderFrame(
 
     if (slide.transition === 'slideLeft') {
       drawSlide(ctxToDraw, slide, localTime, width, height, -width * t, 1, true, transparentBg, drawUI, isPlaying, activeElementId);
-      if (nextSlide) drawSlide(ctxToDraw, nextSlide, nextLocalTime, width, height, width * (1-t), 1, false, transparentBg, drawUI, isPlaying, activeElementId);
+      // overlap slightly by 1px to prevent any white/black lines
+      if (nextSlide) drawSlide(ctxToDraw, nextSlide, nextLocalTime, width, height, (width * (1-t)) - 1, 1, false, transparentBg, drawUI, isPlaying, activeElementId);
     } 
     else if (slide.transition === 'slideUp') {
       drawSlide(ctxToDraw, slide, localTime, width, height, 0, 1 - t, true, transparentBg, drawUI, isPlaying, activeElementId); // fade current while up
-      ctxToDraw.save(); ctxToDraw.translate(0, height * (1-t));
+      ctxToDraw.save(); ctxToDraw.translate(0, height * (1-t) - 1);
       if (nextSlide) drawSlide(ctxToDraw, nextSlide, nextLocalTime, width, height, 0, 1, false, transparentBg, drawUI, isPlaying, activeElementId);
       ctxToDraw.restore();
     }

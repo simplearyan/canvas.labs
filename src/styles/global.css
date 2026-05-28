@@ -5,6 +5,7 @@
 @import "./themes/kenichi.css";
 @import "./themes/kenichi-v2.css";
 @import "./themes/blueprint.css";
+@import "./themes/kinetic.css";
 
 @theme {
   --font-sans: 'Outfit', 'Inter', sans-serif;
