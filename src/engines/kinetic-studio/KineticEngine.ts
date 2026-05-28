@@ -29,15 +29,10 @@ export function applyEase(t: number, type: EasingType): number {
  * CANVAS ENGINE RENDERING LOGIC
  */
 
-export function drawBoundingBox(ctxToDraw: CanvasRenderingContext2D, el: KineticElement) {
-  ctxToDraw.save();
-  
-  // Clear shadows for the bounding box itself
-  ctxToDraw.shadowColor = 'transparent';
-  ctxToDraw.shadowBlur = 0;
-  ctxToDraw.shadowOffsetX = 0;
-  ctxToDraw.shadowOffsetY = 0;
-  
+import { BoundingBoxRenderer } from '../core/interaction/BoundingBoxRenderer';
+import type { BoundingBox, InteractionHandle } from '../core/interaction/types';
+
+export function getKineticElementBounds(ctxToDraw: CanvasRenderingContext2D, el: KineticElement): BoundingBox {
   let hw = 0, hh = 0;
   if (el.type === 'text' && el.text) {
     ctxToDraw.font = `${el.fontWeight || '700'} ${el.size}px ${el.font}`;
@@ -51,21 +46,32 @@ export function drawBoundingBox(ctxToDraw: CanvasRenderingContext2D, el: Kinetic
   } else if (el.type === 'circle') {
     hw = (el.size / 2) + 10; hh = (el.size / 2) + 10;
   }
+  return { x: el.x, y: el.y, w: hw * 2, h: hh * 2, rotation: el.rotation || 0 };
+}
 
-  ctxToDraw.strokeStyle = '#3b82f6'; // Blue
-  ctxToDraw.lineWidth = 1.5;
-  ctxToDraw.setLineDash([6, 6]);
-  ctxToDraw.strokeRect(-hw, -hh, hw * 2, hh * 2);
-  
-  // Center dot
-  ctxToDraw.fillStyle = '#ffffff';
-  ctxToDraw.setLineDash([]);
-  ctxToDraw.beginPath();
-  ctxToDraw.arc(0, 0, 3, 0, Math.PI*2);
-  ctxToDraw.fill();
-  ctxToDraw.stroke();
-  
-  ctxToDraw.restore();
+export function getKineticElementHandles(ctxToDraw: CanvasRenderingContext2D, el: KineticElement, displayScale: number = 1): InteractionHandle[] {
+  const bounds = getKineticElementBounds(ctxToDraw, el);
+  return BoundingBoxRenderer.getHandlePositions(bounds, displayScale);
+}
+
+export function kineticHitTest(ctxToDraw: CanvasRenderingContext2D, elements: KineticElement[], x: number, y: number): string | null {
+  for (let i = elements.length - 1; i >= 0; i--) {
+    const el = elements[i];
+    const bounds = getKineticElementBounds(ctxToDraw, el);
+    const hitPadding = 25;
+    
+    // Convert click to local rotated space
+    const rad = -(bounds.rotation) * Math.PI / 180;
+    const dx = x - bounds.x;
+    const dy = y - bounds.y;
+    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+
+    if (Math.abs(rx) <= (bounds.w / 2 + hitPadding) && Math.abs(ry) <= (bounds.h / 2 + hitPadding)) {
+      return el.id;
+    }
+  }
+  return null;
 }
 
 export function drawSlide(
@@ -80,7 +86,8 @@ export function drawSlide(
   transparentBg = false, 
   drawUI = true,
   isPlaying = false,
-  activeElementId: string | null = null
+  activeElementId: string | null = null,
+  isEditingText: boolean = false
 ) {
   ctxToDraw.save();
   ctxToDraw.translate(offsetX, 0);
@@ -174,9 +181,11 @@ export function drawSlide(
       ctxToDraw.textAlign = 'center';
       ctxToDraw.textBaseline = 'middle';
       
-      const isWordAnimIn = (localTime < el.start + el.inDur) && (el.animIn === 'fadeInWord' || el.animIn === 'bounceInWord');
-      
-      if (isWordAnimIn) {
+      // Hide text completely if currently being edited inline
+      if (!(isEditingText && activeElementId === el.id)) {
+        const isWordAnimIn = (localTime < el.start + el.inDur) && (el.animIn === 'fadeInWord' || el.animIn === 'bounceInWord');
+        
+        if (isWordAnimIn) {
         // Word-by-word staggering animation
         const words = el.text.split(' ');
         let totalWidth = 0;
@@ -223,9 +232,11 @@ export function drawSlide(
             displayText += '|';
           }
         }
+        
         ctxToDraw.fillText(displayText, 0, 0);
         if (el.strokeWidth > 0) ctxToDraw.strokeText(displayText, 0, 0);
       }
+      } // Close the isEditingText block
     } 
     else if (el.type === 'rect') {
       const w = el.size * 1.5; const h = el.size;
@@ -241,13 +252,16 @@ export function drawSlide(
 
     // Reset filter for bounding box
     ctxToDraw.filter = 'none';
-
-    // Selection Bounding Box
-    if (drawUI && !isPlaying && opacity === 1 && offsetX === 0 && activeElementId === el.id) {
-      drawBoundingBox(ctxToDraw, el);
-    }
     
     ctxToDraw.restore(); 
+
+    // Selection Bounding Box (Drawn outside the element's transform so it doesn't double-translate)
+    if (drawUI && !isPlaying && opacity === 1 && offsetX === 0 && activeElementId === el.id) {
+      const bounds = getKineticElementBounds(ctxToDraw, el);
+      // Determine display scale roughly based on canvas width vs native width
+      const displayScale = ctxToDraw.canvas.clientWidth ? (width / ctxToDraw.canvas.clientWidth) : 1;
+      BoundingBoxRenderer.drawSelectionBox(ctxToDraw, bounds, displayScale);
+    }
   });
 
   ctxToDraw.restore(); 
@@ -262,7 +276,8 @@ export function renderFrame(
   transparentBg = false, 
   drawUI = true,
   isPlaying = false,
-  activeElementId: string | null = null
+  activeElementId: string | null = null,
+  isEditingText: boolean = false
 ) {
   if (transparentBg) {
     ctxToDraw.clearRect(0, 0, width, height);
@@ -295,26 +310,26 @@ export function renderFrame(
     const nextLocalTime = 0.01; 
 
     if (slide.transition === 'slideLeft') {
-      drawSlide(ctxToDraw, slide, localTime, width, height, -width * t, 1, true, transparentBg, drawUI, isPlaying, activeElementId);
+      drawSlide(ctxToDraw, slide, localTime, width, height, -width * t, 1, true, transparentBg, drawUI, isPlaying, activeElementId, isEditingText);
       // overlap slightly by 1px to prevent any white/black lines
-      if (nextSlide) drawSlide(ctxToDraw, nextSlide, nextLocalTime, width, height, (width * (1-t)) - 1, 1, false, transparentBg, drawUI, isPlaying, activeElementId);
+      if (nextSlide) drawSlide(ctxToDraw, nextSlide, nextLocalTime, width, height, (width * (1-t)) - 1, 1, false, transparentBg, drawUI, isPlaying, activeElementId, isEditingText);
     } 
     else if (slide.transition === 'slideUp') {
-      drawSlide(ctxToDraw, slide, localTime, width, height, 0, 1 - t, true, transparentBg, drawUI, isPlaying, activeElementId); // fade current while up
+      drawSlide(ctxToDraw, slide, localTime, width, height, 0, 1 - t, true, transparentBg, drawUI, isPlaying, activeElementId, isEditingText); // fade current while up
       ctxToDraw.save(); ctxToDraw.translate(0, height * (1-t) - 1);
-      if (nextSlide) drawSlide(ctxToDraw, nextSlide, nextLocalTime, width, height, 0, 1, false, transparentBg, drawUI, isPlaying, activeElementId);
+      if (nextSlide) drawSlide(ctxToDraw, nextSlide, nextLocalTime, width, height, 0, 1, false, transparentBg, drawUI, isPlaying, activeElementId, isEditingText);
       ctxToDraw.restore();
     }
     else if (slide.transition === 'fade') {
-      drawSlide(ctxToDraw, slide, localTime, width, height, 0, 1 - t, true, transparentBg, drawUI, isPlaying, activeElementId);
-      if (nextSlide) drawSlide(ctxToDraw, nextSlide, nextLocalTime, width, height, 0, t, false, transparentBg, drawUI, isPlaying, activeElementId);
+      drawSlide(ctxToDraw, slide, localTime, width, height, 0, 1 - t, true, transparentBg, drawUI, isPlaying, activeElementId, isEditingText);
+      if (nextSlide) drawSlide(ctxToDraw, nextSlide, nextLocalTime, width, height, 0, t, false, transparentBg, drawUI, isPlaying, activeElementId, isEditingText);
     }
     else {
       // None (Cut)
-      drawSlide(ctxToDraw, slide, localTime, width, height, 0, 1, true, transparentBg, drawUI, isPlaying, activeElementId);
+      drawSlide(ctxToDraw, slide, localTime, width, height, 0, 1, true, transparentBg, drawUI, isPlaying, activeElementId, isEditingText);
     }
   } else {
     // Normal Drawing
-    drawSlide(ctxToDraw, slide, localTime, width, height, 0, 1, false, transparentBg, drawUI, isPlaying, activeElementId);
+    drawSlide(ctxToDraw, slide, localTime, width, height, 0, 1, false, transparentBg, drawUI, isPlaying, activeElementId, isEditingText);
   }
 }

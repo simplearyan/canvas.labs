@@ -1,8 +1,9 @@
-import { createSignal, createEffect, onCleanup, onMount, For, Show } from 'solid-js';
+import { createSignal, createEffect, onCleanup, onMount, For, Show, createMemo } from 'solid-js';
 import Icon from '../../ui/Icon';
 import type { KineticState, KineticSlide, KineticElement, KineticElementType } from '@/engines/kinetic-studio/types';
-import { serializeKineticState, deserializeKineticState, generateId } from '@/engines/kinetic-studio/KineticEngineUtils';
-import { renderFrame, SLIDE_DURATION } from '@/engines/kinetic-studio/KineticEngine';
+import { deserializeKineticState, serializeKineticState, defaultKineticState, generateId } from '@/engines/kinetic-studio/KineticEngineUtils';
+import { renderFrame, SLIDE_DURATION, kineticHitTest, getKineticElementHandles, getKineticElementBounds } from '@/engines/kinetic-studio/KineticEngine';
+import { InteractionController } from '@/engines/core/interaction/InteractionController';
 import ExportModal from '@/components/common/ExportModal';
 import SnapshotModal from '@/components/common/SnapshotModal';
 
@@ -52,11 +53,74 @@ export default function KineticEditor() {
   
   let canvasRef: HTMLCanvasElement | undefined;
   let containerRef: HTMLDivElement | undefined;
+  let canvasContainerRef!: HTMLDivElement;
   let animationFrameId: number;
   let lastTimestamp = 0;
 
+  const [isEditingCanvasText, setIsEditingCanvasText] = createSignal(false);
+  let editTextAreaRef!: HTMLTextAreaElement;
+
+  const inlineEditorStyle = createMemo(() => {
+    if (!isEditingCanvasText()) return {};
+    const id = activeElementId();
+    const el = state().slides[activeSlideIndex()]?.elements.find(e => e.id === id) as KineticElement;
+    if (!el || el.type !== 'text' || !canvasRef || !containerRef) return {};
+    
+    const bounds = getKineticElementBounds(canvasRef.getContext('2d')!, el);
+    const rect = containerRef.getBoundingClientRect();
+    const { nativeW, nativeH } = getNativeDims();
+    const scale = Math.min(rect.width / nativeW, rect.height / nativeH);
+    const offX = (rect.width - nativeW * scale) / 2;
+    const offY = (rect.height - nativeH * scale) / 2;
+
+    const left = offX + bounds.x * scale;
+    const top = offY + bounds.y * scale;
+    const width = bounds.w * scale;
+    const height = bounds.h * scale;
+
+    return {
+      left: `${left - width / 2}px`,
+      top: `${top - height / 2}px`,
+      width: `${width}px`,
+      height: `${height}px`,
+      transform: `rotate(${bounds.rotation}deg)`
+    };
+  });
+
+  const inlineEditorTextStyle = createMemo(() => {
+    if (!isEditingCanvasText()) return {};
+    const id = activeElementId();
+    const el = state().slides[activeSlideIndex()]?.elements.find(e => e.id === id) as KineticElement;
+    if (!el || el.type !== 'text' || !containerRef) return {};
+    
+    const rect = containerRef.getBoundingClientRect();
+    const { nativeW, nativeH } = getNativeDims();
+    const scale = Math.min(rect.width / nativeW, rect.height / nativeH);
+
+    return {
+      color: el.fill || "#ffffff",
+      "caret-color": el.fill || "#10b981",
+      "font-family": el.font,
+      "font-weight": el.fontWeight || "700",
+      "font-size": `${el.size * scale}px`,
+      padding: `${10 * scale}px`,
+    };
+  });
+
   // Derive max duration
   const maxDuration = () => state().slides.length * SLIDE_DURATION;
+
+  const getNativeDims = () => {
+    const aspect = aspectRatio();
+    let nativeW = 1920; let nativeH = 1080;
+    if (aspect === '9:16') { nativeW = 1080; nativeH = 1920; }
+    else if (aspect === '1:1') { nativeW = 1080; nativeH = 1080; }
+    else if (aspect === '4:5') { nativeW = 1080; nativeH = 1350; }
+    else if (aspect === '3:4') { nativeW = 1080; nativeH = 1440; }
+    else if (aspect === '4:3') { nativeW = 1440; nativeH = 1080; }
+    else if (aspect === '2:1') { nativeW = 2160; nativeH = 1080; }
+    return { nativeW, nativeH };
+  };
 
   // Persist State to URL
   createEffect(() => {
@@ -197,8 +261,8 @@ export default function KineticEditor() {
 
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
-
-    renderFrame(ctx, globalTime(), nativeW, nativeH, state().slides, false, true, isPlaying(), activeElementId());
+    const sState = { ...state(), selectedId: activeElementId() };
+    renderFrame(ctx, globalTime(), nativeW, nativeH, sState.slides, false, true, isPlaying(), sState.selectedId, isEditingCanvasText());
 
     // Call drawWaveform periodically if playing
     if (isPlaying() && audioCtx) {
@@ -283,82 +347,82 @@ export default function KineticEditor() {
     const observer = new ResizeObserver(() => requestRender());
     if (containerRef) observer.observe(containerRef);
 
-    // Interaction handling (Drag)
-    let isDragging = false;
-    let dragOffsetX = 0;
-    let dragOffsetY = 0;
+    const interactionCtrl = new InteractionController({
+      onSelect: (id) => {
+        setActiveElementId(id);
+        if (id) {
+          setRightTab('props');
+          setMobileTab('props');
+        }
+      },
+      onUpdate: (id, updates) => updateElement(id, updates),
+      onDoubleTap: (id) => {
+        const el = state().slides[activeSlideIndex()].elements.find(e => e.id === id);
+        if (el && el.type === 'text') {
+           setIsEditingCanvasText(true);
+           setTimeout(() => {
+             if (editTextAreaRef) {
+               editTextAreaRef.focus();
+               editTextAreaRef.select();
+             }
+           }, 50);
+        }
+      },
+      hitTest: (x, y) => {
+        const ctx = canvasRef!.getContext('2d');
+        if (!ctx) return null;
+        return kineticHitTest(ctx, state().slides[activeSlideIndex()].elements, x, y);
+      },
+      getHandles: (id) => {
+        const el = state().slides[activeSlideIndex()].elements.find(e => e.id === id);
+        if (!el) return null;
+        const ctx = canvasRef!.getContext('2d')!;
+        const { nativeW } = getNativeDims();
+        const displayScale = canvasRef!.clientWidth ? (nativeW / canvasRef!.clientWidth) : 1;
+        return getKineticElementHandles(ctx, el, displayScale);
+      },
+      getElementInfo: (id) => {
+        const el = state().slides[activeSlideIndex()].elements.find(e => e.id === id);
+        if (!el) return null;
+        return { x: el.x, y: el.y, rotation: el.rotation || 0, size: el.size, type: el.type };
+      }
+    });
 
-    const handlePointerDown = (e: PointerEvent) => {
-      if (isPlaying() || !canvasRef || !containerRef) return;
-      const rect = containerRef.getBoundingClientRect();
-      const scale = Math.min(rect.width / 800, rect.height / 500);
-      const offX = (rect.width - 800 * scale) / 2;
-      const offY = (rect.height - 500 * scale) / 2;
+    createEffect(() => {
+      interactionCtrl.setActiveElement(activeElementId());
+    });
+
+    const getCanvasCoords = (e: PointerEvent) => {
+      const rect = containerRef!.getBoundingClientRect();
+      const { nativeW, nativeH } = getNativeDims();
+      const scale = Math.min(rect.width / nativeW, rect.height / nativeH);
+      const offX = (rect.width - nativeW * scale) / 2;
+      const offY = (rect.height - nativeH * scale) / 2;
       
       const x = (e.clientX - rect.left - offX) / scale;
       const y = (e.clientY - rect.top - offY) / scale;
+      return { x, y };
+    };
 
-      const slide = state().slides[activeSlideIndex()];
-      let clickedEl: KineticElement | null = null;
-      
-      const ctx = canvasRef.getContext('2d');
-      if (!ctx) return;
-
-      // Reverse order for painter's algorithm hit test
-      for (let i = slide.elements.length - 1; i >= 0; i--) {
-        const el = slide.elements[i];
-        let hw = 50, hh = 50;
-
-        if (el.type === 'text' && el.text) {
-          ctx.font = `${el.fontWeight || '700'} ${el.size}px ${el.font}`;
-          hw = ctx.measureText(el.text).width / 2;
-          hh = el.size / 2;
-        } else if (el.type === 'rect') {
-          hw = el.size * 1.5 / 2; hh = el.size / 2;
-        } else if (el.type === 'circle') {
-          hw = el.size / 2; hh = el.size / 2;
-        }
-
-        const angle = -(el.rotation || 0) * Math.PI / 180;
-        const dx = x - el.x;
-        const dy = y - el.y;
-        const rx = dx * Math.cos(angle) - dy * Math.sin(angle);
-        const ry = dx * Math.sin(angle) + dy * Math.cos(angle);
-
-        if (Math.abs(rx) <= hw && Math.abs(ry) <= hh) {
-          clickedEl = el;
-          break;
-        }
-      }
-
-      if (clickedEl) {
-        setActiveElementId(clickedEl.id);
-        isDragging = true;
-        dragOffsetX = x - clickedEl.x;
-        dragOffsetY = y - clickedEl.y;
-        setRightTab('props');
-        setMobileTab('props');
-      } else {
-        setActiveElementId(null);
-        setRightTab('props');
-        setMobileTab('props');
+    const handlePointerDown = (e: PointerEvent) => {
+      if (isPlaying() || !canvasRef || !containerRef || isEditingCanvasText()) return;
+      const { x, y } = getCanvasCoords(e);
+      const isTouch = e.pointerType === 'touch';
+      if (interactionCtrl.handlePointerDown(x, y, isTouch)) {
+        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch(err){}
       }
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!isDragging || !activeElementId() || isPlaying() || !containerRef) return;
-      const rect = containerRef.getBoundingClientRect();
-      const scale = Math.min(rect.width / 800, rect.height / 500);
-      const offX = (rect.width - 800 * scale) / 2;
-      const offY = (rect.height - 500 * scale) / 2;
-      
-      const x = (e.clientX - rect.left - offX) / scale;
-      const y = (e.clientY - rect.top - offY) / scale;
-      
-      updateElement(activeElementId()!, { x: x - dragOffsetX, y: y - dragOffsetY });
+      if (isPlaying() || !canvasRef || !containerRef || isEditingCanvasText()) return;
+      const { x, y } = getCanvasCoords(e);
+      interactionCtrl.handlePointerMove(x, y);
     };
 
-    const handlePointerUp = () => { isDragging = false; };
+    const handlePointerUp = (e: PointerEvent) => {
+      interactionCtrl.handlePointerUp();
+      try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch(err){}
+    };
 
     canvasRef?.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('pointermove', handlePointerMove);
@@ -728,6 +792,60 @@ export default function KineticEditor() {
           <div class="flex-1 min-h-[300px] relative bg-gray-100/50 dark:bg-black/50 border border-gray-200 dark:border-white/5 rounded-xl shadow-inner overflow-hidden flex items-center justify-center p-4">
             <div ref={containerRef} class="w-full h-full relative flex items-center justify-center" id="kinetic-canvas-container">
               <canvas ref={canvasRef} class="absolute inset-0 w-full h-full cursor-pointer touch-none"></canvas>
+              
+              {/* Direct Inline Bounding Box Editor Overlay */}
+              <Show when={isEditingCanvasText()}>
+                <>
+                  {/* Click Outside Invisible Backdrop */}
+                  <div
+                    onClick={() => setIsEditingCanvasText(false)}
+                    class="absolute inset-0 z-40 pointer-events-auto cursor-default"
+                  ></div>
+                  
+                  {/* Rotated & Positioned Input Container exactly matching Bounding Box */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      "transform-origin": "center center",
+                      "pointer-events": "none",
+                      "z-index": "45",
+                      ...inlineEditorStyle()
+                    }}
+                    class="animate-pure-scale-in"
+                  >
+                    <textarea
+                      ref={editTextAreaRef}
+                      rows="2"
+                      value={(state().slides[activeSlideIndex()]?.elements.find(e => e.id === activeElementId()) as any)?.text || ''}
+                      onInput={(e) => updateElement(activeElementId()!, { text: e.currentTarget.value })}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        background: "transparent",
+                        border: "none",
+                        resize: "none",
+                        outline: "none",
+                        "text-align": "center",
+                        "line-height": "1",
+                        "pointer-events": "auto",
+                        overflow: "hidden",
+                        "white-space": "pre-wrap",
+                        "word-break": "break-word",
+                        "box-sizing": "border-box",
+                        ...inlineEditorTextStyle()
+                      }}
+                      class="focus:ring-0 shadow-inner-sm select-text"
+                      placeholder="Type text..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          setIsEditingCanvasText(false);
+                        }
+                      }}
+                    />
+                  </div>
+                </>
+              </Show>
             </div>
           </div>
 
@@ -896,7 +1014,7 @@ export default function KineticEditor() {
                       <span class="text-xs font-semibold text-gray-700 dark:text-zinc-300">Fill Color</span>
                       <input 
                         type="color" 
-                        value={activeElement()?.fill} 
+                        value={activeElement()?.fill || '#ffffff'} 
                         onChange={(e) => updateElement(activeElementId()!, { fill: e.currentTarget.value })}
                         class="w-7 h-7 rounded cursor-pointer bg-transparent border-0" 
                       />
@@ -922,7 +1040,7 @@ export default function KineticEditor() {
                       <span class="text-xs font-semibold text-gray-700 dark:text-zinc-300">Background Color</span>
                       <input 
                         type="color" 
-                        value={activeSlide()?.bg === 'transparent' ? '#000000' : activeSlide()?.bg} 
+                        value={activeSlide()?.bg === 'transparent' ? '#000000' : (activeSlide()?.bg || '#ffffff')} 
                         onInput={(e) => updateSlide(activeSlideIndex(), { bg: e.currentTarget.value })}
                         class="w-8 h-8 rounded cursor-pointer bg-transparent border-0" 
                       />

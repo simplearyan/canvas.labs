@@ -1,8 +1,9 @@
-import { createSignal, createEffect, onCleanup, onMount, Show } from 'solid-js';
+import { createSignal, createEffect, onCleanup, onMount, Show, createMemo } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { deserializeKineticState } from '@/engines/kinetic-studio/KineticEngineUtils';
-import { renderFrame, SLIDE_DURATION } from '@/engines/kinetic-studio/KineticEngine';
-import type { KineticState } from '@/engines/kinetic-studio/types';
+import { renderFrame, SLIDE_DURATION, kineticHitTest, getKineticElementHandles, getKineticElementBounds } from '@/engines/kinetic-studio/KineticEngine';
+import { InteractionController } from '@/engines/core/interaction/InteractionController';
+import type { KineticState, KineticSlide } from '@/engines/kinetic-studio/types';
 import { isDarkTheme } from '@/store/global';
 import { AD_CONFIG } from '@/config/ads';
 
@@ -22,13 +23,154 @@ export default function KineticPresetTemplate(props: { slug: string; encodedStat
   const [aspectRatio, setAspectRatio] = createSignal<'16:9' | '9:16' | '1:1' | '4:5' | '4:3'>('16:9');
   const [isFullscreen, setIsFullscreen] = createSignal(false);
   const [portalTarget, setPortalTarget] = createSignal<HTMLElement | undefined>(undefined);
+  const [activeElementId, setActiveElementId] = createSignal<string | null>(null);
+  const [isEditingCanvasText, setIsEditingCanvasText] = createSignal(false);
   
   let canvasRef: HTMLCanvasElement | undefined;
   let canvasContainerRef: HTMLDivElement | undefined;
+  let editTextAreaRef: HTMLTextAreaElement | undefined;
   let animationFrameId: number;
   let lastTimestamp = 0;
 
+  const inlineEditorStyle = createMemo(() => {
+    if (!isEditingCanvasText()) return {};
+    const id = activeElementId();
+    const el = state().slides[activeSlideIndex()]?.elements.find(e => e.id === id) as KineticElement;
+    if (!el || el.type !== 'text' || !canvasRef || !canvasContainerRef) return {};
+    
+    const bounds = getKineticElementBounds(canvasRef.getContext('2d')!, el);
+    const rect = canvasContainerRef.getBoundingClientRect();
+    const { nativeW, nativeH } = getNativeDims();
+    const scale = Math.min(rect.width / nativeW, rect.height / nativeH);
+    const offX = (rect.width - nativeW * scale) / 2;
+    const offY = (rect.height - nativeH * scale) / 2;
+
+    const left = offX + bounds.x * scale;
+    const top = offY + bounds.y * scale;
+    const width = bounds.w * scale;
+    const height = bounds.h * scale;
+
+    return {
+      left: `${left - width / 2}px`,
+      top: `${top - height / 2}px`,
+      width: `${width}px`,
+      height: `${height}px`,
+      transform: `rotate(${bounds.rotation}deg)`
+    };
+  });
+
+  const inlineEditorTextStyle = createMemo(() => {
+    if (!isEditingCanvasText()) return {};
+    const id = activeElementId();
+    const el = state().slides[activeSlideIndex()]?.elements.find(e => e.id === id) as KineticElement;
+    if (!el || el.type !== 'text' || !canvasContainerRef) return {};
+    
+    const rect = canvasContainerRef.getBoundingClientRect();
+    const { nativeW, nativeH } = getNativeDims();
+    const scale = Math.min(rect.width / nativeW, rect.height / nativeH);
+
+    return {
+      color: el.fill || "#ffffff",
+      "caret-color": el.fill || "#10b981",
+      "font-family": el.font,
+      "font-weight": el.fontWeight || "700",
+      "font-size": `${el.size * scale}px`,
+      padding: `${10 * scale}px`,
+    };
+  });
+
   const maxDuration = () => state().slides.length * SLIDE_DURATION;
+  const activeSlideIndex = () => Math.floor(globalTime() / SLIDE_DURATION) % Math.max(1, state().slides.length);
+
+  const updateElement = (id: string, updates: any) => {
+    setState(prev => {
+      const newSlides = [...prev.slides];
+      const sIdx = activeSlideIndex();
+      newSlides[sIdx] = {
+        ...newSlides[sIdx],
+        elements: newSlides[sIdx].elements.map(el => el.id === id ? { ...el, ...updates } : el)
+      };
+      return { ...prev, slides: newSlides };
+    });
+    requestRender();
+  };
+
+  const getNativeDims = () => {
+    const aspect = aspectRatio();
+    let nativeW = 1920; let nativeH = 1080;
+    if (aspect === '9:16') { nativeW = 1080; nativeH = 1920; }
+    else if (aspect === '1:1') { nativeW = 1080; nativeH = 1080; }
+    else if (aspect === '4:5') { nativeW = 1080; nativeH = 1350; }
+    else if (aspect === '4:3') { nativeW = 1440; nativeH = 1080; }
+    return { nativeW, nativeH };
+  };
+
+  const interactionCtrl = new InteractionController({
+    onSelect: (id) => setActiveElementId(id),
+    onUpdate: (id, updates) => updateElement(id, updates),
+    onDoubleTap: (id) => {
+      const el = state().slides[activeSlideIndex()].elements.find(e => e.id === id);
+      if (el && el.type === 'text') {
+         setIsEditingCanvasText(true);
+         setTimeout(() => {
+           if (editTextAreaRef) {
+             editTextAreaRef.focus();
+             editTextAreaRef.select();
+           }
+         }, 50);
+      }
+    },
+    hitTest: (x, y) => {
+      const ctx = canvasRef?.getContext('2d');
+      if (!ctx) return null;
+      return kineticHitTest(ctx, state().slides[activeSlideIndex()].elements, x, y);
+    },
+    getHandles: (id) => {
+      const el = state().slides[activeSlideIndex()].elements.find(e => e.id === id);
+      if (!el) return null;
+      const ctx = canvasRef!.getContext('2d')!;
+      const { nativeW } = getNativeDims();
+      const displayScale = canvasRef!.clientWidth ? (nativeW / canvasRef!.clientWidth) : 1;
+      return getKineticElementHandles(ctx, el, displayScale);
+    },
+    getElementInfo: (id) => {
+      const el = state().slides[activeSlideIndex()].elements.find(e => e.id === id);
+      if (!el) return null;
+      return { x: el.x, y: el.y, rotation: el.rotation || 0, size: el.size, type: el.type };
+    }
+  });
+
+  createEffect(() => interactionCtrl.setActiveElement(activeElementId()));
+
+  const getCanvasCoords = (e: PointerEvent) => {
+    const rect = canvasContainerRef!.getBoundingClientRect();
+    const { nativeW, nativeH } = getNativeDims();
+    const scale = Math.min(rect.width / nativeW, rect.height / nativeH);
+    const offX = (rect.width - nativeW * scale) / 2;
+    const offY = (rect.height - nativeH * scale) / 2;
+    const x = (e.clientX - rect.left - offX) / scale;
+    const y = (e.clientY - rect.top - offY) / scale;
+    return { x, y };
+  };
+
+  const handlePointerDown = (e: PointerEvent) => {
+    if (isPlaying() || !canvasRef || !canvasContainerRef || isEditingCanvasText()) return;
+    const { x, y } = getCanvasCoords(e);
+    if (interactionCtrl.handlePointerDown(x, y, e.pointerType === 'touch')) {
+      try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch(err){}
+    }
+  };
+
+  const handlePointerMove = (e: PointerEvent) => {
+    if (isPlaying() || !canvasRef || !canvasContainerRef || isEditingCanvasText()) return;
+    const { x, y } = getCanvasCoords(e);
+    interactionCtrl.handlePointerMove(x, y);
+  };
+
+  const handlePointerUp = (e: PointerEvent) => {
+    interactionCtrl.handlePointerUp();
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch(err){}
+  };
 
   const requestRender = () => {
     if (!canvasRef || !canvasContainerRef) return;
@@ -59,7 +201,9 @@ export default function KineticPresetTemplate(props: { slug: string; encodedStat
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
 
-    renderFrame(ctx, globalTime(), nativeW, nativeH, state().slides, false, false, isPlaying(), null);
+    const sState = { ...state(), selectedId: activeElementId() }; // pass selection state
+
+    renderFrame(ctx, globalTime(), nativeW, nativeH, sState.slides, false, true, isPlaying(), sState.selectedId, isEditingCanvasText());
   };
 
   const gameLoop = (timestamp: number) => {
@@ -234,7 +378,61 @@ export default function KineticPresetTemplate(props: { slug: string; encodedStat
                 ref={canvasRef}
                 class="object-contain"
                 style={{ "touch-action": "none" }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
               ></canvas>
+
+              {/* Direct Inline Bounding Box Editor Overlay */}
+              <Show when={isEditingCanvasText()}>
+                <>
+                  <div
+                    onClick={() => setIsEditingCanvasText(false)}
+                    class="absolute inset-0 z-40 pointer-events-auto cursor-default"
+                  ></div>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      "transform-origin": "center center",
+                      "pointer-events": "none",
+                      "z-index": "45",
+                      ...inlineEditorStyle()
+                    }}
+                    class="animate-pure-scale-in"
+                  >
+                    <textarea
+                      ref={editTextAreaRef!}
+                      rows="2"
+                      value={(state().slides[activeSlideIndex()]?.elements.find(e => e.id === activeElementId()) as any)?.text || ''}
+                      onInput={(e) => updateElement(activeElementId()!, { text: e.currentTarget.value })}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        background: "transparent",
+                        border: "none",
+                        resize: "none",
+                        outline: "none",
+                        "text-align": "center",
+                        "line-height": "1",
+                        "pointer-events": "auto",
+                        overflow: "hidden",
+                        "white-space": "pre-wrap",
+                        "word-break": "break-word",
+                        "box-sizing": "border-box",
+                        ...inlineEditorTextStyle()
+                      }}
+                      class="focus:ring-0 shadow-inner-sm select-text"
+                      placeholder="Type text..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          setIsEditingCanvasText(false);
+                        }
+                      }}
+                    />
+                  </div>
+                </>
+              </Show>
             </div>
 
             {/* Playback Controls */}
